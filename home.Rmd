@@ -103,3 +103,56 @@ Se rapport for skog:
 
 
 [![Alt Text](figures/skograpporten.png)](https://brage.nina.no/nina-xmlui/handle/11250/2739886){width=10%}
+
+## Sjekkliste for tilstandsindikatorer
+
+
+\def\LayoutTextField#1#2{% label, field
+  #2%
+}
+
+
+\begin{Form}
+    Indikatornavn: \TextField[width=10cm]{Indikatornavn}\\\\
+    Tilstede under utfyllingen: \TextField[multiline=true, width=10cm,height=1cm]{Tilstede}\\\\
+    Dato: \TextField[width=3cm]{Dato}\\
+    \\
+    \CheckBox{Indikatoren gir et representativt bilde av miljøets tilstand, miljøpåvirkninger eller samfunnets respons og er relevant for det arealet som vurderes }\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm,invisible=true]{a}\\\\
+      \CheckBox{Indikatoren påvirkes betraktelig av menneskelig aktivitet, og denne responsen blir ikke overskygget av den naturlige variasjonen i indikatoren }\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{b}\\\\
+      \CheckBox{Indikatoren gir grunnlag for internasjonale sammenligninger}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{c}\\\\
+      \CheckBox{Vi har kontroll på at variasjonen vi innfører gjennom beregningene våre ikke overskygger eller systematisk styrer verdien av indikatoren}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{c2}\\\\
+      \CheckBox{Indikatoren representerer en unik side ved økosystemet som ikke fanges opp av noen av de andre indikatorene}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{d}\\\\
+      \CheckBox{Metoden for beregning av indikatorverdier er godt dokumentert og beregningene er reproduserbare}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{e}\\\\
+      \CheckBox{Fastsetting av referanseverdier (0, 1) og grenseverdier for GØT er godt faglig begrunnet og gjennomdiskutert med flere fagfeller}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{f}\\\\
+      \CheckBox{Indikatoren lar seg tilskrive en eller flere av de syv definerte økosystemegenskapene}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{g}\\\\
+      \CheckBox{Data som trengs for å støtte indikatoren er
+lett tilgjengelig eller kunne gjøres tilgjengelig på en kostnadseffektiv måte
+}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{h}\\\\
+      \CheckBox{Data som trengs for å støtte indikatoren er
+godt dokumentert og av kjent kvalitet
+}\\
+    Kommentar: \\\\
+     \TextField[multiline=true, width=\linewidth,height=2cm]{i}\\\\
+    
+     
+     
+    
+\end{Form}
