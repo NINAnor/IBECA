@@ -28,7 +28,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## Faktaark
-```{r, echo=FALSE}
+```{r, echo=FALSE, message=F}
 library(readxl)
 library(knitr)
 library(kableExtra)
@@ -50,7 +50,7 @@ for(i in 1:nrow(doc)){
 
 ```
 
-### Fjellrev
+### Bestandsnivå Fjellrev
 
 ```{r, echo=FALSE}
 tbl <- get('Bestandsnivå fjellrev')
@@ -59,7 +59,7 @@ tbl
 ```
 
 
-### Bestandsnivå jerv
+### Bestandsnivå Jerv
 
 ```{r, echo=FALSE}
 tbl <- get('Bestandsnivå jerv')

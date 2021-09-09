@@ -30,6 +30,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Klikkbart flytskjema
 Denne figurene er kun et 'proof of consept', men skal vise hvordan tilsndaindikatorene knytter seg til de ulike påvirkningene og egenskapene. Nodene er klikkbare og tar deg til faktaarket.
 
+[Test link](https://ninanor.github.io/IBECA/faktaark#fjellrev)
 
 ```{r, echo=F, message=FALSE}
 library(readxl)
@@ -125,6 +126,14 @@ space2ID <- row.names(nodes2)[nodes2$type=="space2"]
 # the dag craches if there's a column called tooltip
 edges2 <- rename(edges2, tooltip_edge = tooltip)
 
+
+# Add unique URLs
+
+nodes2$URL <- "https://ninanor.github.io/IBECA/faktaark"
+nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#bestandsnivå-fjellrev"
+nodes2$URL[nodes2$nodes== "Bestandsnivå jerv"] <- "https://ninanor.github.io/IBECA/faktaark#bestandsnivå-jerv"
+
+
 # DAG ---------------------------------------------------------------------
 
 
@@ -142,7 +151,7 @@ dag <- create_graph(
   set_node_attrs(node_attr = shape, values =  "box") %>%
   set_node_attrs(node_attr = shape, values =  "triangle", nodes = paaID) %>%
   
-  set_node_attrs(node_attr = URL, values =  "https://www.nrk.no") %>%
+  set_node_attrs(node_attr = URL, values =  nodes2$URL) %>%
   
   set_node_attrs(node_attr = rank, values =  1, nodes = paaID) %>%
   set_node_attrs(node_attr = rank, values =  3, nodes = indID) %>%
