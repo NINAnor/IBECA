@@ -22,9 +22,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-[Hjem](https://anders-kolstad.github.io/IBECA) | 
-[Tilstandsindikatorer](https://anders-kolstad.github.io/IBECA/fjell) |
-[Faktaark](https://anders-kolstad.github.io/IBECA/faktaark) |
+[Hjem](https://ninanor.github.io/IBECA) | 
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) |
+[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
 ## Klikkbart flytskjema

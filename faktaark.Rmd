@@ -21,25 +21,57 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+[Hjem](https://ninanor.github.io/IBECA) | 
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) |
+[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
-[Hjem](https://anders-kolstad.github.io/IBECA) | 
-[Tilstandsindikatorer](https://anders-kolstad.github.io/IBECA/fjell) |
-[Faktaark](https://anders-kolstad.github.io/IBECA/faktaark) |
 
 
 ## Faktaark
+```{r, echo=FALSE}
+library(readxl)
+library(knitr)
+library(kableExtra)
+library(dplyr)
+doc <- read_excel("data/dokumentasjonIndikatorer.xlsx")
+```
+
+```{r, echo=F}
+for(i in 1:nrow(doc)){
+  docTemp <- doc[i,]
+  docTemp <- as.data.frame(t(docTemp))
+  out <- kableExtra::kable(docTemp, "html",
+        caption = paste("Metadatasjekama for tilstandindikatoren ", 
+                        docTemp$V1[1]), col.names = NULL) %>%
+  kableExtra::kable_styling(full_width = T)%>%         # not working
+  column_spec(1, width = "1cm")       # not working
+  assign(docTemp$V1[1], out)
+}
+
+```
+
+### Fjellrev
+
+```{r, echo=FALSE}
+tbl <- get('Bestandsnivå fjellrev')
+tbl
+
+```
+
+
+### Bestandsnivå jerv
+
+```{r, echo=FALSE}
+tbl <- get('Bestandsnivå jerv')
+tbl
+
+```
+
+
+
 
 Last update:
 ```{r}
 Sys.time()
 ```
 
-Her kan vi samle alle faktaarkene...
-
-
-### Faktaark 1
-
-blablabla
-
-
-### Faktaark 2

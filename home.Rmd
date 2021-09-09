@@ -1,5 +1,12 @@
 ---
 title: "Økologisk tilstand for fjell i Norge"
+
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
 knit: (function(input_file, encoding) {
   out_dir <- 'docs';
   rmarkdown::render(input_file,
@@ -8,18 +15,23 @@ knit: (function(input_file, encoding) {
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=F}
+library(knitr)
 ```
 
 
 
-[Hjem](https://anders-kolstad.github.io/IBECA) | 
-[Økosystem Fjell](https://anders-kolstad.github.io/IBECA/fjell) |
-[Faktaark](https://anders-kolstad.github.io/IBECA/faktaark) |
+[Hjem](https://ninanor.github.io/IBECA) | 
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) |
+[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
 
-### Introduksjon
+## Introduksjon
 På denne siden vil du (etterhvert) finne informasjon om hvordan NINA har jobber med å vurdere økologisk tilstand i Norge økosystemer.
 
 Figuren under viser den grunnleggende arbeidsflyten rundt fremskaffelsen av tilstandsindikatorer:
@@ -96,14 +108,17 @@ grViz("digraph{
 ## GitHub
 [Klikk her](https://github.com/anders-kolstad/IBECA) for å gå til Github hvor du kan finne all R koden og del av dataene som er brukt i analysene.
 
+### Sjekkliste for tilstandsindikatorer
 
-### Publikasjoner
+[Klikk her](https://github.com/NINAnor/IBECA/tree/main/output/sjekkliste.pdf) for å gå rett til sjekklisten som fylles ut av ekspertpanelet for hver indikator (jf. figuren over).
 
-Se rapport for skog:
+## Publikasjoner
+
+```{r, echo=FALSE,out.width="49%",out.height="20%",fig.cap="caption",fig.show='hold',fig.align='center', fig.link=c('https://brage.nina.no/nina-xmlui/handle/11250/2739886', 'https://www.regjeringen.no/contentassets/7c4be071791f439b83fa035c03cdfc82/fagsystem-for-fastsetting-av-god-okologisk-tilstand_2017.pdf')}
+
+knitr::include_graphics(c("figures/skograpporten.png","figures/Fagsystemrapporten.png"))
+
+``` 
 
 
-[![Alt Text](figures/skograpporten.png)](https://brage.nina.no/nina-xmlui/handle/11250/2739886){width=10%}
 
-## Sjekkliste for tilstandsindikatorer
-
-[Klikk her](https://github.com/NINAnor/IBECA/tree/main/output/sjekkliste.pdf) for å se sjekklisten som fylles ut av ekspertpanelet for hver indikator (jf. figuren over).
