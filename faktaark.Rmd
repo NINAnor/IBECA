@@ -45,8 +45,7 @@ for(i in 1:nrow(doc)){
   out <- kableExtra::kable(docTemp, "html",
         caption = paste("Metadatasjekama for tilstandindikatoren ", 
                         docTemp$V1[1]), col.names = NULL) %>%
-  kableExtra::kable_styling(full_width = T)%>%         # not working
-  column_spec(1, width = "1cm")       # not working
+    kableExtra::kable_styling(full_width = T)
   assign(docTemp$V1[1], out)
 }
 
