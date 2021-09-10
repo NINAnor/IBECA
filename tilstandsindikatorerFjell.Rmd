@@ -1,5 +1,5 @@
 ---
-title: "Tilstandsindikatorer"
+title: "Økosystem Fjell"
 
 output:
   html_document:
@@ -22,15 +22,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
+
 [Hjem](https://ninanor.github.io/IBECA) | 
 [Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) |
+[Økosystem Skog](https://ninanor.github.io/IBECA/skog) |
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
-## Klikkbart flytskjema
-Denne figurene er kun et 'proof of consept', men skal vise hvordan tilsndaindikatorene knytter seg til de ulike påvirkningene og egenskapene. Nodene er klikkbare og tar deg til faktaarket.
+### Indikatorenes tilknyttning til påvirkninger og egenskaper
 
-[Test link](https://ninanor.github.io/IBECA/faktaark#fjellrev)
+Denne figurene er kun et 'proof of consept', men skal vise hvordan tilstandsikatorene knytter seg til de ulike påvirkningene og egenskapene. Nodene er klikkbare og tar deg til faktaarket. Hold musepeker over boksene får å se noe utfyllende informasjon, og klikk for se enda mer detaljer.
+
 
 ```{r, echo=F, message=FALSE}
 library(readxl)

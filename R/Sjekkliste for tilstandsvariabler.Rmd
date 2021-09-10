@@ -50,6 +50,8 @@ godt dokumentert og av kjent kvalitet
 }\\
     Kommentar: \\\\
      \TextField[multiline=true, width=\linewidth,height=2cm]{i}\\\\
+     Generelle kommentarer: \\\\
+     \TextField[multiline=true, width=\linewidth,height=5cm]{i}\\\\
     
      
      

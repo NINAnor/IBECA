@@ -1,5 +1,5 @@
 ---
-title: "Økologisk tilstand for fjell i Norge"
+title: "Økologisk tilstand"
 
 output:
   html_document:
@@ -27,6 +27,7 @@ library(knitr)
 
 [Hjem](https://ninanor.github.io/IBECA) | 
 [Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) |
+[Økosystem Skog](https://ninanor.github.io/IBECA/skog) |
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
