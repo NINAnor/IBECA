@@ -1,6 +1,5 @@
 ---
 title: "Bestandsnivå fjellrev"
-
 output:
   html_document:
     toc: true
@@ -14,7 +13,9 @@ knit: (function(input_file, encoding) {
  output_file=file.path(dirname(input_file), out_dir, 'bestandsnivafjellrev.html'))})
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -38,4 +39,11 @@ summary(cars)
 ```{r pressure, echo=FALSE}
 plot(pressure)
 ```
+
+
+
+## Sjekkliste
+
+![Sjekkliste](output/test/abc.pdf){width=100%}
+
 

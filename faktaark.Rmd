@@ -30,7 +30,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-## Faktaark
 ```{r, echo=FALSE, message=F}
 library(readxl)
 library(knitr)
@@ -55,7 +54,8 @@ for(i in 1:nrow(doc)){
 
 ### Bestandsnivå Fjellrev
 
-Under ser du metadatasjemaet for indikatoren. [Klikk her]() for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+Under ser du metadatasjemaet for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/bestandsnivafjellrev.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
 
 ```{r, echo=FALSE}
 tbl <- get('Bestandsnivå fjellrev')

@@ -3,6 +3,12 @@ title: "Sjekkliste for tilstandsindikatorer"
 author: ""
 date: ""
 output: pdf_document
+
+knit: (function(input_file, encoding) {
+  out_dir <- '../data';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'sjekkliste.pdf'))})
 ---
 
 
@@ -12,46 +18,71 @@ output: pdf_document
 
 
 \begin{Form}
-    Indikatornavn: \TextField[width=10cm]{Indikatornavn}\\\\
-    Tilstede under utfyllingen: \TextField[multiline=true, width=10cm,height=1cm]{Tilstede}\\\\
+    Indikatornavn: \TextField[width=10cm]{Indikatornavn}
+    \\\\
+    Tilstede under utfyllingen: \TextField[multiline=true, width=10cm,height=1cm]{Tilstede}
+    \\\\
     Dato: \TextField[width=3cm]{Dato}\\
     \\
-    \CheckBox{Indikatoren gir et representativt bilde av miljøets tilstand, miljøpåvirkninger eller samfunnets respons og er relevant for det arealet som vurderes }\\
+    \\
+    \CheckBox{Indikatoren gir et representativt bilde av miljøets tilstand og 
+    er relevant for det arealet som vurderes }\\
+    Kommentar: 
+    \\\\
+     \TextField[multiline=true, width=\linewidth,height=4cm,invisible=true]{a}
+     \\\\
+      \CheckBox{Indikatoren påvirkes betraktelig av menneskelig aktivitet, og 
+      denne responsen blir ikke overskygget av den naturlige variasjonen i 
+      indikatoren}
+      \\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm,invisible=true]{a}\\\\
-      \CheckBox{Indikatoren påvirkes betraktelig av menneskelig aktivitet, og denne responsen blir ikke overskygget av den naturlige variasjonen i indikatoren }\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{b}\\\\
+      \CheckBox{Vi har kontroll på at variasjonen vi innfører gjennom 
+      beregningene våre, for eksempel ved ekstrapoleringer, og er sikre
+      på at denne variasjonen ikke overskygger eller systematisk 
+      styrer verdien av indikatoren}
+      \\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{b}\\\\
-      \CheckBox{Indikatoren gir grunnlag for internasjonale sammenligninger}\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{c}\\\\
+      \CheckBox{Indikatoren representerer en unik side ved økosystemet som 
+      ikke fanges opp av noen av de andre indikatorene}
+      \\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{c}\\\\
-      \CheckBox{Vi har kontroll på at variasjonen vi innfører gjennom beregningene våre ikke overskygger eller systematisk styrer verdien av indikatoren}\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{d}
+     \\\\
+      \CheckBox{Metoden for beregning av indikatorverdier er godt dokumentert 
+      og beregningene er reproduserbare}
+      \\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{c2}\\\\
-      \CheckBox{Indikatoren representerer en unik side ved økosystemet som ikke fanges opp av noen av de andre indikatorene}\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{e}
+     \\\\
+      \CheckBox{Fastsetting av referanseverdier (0, 1) og grenseverdier for 
+      GØT er godt faglig begrunnet, dokumentert og gjennomdiskutert med flere 
+      fagfeller}
+      \\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{d}\\\\
-      \CheckBox{Metoden for beregning av indikatorverdier er godt dokumentert og beregningene er reproduserbare}\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{f}
+     \\\\
+      \CheckBox{Indikatoren lar seg tilskrive en eller flere av de syv 
+      definerte økosystemegenskapene}\\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{e}\\\\
-      \CheckBox{Fastsetting av referanseverdier (0, 1) og grenseverdier for GØT er godt faglig begrunnet og gjennomdiskutert med flere fagfeller}\\
-    Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{f}\\\\
-      \CheckBox{Indikatoren lar seg tilskrive en eller flere av de syv definerte økosystemegenskapene}\\
-    Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{g}\\\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{g}\\\\
       \CheckBox{Data som trengs for å støtte indikatoren er
-lett tilgjengelig eller kunne gjøres tilgjengelig på en kostnadseffektiv måte
-}\\
+       tilgjengelig eller kunne gjøres tilgjengelig ved etterspørsel 
+       på en kostnadseffektiv måte}
+      \\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{h}\\\\
-      \CheckBox{Data som trengs for å støtte indikatoren er
-godt dokumentert og av kjent kvalitet
-}\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{h}\\\\
+      \CheckBox{Data som trengs for å støtte indikatoren er 
+      godt dokumentert og av kjent kvalitet}
+      \\
     Kommentar: \\\\
-     \TextField[multiline=true, width=\linewidth,height=2cm]{i}\\\\
-     Generelle kommentarer: \\\\
-     \TextField[multiline=true, width=\linewidth,height=5cm]{i}\\\\
+     \TextField[multiline=true, width=\linewidth,height=4cm]{i}
+     \\\\
+     Generelle kommentarer: 
+     \\\\
+     \TextField[multiline=true, width=\linewidth,height=6cm]{j}
+     \\\\
     
      
      
