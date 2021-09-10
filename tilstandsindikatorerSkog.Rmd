@@ -18,8 +18,10 @@ knit: (function(input_file, encoding) {
 
 
 [Hjem](https://ninanor.github.io/IBECA) | 
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) |
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog) |
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
+![test](figures/fjellLogo.png){width=1cm} |
+[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
+![test](figures/skogLogo.png){width=0.5cm} |
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 

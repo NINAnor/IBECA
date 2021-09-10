@@ -26,8 +26,10 @@ library(knitr)
 
 
 [Hjem](https://ninanor.github.io/IBECA) | 
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) |
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog) |
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
+![test](figures/fjellLogo.png){width=1cm} |
+[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
+![test](figures/skogLogo.png){width=0.5cm} |
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
@@ -115,7 +117,7 @@ grViz("digraph{
 
 ## Publikasjoner
 
-```{r, echo=FALSE,out.width="49%",out.height="20%",fig.cap="caption",fig.show='hold',fig.align='center', fig.link=c('https://brage.nina.no/nina-xmlui/handle/11250/2739886', 'https://www.regjeringen.no/contentassets/7c4be071791f439b83fa035c03cdfc82/fagsystem-for-fastsetting-av-god-okologisk-tilstand_2017.pdf')}
+```{r, echo=FALSE,out.width="49%",out.height="20%",fig.cap="",fig.show='hold',fig.align='center', fig.link=c('https://brage.nina.no/nina-xmlui/handle/11250/2739886', 'https://www.regjeringen.no/contentassets/7c4be071791f439b83fa035c03cdfc82/fagsystem-for-fastsetting-av-god-okologisk-tilstand_2017.pdf')}
 
 knitr::include_graphics(c("figures/skograpporten.png","figures/Fagsystemrapporten.png"))
 
