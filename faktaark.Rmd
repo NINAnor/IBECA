@@ -79,3 +79,15 @@ Last update:
 Sys.time()
 ```
 
+
+
+### Kongeørn
+
+Under ser du metadatasjemaet for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/kongeoern.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get('Kongeørn')
+tbl
+
+```

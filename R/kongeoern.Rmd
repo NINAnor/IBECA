@@ -1,0 +1,52 @@
+---
+title: "Kongeørn"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'kongeoern.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(sf)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+[Hjem](https://ninanor.github.io/IBECA) | 
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
+![test](../figures/fjellLogo.png){width=1cm} |
+[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
+![test](../figures/skogLogo.png){width=0.5cm} |
+[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
+
+
+## Analyser av kongeørnterritorier
+Det brukes lokale stier da dataene ikke skal være offentlig tilgjengelige.
+
+
+```{r import}
+dat <- st_read('../data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+dat
+```
+
+
+```{r plot}
+plot(dat[,c('Terr_total', 'geometry')])
+```
+
+
+
+## Sjekkliste
+Sjekklisten er ikke utfylt enda.
+
+![Sjekkliste](../output/test/abc.pdf){width=100%}
+
+
