@@ -35,7 +35,7 @@ library(readxl)
 library(knitr)
 library(kableExtra)
 library(dplyr)
-doc <- read_excel("data/dokumentasjonIndikatorer.xlsx")
+doc <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
 ```
 
 ```{r, echo=F}
