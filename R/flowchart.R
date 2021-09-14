@@ -141,7 +141,6 @@ nodes2$URL[nodes2$nodes== "Ellenberg N"] <- "https://ninanor.github.io/IBECA/fak
 nodes2$URL[nodes2$nodes== "Ellenberg L"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-l"
 nodes2$URL[nodes2$nodes== "Areal uten tekniske inngrep"] <- "https://ninanor.github.io/IBECA/faktaark#areal-uten-tekniske-inngrep"
 nodes2$URL[nodes2$nodes== "Smågnagere"] <- "https://ninanor.github.io/IBECA/faktaark#smågnagere"
-nodes2$URL[nodes2$nodes== "Smågnagere"] <- "https://ninanor.github.io/IBECA/faktaark#smågnagere"
 nodes2$URL[nodes2$nodes== "Bestandsnivå lirype"] <- "https://ninanor.github.io/IBECA/faktaark#lirype"
 nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrype"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrype"
 nodes2$URL[nodes2$nodes== "NI for fjell"] <- "https://ninanor.github.io/IBECA/faktaark#naturindeks-for-fjell"
