@@ -115,6 +115,19 @@ toID <- row.names(nodes2)[nodes2$nodes %in% theTo]
 edges2 <- rename(edges2, tooltip_edge = tooltip)
 
 
+# linebreaks for egenskaper
+lineBreaks <-  nodes2
+nodes2$br <- nodes2$nodes
+nodes2$br[nodes2$type=="ege"] <- c(
+                  "Primærproduksjon",
+                 "Biomasse mellom\ntrofiske nivåer",
+                 "Funksjonell\nsammensetning\ninnen trofiske\nnivåer",
+                 "Funksjonelt\nviktige arter\nog strukturer",
+                 "Landskaps-\nøkologiske\nmønstre",
+                 "Biologisk\nmangfold",
+                 "Abiotiske\nforhold")
+
+
 # Add URLs ---------------------------------------
 
 #default URL:
@@ -153,7 +166,7 @@ dag <- create_graph(
   # global styling of nodes
   set_node_attrs(node_attr = shape, values =  "box") %>%
   set_node_attrs(node_attr = shape, values =  "triangle", nodes = paaID) %>%
-  
+
   set_node_attrs(node_attr = URL, values =  nodes2$URL) %>%
   
   set_node_attrs(node_attr = rank, values =  1, nodes = paaID) %>%
@@ -168,12 +181,14 @@ dag <- create_graph(
   
   set_node_attrs(node_attr = tooltip, values =  nodes2$tooltip) %>%
   
-  set_node_attrs(node_attr = width, values =  3.1, nodes = egeID) %>%  # width of egenskaper
+  set_node_attrs(node_attr = width, values =  1.5, nodes = egeID) %>%  # width of egenskaper
   set_node_attrs(node_attr = width, values =  1.8, nodes = indID) %>% 
   set_node_attrs(node_attr = width, values =  1.5, nodes = spaceID) %>% 
   set_node_attrs(node_attr = width, values =  1.5, nodes = space2ID) %>% 
   set_node_attrs(node_attr = width, values =  1.5, nodes = paaID) %>% 
   set_node_attrs(node_attr = height, values =  1.5, nodes = paaID) %>% 
+  set_node_attrs(node_attr = height, values =  1.2, nodes = egeID) %>% 
+  
   
   set_node_attrs(node_attr = penwidth, value = 4) %>%
   
@@ -219,4 +234,6 @@ dag <- create_graph(
   set_node_attrs_ws(node_attr = fillcolor, value = "grey40") %>%
   clear_selection()%>%
   
-  set_node_attrs(node_attr = fillcolor, values =  "white", nodes = supID) 
+  set_node_attrs(node_attr = fillcolor, values =  "white", nodes = supID)%>%
+  
+  set_node_attrs(node_attr = label, values = nodes2$br)

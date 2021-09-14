@@ -37,7 +37,7 @@ Denne figurene er kun et 'proof of consept', men skal vise hvordan tilstandsikat
 
 ```{r plotting, message=FALSE, echo=FALSE}
 library(DiagrammeR)
-source('R/flowchart.R')
+source('R/flowchart.R', encoding = "UTF-8")
 DiagrammeR::render_graph(dag,  height = 1600)
 
 ```
