@@ -109,7 +109,7 @@ grViz("digraph{
 
 
 ## GitHub
-[Klikk her](https://github.com/anders-kolstad/IBECA) for å gå til Github hvor du kan finne all R koden og del av dataene som er brukt i analysene.
+[Klikk her](https://github.com/NINAnor/IBECA) for å gå til Github hvor du kan finne all R koden og del av dataene som er brukt i analysene.
 
 ### Sjekkliste for tilstandsindikatorer
 

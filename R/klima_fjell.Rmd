@@ -34,7 +34,7 @@ nedbørsmengde og -mønster.
 
 ## Påvirkningsindikatorer
 Her vil du kunne lese om ulike påvirkningsindikatorer som sier oss noe om
-trender og status for den aktuelle påvirkningen 
+trender og status for den aktuelle påvirkningen. 
 
 ```{r cars}
 summary(cars)

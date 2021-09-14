@@ -134,9 +134,19 @@ nodes2$br[nodes2$type=="ege"] <- c(
 nodes2$URL <- "https://ninanor.github.io/IBECA/faktaark"
 
 # Custum URLs
-nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#bestandsnivå-fjellrev"
-nodes2$URL[nodes2$nodes== "Bestandsnivå jerv"] <- "https://ninanor.github.io/IBECA/faktaark#bestandsnivå-jerv"
-nodes2$URL[nodes2$nodes== "Kongeørn"] <- "https://ninanor.github.io/IBECA/faktaark#kongeoern"
+nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrev"
+nodes2$URL[nodes2$nodes== "Bestandsnivå jerv"] <- "https://ninanor.github.io/IBECA/faktaark#jerv"
+nodes2$URL[nodes2$nodes== "Kongeørn"] <- "https://ninanor.github.io/IBECA/faktaark#kongeørn"
+nodes2$URL[nodes2$nodes== "Ellenberg N"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-n"
+nodes2$URL[nodes2$nodes== "Ellenberg L"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-l"
+nodes2$URL[nodes2$nodes== "Areal uten tekniske inngrep"] <- "https://ninanor.github.io/IBECA/faktaark#areal-uten-tekniske-inngrep"
+nodes2$URL[nodes2$nodes== "Smågnagere"] <- "https://ninanor.github.io/IBECA/faktaark#smågnagere"
+nodes2$URL[nodes2$nodes== "Smågnagere"] <- "https://ninanor.github.io/IBECA/faktaark#smågnagere"
+nodes2$URL[nodes2$nodes== "Bestandsnivå lirype"] <- "https://ninanor.github.io/IBECA/faktaark#lirype"
+nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrype"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrype"
+nodes2$URL[nodes2$nodes== "NI for fjell"] <- "https://ninanor.github.io/IBECA/faktaark#naturindeks-for-fjell"
+nodes2$URL[nodes2$nodes== "Areal av isbreer"] <- "https://ninanor.github.io/IBECA/faktaark#areal-av-isbreer"
+nodes2$URL[nodes2$nodes== "Snømengde"] <- "https://ninanor.github.io/IBECA/faktaark#snømengde"
 
 # Påvirkninger
 nodes2$URL[nodes2$nodes== "Beskatning"] <- 

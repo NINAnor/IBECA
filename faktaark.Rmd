@@ -51,43 +51,134 @@ for(i in 1:nrow(doc)){
 
 ```
 
-### Bestandsnivå Fjellrev
+### Fjellrev
 
-Under ser du metadatasjemaet for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/bestandsnivafjellrev.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/bestandsnivafjellrev.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 
 ```{r, echo=FALSE}
-tbl <- get('Bestandsnivå fjellrev')
+tbl <- get('Bestandsnivå-fjellrev')
 tbl
 
 ```
 
 
-### Bestandsnivå Jerv
+### Jerv
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/jerv.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 ```{r, echo=FALSE}
-tbl <- get('Bestandsnivå jerv')
+tbl <- get('Bestandsnivå-jerv')
 tbl
 
-```
-
-
-
-
-Last update:
-```{r}
-Sys.time()
 ```
 
 
 
 ### Kongeørn
 
-Under ser du metadatasjemaet for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/kongeoern.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/kongeoern.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 
 ```{r, echo=FALSE}
 tbl <- get('Kongeørn')
 tbl
 
+```
+
+
+### Ellenberg N
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/ellenberg-n.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("EllenbergN")
+tbl
+
+```
+
+### Ellenberg L
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/ellenberg-l.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("EllenbergL")
+tbl
+```
+
+### Areal uten tekniske inngrep
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/inon.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Areal-uten-tekniske-inngrep")
+tbl
+
+```
+
+### Smågnagere
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/smaagnagere.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Smågnagere")
+tbl
+
+```
+
+### Lirype
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/lirype.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Bestandsnivå-lirype")
+tbl
+
+```
+
+### Fjellrype
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fjellrype.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Bestandsnivå-fjellrype")
+tbl
+
+```
+
+### Naturindeks for fjell
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/NIfjell.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("NI-for-fjell")
+tbl
+
+```
+
+### Areal av isbreer
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/areal-av-isbreer.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Areal-av-isbreer")
+tbl
+```
+
+
+### Snømengde
+
+Under ser du faktaarket for indikatoren. ![](figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/snoemengde.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Snømengde")
+tbl
 ```

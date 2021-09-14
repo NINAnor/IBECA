@@ -1,0 +1,49 @@
+---
+title: "Økosystem Fjell"
+
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- 'docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'fjell.html'))})
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+[Hjem](https://ninanor.github.io/IBECA) | 
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
+![test](figures/fjellLogo.png){width=1cm} |
+[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
+![test](figures/skogLogo.png){width=0.5cm} |
+[Faktaark](https://ninanor.github.io/IBECA/faktaark)
+
+
+### Indikatorenes tilknyttning til påvirkninger og egenskaper
+
+Denne figurene er kun et 'proof of consept', men skal vise hvordan tilstandsikatorene knytter seg til de ulike påvirkningene og egenskapene. Nodene er klikkbare og tar deg til faktaarket. Hold musepeker over boksene får å se noe utfyllende informasjon, og klikk for se enda mer detaljer.
+
+```{r plotting, message=FALSE, echo=FALSE}
+library(DiagrammeR)
+source('R/flowchart.R', encoding = "UTF-8")
+DiagrammeR::render_graph(dag,  height = 1600)
+
+```
+
+
+
+
+
+
