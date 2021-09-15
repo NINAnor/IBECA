@@ -81,7 +81,7 @@ nodes <- rbind(nodes, space)
 
 
 # subset -----------------------------------------------------------------
-# Removing the dataset stuff from this figure
+# Removing the data set stuff from this figure
 
 nodes2 <- nodes[nodes$type!="dat",]
 edges2 <- edges[edges$kategori!="dat-ind",]
@@ -111,7 +111,7 @@ toID <- row.names(nodes2)[nodes2$nodes %in% theTo]
 
 
 
-# the dag craches if there's a column called tooltip
+# the figure function craches if there's a column called tooltip
 edges2 <- rename(edges2, tooltip_edge = tooltip)
 
 
@@ -246,3 +246,9 @@ dag <- create_graph(
   set_node_attrs(node_attr = fillcolor, values =  "white", nodes = supID)%>%
   
   set_node_attrs(node_attr = label, values = nodes2$br)
+
+rm(dat, edges, edges2, ege, fakeEdge, ind, lineBreaks,
+   nodes, nodes2, paa, space, datID, egeID,
+   fromID, indID, mainID, paaID, space2ID,
+   spaceID, supID, theFrom, theTo, toID)
+# render_graph(dag)
