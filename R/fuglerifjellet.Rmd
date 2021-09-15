@@ -27,7 +27,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ![test](../figures/skogLogo.png){width=0.5cm} |
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
-
+asda
 <!-- This is a comment -->
 ```{r, echo=FALSE}
 getwd()
