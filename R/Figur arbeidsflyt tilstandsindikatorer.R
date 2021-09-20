@@ -1,7 +1,7 @@
 library(DiagrammeR)
 
 
-
+flyt <- 
 grViz("digraph{
 
   graph [compound = true, nodesep = .15, ranksep = .8,
@@ -79,11 +79,9 @@ subgraph cluster {
 }")
 
 
-
-
-
-
-
+DiagrammeR::export_graph(graph = flyt, 
+                         file_type = 'PNG', 
+                         file_name = '../output/flytskjema.png')
 
 
 

@@ -16,6 +16,10 @@ knit: (function(input_file, encoding) {
 ```{r setup, include=FALSE, message=FALSE}
 library(knitr)
 library(sf)
+library(raster) 
+library(sp)
+library(rgdal)
+library(stars)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -29,20 +33,109 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## Analyser av kongeørnterritorier
-Det brukes lokale stier da dataene ikke skal være offentlig tilgjengelige.
+Datasettet ligger på P:// som er en server på NINA.
 
 
 ```{r import}
-dat <- st_read('../data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
-dat
+dat <- st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+head(dat)
+```
+Datasettet inneholder alle kjente kongeørnterritorier i Norge (vi bryr oss ikke om streiffulger). Ikke alle territorier er okkupert til en hver tid. Det er to kolonner (`Visit_2021` og `Visit_20`) som indikarer hvorvidt territoriene har blitt overvåket i hhv 2010-2014 og/eller 2015-2019. Det er med andre ord data mellom 2010 og 2019. La oss se hvor mange territorier det er:
+
+```{r}
+length(unique(dat$Terr_total))
+```
+Er det noen duplikater?
+```{r}
+nrow(dat)
+```
+Nei, det er det ikke.
+
+Hvor mange territorier ble overvåket i siste periode?
+```{r}
+table(dat$Visited_20)
+```
+Det er 533 territorier som ble overvåket i siste periode. Av disse var det kun 398 som var okkupert (pers. com. Jenny Mattison). Modelleringer tilseier at det skal være rundt 1027 okkuperte territorier i Norge under siste perioden (2015-2019) (pers. com. Jenny Mattison). Disse dataene finnes på fylkesnivå.  
+
+```{r}
+table(dat$Visit_2010, dat$Visited_20, deparse.level = 2)
+```
+Tabellen over sier oss at 635 territorier ikke har vært overvåket i noen av periodene (!?), og at 335 har vært overvåket i begge. 
+
+
+Ett territorie er en sirkel med radius 10 km plassert rundt sentrumspunktet for de reirene som er inkludert i det samme territoriet (det kan være flere, men bare ett er okkupert til en hvert tid).
+
+La oss se hvordan territoriene fordeler seg i landet. Først, las oss se hvilke crs dataene våre har og deretter laste inn en outline for Norge.
+
+```{r crs}
+crs(dat)
+```
+
+```{r outline, eval=FALSE}
+nor <- raster::getData('GADM', country='NOR', level=0)%>%
+  sp::spTransform("+proj=utm +zone=33")
+saveRDS(nor, '../data/norway_outline.RDS')
+```
+
+```{r, echo=FALSE}
+nor <- readRDS('../data/norway_outline.RDS')
+```
+
+```{r plotting}
+plot(nor)
+plot(dat[,c('Terr_total', 'geometry')], add=T)
+```
+Det er ingenting på Østlandet. Ellers så er landet godt dekt.
+
+
+## Fjellmasken
+Det neste vi må gjøre er å ekskludere territorier som ikke har fjell. Her har vi flere muligheter. La oss først ta inn fjellmasken.
+
+```{r import fjell}
+fjell <- stars::read_stars("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
+class(fjell)
+```
+Jeg tror fila er så stor at vi kun får en proxy og ikke alle verdiene:
+```{r}
+dim(fjell)
+```
+32k * 32k gir litt over en milliard verdeier (piksler)
+
+Vi kan gi nytt navn til attributestabellen
+```{r}
+names(fjell) <- "ecosystemType"
+```
+
+```{r}
+```
+
+Her er måten for å vise crs 
+```{r, eval=F}
+st_crs(fjell)
 ```
 
 
-```{r plot}
-plot(dat[,c('Terr_total', 'geometry')])
+```{r}
+names(fjell)  <- "fjell"
+class(fjell$fjell)
+```
+Oppløsningen er 50 m så det er veldig mange verdier (4Gb)
+
+```{r plotting fjell}
+plot(fjell)
+summary(fjell)
 ```
 
+Denne masken ser ut til å være piksler med verdi 202 fra dette kartlaget:
+P:\41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly\FINAL\Raw_data\Ecosystems\ecoMap_50m.tif
 
+Nå må vi fjerne territorier (sf-objects) som ikke har noe fjell (raster) i seg. Det er problematisk at territoriene er polygoner og masken er raster. En løsning er å gjøre polygonene om til raster (raster::rasterize), men da tror jeg vi mister for mye nyanser.  
+
+```{r}
+fjell2 <- st_as_sf(fjell)
+joined <- intersect(dat, fjell)
+joined <- st_intersection(dat, fjell)
+```
 
 ## Sjekkliste
 Sjekklisten er ikke utfylt enda.

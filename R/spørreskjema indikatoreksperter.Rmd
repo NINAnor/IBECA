@@ -1,0 +1,49 @@
+---
+title: "Spørreskjema til indikatoreksperter"
+author: ""
+date: ""
+output: pdf_document
+
+knit: (function(input_file, encoding) {
+  out_dir <- '../data';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'indikatoreksperter.pdf'))})
+---
+## Informasjon 
+
+Spørsmålene under besvares av indikatoreksperten(e), dvs. fagpersonen(e) som kjernegruppen for økologisk tilstands-vurderingene har rådført seg med. Besvarelsen trenger ikke være utfyllende på alle aspekter, men dokumentet bør total sett få frem de viktigste elementene i diskusjonen mellom kjernegruppen og indikatoreksperten, inkludert eventuelle betenkeligheter ved bruk av indikatoren. Dokumentet vil bli presentert for ekspertgruppen som vil ta endelig stilling til om indikatoren skal inngå i vurderingen for økologisk tilstand. Det oppfordres til å inkludere viktige referanser i svarene.  
+
+
+
+
+\def\LayoutTextField#1#2{% label, field
+  #2%
+}
+
+
+\begin{Form}
+    Indikatornavn: \TextField[width=10cm]{Indikatornavn}
+    \\\\
+    Navn på utfyller: \TextField[multiline=true, width=10cm,height=1cm]{Tilstede}
+    \\\\
+    Dato: \TextField[width=3cm]{Dato}\\
+    \\
+    \\
+    Er indikatoren relevant for å beskrive en eller flere av de syv økosystemegenskapene? Kort beskrevet, hva er indikatorens betydning i økosystemet og de mest sannsynlige økologiske konsekvenser ved redusert indikatorverdi? 
+    \\\\
+     \TextField[multiline=true, width=\linewidth,height=6cm,invisible=true]{a}
+     \\\\
+    I hvilken grad opplever du datagrunnlaget som godt nok for å gi et representativt bilde av hvordan indikatoren reagerer på menneskelig påvirkning? Og hvilke påvirkningsfaktorer mener du ev. er viktigst for indikatoren?
+    \\\\
+     \TextField[multiline=true, width=\linewidth,height=6cm]{b}\\\\
+    Hvor sterkt faglig begrunnet opplever du at fremgangsmåten er for fastsettingen av referansetilstand og grenseverdi for god økologisk tilstand?  
+    \\\\
+     \TextField[multiline=true, width=\linewidth,height=6cm]{c}\\\\
+      Eventuelle andre kommentarer:  
+      \\\\
+     \TextField[multiline=true, width=\linewidth,height=6cm]{d}
+     \\\\
+      
+    
+\end{Form}
