@@ -16,8 +16,8 @@ knit: (function(input_file, encoding) {
 ```{r setup, include=FALSE, message=FALSE}
 library(knitr)
 library(sf)
-library(raster) 
-library(sp)
+#library(raster) # byttet ut med stars
+library(sp)  # usikker på om jeg trenger denne
 library(rgdal)
 library(stars)
 knitr::opts_chunk$set(echo = TRUE)
