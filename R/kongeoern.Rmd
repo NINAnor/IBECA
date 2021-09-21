@@ -71,6 +71,10 @@ La oss se hvordan territoriene fordeler seg i landet. Først, las oss se hvilke 
 crs(dat)
 ```
 
+
+
+
+## Outline of Norway
 ```{r outline, eval=FALSE}
 nor <- raster::getData('GADM', country='NOR', level=0)%>%
   sp::spTransform("+proj=utm +zone=33")
@@ -81,59 +85,71 @@ saveRDS(nor, '../data/norway_outline.RDS')
 nor <- readRDS('../data/norway_outline.RDS')
 ```
 
+Lets also get a zoom box ready
+```{r}
+myExt <- raster::extent(100000, 300000, 6800000, 7000000)
+```
+
+
 ```{r plotting}
-plot(nor)
+plot(nor, axes=T)
 plot(dat[,c('Terr_total', 'geometry')], add=T)
+plot(myExt, add=T, lwd=10)
+
+
 ```
 Det er ingenting på Østlandet. Ellers så er landet godt dekt.
+
+Zoomer inn i ruta...
+```{r}
+datc <- sf::st_crop(dat, myExt)
+plot(datc[,c('Terr_total', 'geometry')])
+
+```
+Det er som vi ser veldig mye overlapp mellom de teoretiske territoriene.
+
 
 
 ## Fjellmasken
 Det neste vi må gjøre er å ekskludere territorier som ikke har fjell. Her har vi flere muligheter. La oss først ta inn fjellmasken.
 
 ```{r import fjell}
-<<<<<<< HEAD
-fjell <- stars::read_stars("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif",
-                           proxy=F)
+#fjell <- stars::read_stars("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif",
+#                           proxy=F)
 
-#fjell <- stars::read_stars()
-=======
-fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
+#fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
 fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif")
->>>>>>> 8fcc22e3e17e1dc6c9b0e3ccbd16c01ef4edf84f
 
 class(fjell)
 ```
-Fila er så stor at vi kun får en proxy om vi ikke sier noe annet.
+Fila erganske stor.
+
+
 ```{r}
 dim(fjell)
 ```
-32k * 32k gir litt over en milliard verdeier (piksler)
-
-Vi kan gi nytt navn til attributestabellen
-```{r}
-names(fjell) <- "ecosystemType"
-```
-
-```{r}
-class(fjell$ecosystemType)
-```
-Matriksen over er en datatabell med 32k x 32k verdier.
-
-
-Her er måten for å vise crs 
-```{r, eval=F}
-st_crs(fjell)
-```
+32k * 32k gir litt over en milliard verdier (piksler)
 
 
 ```{r plotting fjell}
-fjell[fjell$ecosystemType==5]
+plot(fjell)
+```
+Denne masken ser ut til å være piksler med verdi 202 fra dette kartlaget:
+P:\41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly\FINAL\Raw_data\Ecosystems\ecoMap_50m.tif
+
+Fila er ganske tung å jobbe med så vi må prøve å redusere størrelsen
+```{r}
+summary(fjell)
+```
+
+Alle 0'er kan bli NA
+
+```{r}
+fjellc <-  raster::mask(fjell, fjell[fjell==0],maskvalue = 0, updatevalue = NA)
+fjell[fjell[]==0] <- NA
 
 ```
 
-Denne masken ser ut til å være piksler med verdi 202 fra dette kartlaget:
-P:\41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly\FINAL\Raw_data\Ecosystems\ecoMap_50m.tif
 
 Nå må vi fjerne territorier (sf-objects) som ikke har noe fjell (raster) i seg. Det er problematisk at territoriene er polygoner og masken er raster. En løsning er å gjøre polygonene om til raster (raster::rasterize), men da tror jeg vi mister for mye nyanser.  
 
