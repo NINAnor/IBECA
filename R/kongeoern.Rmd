@@ -92,10 +92,14 @@ Det er ingenting på Østlandet. Ellers så er landet godt dekt.
 Det neste vi må gjøre er å ekskludere territorier som ikke har fjell. Her har vi flere muligheter. La oss først ta inn fjellmasken.
 
 ```{r import fjell}
-fjell <- stars::read_stars("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
+fjell <- stars::read_stars("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif",
+                           proxy=F)
+
+#fjell <- stars::read_stars()
+
 class(fjell)
 ```
-Jeg tror fila er så stor at vi kun får en proxy og ikke alle verdiene:
+Fila er så stor at vi kun får en proxy om vi ikke sier noe annet.
 ```{r}
 dim(fjell)
 ```
@@ -107,7 +111,10 @@ names(fjell) <- "ecosystemType"
 ```
 
 ```{r}
+class(fjell$ecosystemType)
 ```
+Matriksen over er en datatabell med 32k x 32k verdier.
+
 
 Her er måten for å vise crs 
 ```{r, eval=F}
@@ -115,15 +122,9 @@ st_crs(fjell)
 ```
 
 
-```{r}
-names(fjell)  <- "fjell"
-class(fjell$fjell)
-```
-Oppløsningen er 50 m så det er veldig mange verdier (4Gb)
-
 ```{r plotting fjell}
-plot(fjell)
-summary(fjell)
+fjell[fjell$ecosystemType==5]
+
 ```
 
 Denne masken ser ut til å være piksler med verdi 202 fra dette kartlaget:
