@@ -16,10 +16,10 @@ knit: (function(input_file, encoding) {
 ```{r setup, include=FALSE, message=FALSE}
 library(knitr)
 library(sf)
-#library(raster) # byttet ut med stars
+library(raster) # burde kanskje byttes ut med stars
 library(sp)  # usikker på om jeg trenger denne
 library(rgdal)
-library(stars)
+# library(stars) # vil ikke la seg installere på server
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -37,7 +37,7 @@ Datasettet ligger på P:// som er en server på NINA.
 
 
 ```{r import}
-dat <- st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+dat <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
 head(dat)
 ```
 Datasettet inneholder alle kjente kongeørnterritorier i Norge (vi bryr oss ikke om streiffulger). Ikke alle territorier er okkupert til en hver tid. Det er to kolonner (`Visit_2021` og `Visit_20`) som indikarer hvorvidt territoriene har blitt overvåket i hhv 2010-2014 og/eller 2015-2019. Det er med andre ord data mellom 2010 og 2019. La oss se hvor mange territorier det er:
@@ -92,7 +92,9 @@ Det er ingenting på Østlandet. Ellers så er landet godt dekt.
 Det neste vi må gjøre er å ekskludere territorier som ikke har fjell. Her har vi flere muligheter. La oss først ta inn fjellmasken.
 
 ```{r import fjell}
-fjell <- stars::read_stars("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
+fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
+fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif")
+
 class(fjell)
 ```
 Jeg tror fila er så stor at vi kun får en proxy og ikke alle verdiene:
