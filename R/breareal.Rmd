@@ -1,0 +1,152 @@
+---
+title: "Breareal"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'areal-av-isbreer.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(sf)
+library(raster)
+library(dplyr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+[Hjem](https://ninanor.github.io/IBECA) | 
+[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
+![test](../figures/fjellLogo.png){width=1cm} |
+[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
+![test](../figures/skogLogo.png){width=0.5cm} |
+[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
+
+
+## Analyser av breareal
+
+Her er det nye breatlasset med breareal fra 2018 og 2019 hentet fra Sentinell (ref Liss Marie Andreassen, NVE)
+```{r}
+breatlas <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/breatlas_2018_2019/Breatlas_20182019_temp20210922_lma.shp')
+```
+
+CRS: UTM 33N ETRS89
+Det er 6915 polygoner
+
+```{r}
+plot(breatlas[1], main = "Breatlas 2018-2019", col = "black")
+```
+
+Arealet ser større ut en det er fordi det er lagt på kantlinjer.
+
+```{r}
+breatlas$area <- st_area(breatlas)
+par(mfrow=c(1,2))
+hist(breatlas$area)
+plot(breatlas$area)
+```
+
+De fleste polygonene er små. Og så er det noen få veldig store. Den største er 50 km2.
+
+
+## Kart over Norge
+```{r}
+nor <- readRDS('../data/norway_outline.RDS')%>%
+  st_as_sf()%>%
+  st_transform(crs=crs(breatlas))
+plot(nor$geometry, axes=T, main = "Breatlas 2018-2019")
+  plot(breatlas$geometry, add=T, border = "blue")
+
+```
+
+UTM33 WGS84
+
+Her er utstrekningen til breer i perioden 1952 til 1985, basert på gamle kart.
+```{r}
+n50 <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/n50/cryoclim_GAO_NO_1952_1985_UTM_33N.shp')%>%
+  st_transform(crs = crs(breatlas))
+
+```
+
+```{r}
+plot(nor$geometry, axes=T, main = "n50 - 1952-1985")
+  plot(n50$geometry, add=T, border = "red")
+```
+
+La oss plotte alt sammen oppå hverandre
+
+```{r}
+
+myExt <- raster::extent(c(0, 100000, 6840000, 6900000))
+myExt2 <- raster::extent(c(5000, 10000, 6880000, 6885000))
+
+par(mfrow=c(1,3))
+plot(nor$geometry, axes=T)
+    plot(n50$geometry,  border = "orange", col = scales::alpha("orange", 1), add=T)
+    plot(myExt, add=T, lwd=2)
+
+plot(nor$geometry, xlim=c(0, 100000),
+          ylim=c(6840000, 6900000),
+          axes=T)
+    plot(n50$geometry, add=T, col = "black")
+    plot(myExt2, add=T, lwd=3, col="orange")
+    
+plot(nor$geometry, xlim=c(5000, 10000),
+          ylim=c(6880000, 6885000),
+     axes=T)
+    plot(n50$geometry, add=T, col = "red")
+    plot(breatlas$geometry, add=T, col = "black")
+    
+```
+
+De røde områdene i kartet til høyre er hvor isen har trekt seg tilbake. 
+Nå må vi dele kartlage inn etter regioner for så å sammenligne arealet i n50 med breatlaset. Hvordan vi gjør det med kalkulering av usikkerhet vet jeg fortsatt ikke.
+
+Henter shp med regionene
+
+```{r}
+reg <- st_read("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
+  st_transform(crs = crs(breatlas))
+```
+
+
+```{r}
+plot(nor$geometry, axes=T)
+  plot(reg$geometry, add=T, border = "black", 
+       col = scales::alpha(c("blue", 
+                             "red", 
+                             "green",
+                             "yellow",
+                             "brown"), .2))
+```
+
+Før vi henter brearealet inn i tabellen for regionene må jeg prøve å fikse et problem med noen brepolygoner som krysser seg selv
+```{r}
+table(st_is_valid(breatlas))
+```
+```{r}
+st_is_valid(breatlas, reason=T)[1:10]
+
+```
+
+```{r}
+breatlas2 <- st_buffer(breatlas, 0.0)
+table(st_is_valid(breatlas2))
+```
+
+```{r}
+plot(nor$geometry, xlim=c(5000, 10000),
+          ylim=c(6880000, 6885000),
+     axes=T)
+    plot(breatlas2$geometry, add=T, col = scales::alpha("blue",0.5))
+    plot(breatlas$geometry, add=T, col = scales::alpha("yellow",0.5))
+```
+
+Dette ser ut til å ha funket fint
