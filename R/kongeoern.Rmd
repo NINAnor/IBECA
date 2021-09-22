@@ -259,15 +259,22 @@ hist(datcc$andelFjell)
 Territoriene har god spredning når det gjelder andel fjellareal
 
 ```{r}
-par(mfrow=c(1,2))
-plot(fjellc10cv3, main = "Aggregation with threshold")
-  plot(datcc$geometry[datcc$andelFjell<0.2], add=T, col = heat.colors(datcc$andelFjell*10, alpha=.5))
-plot(fjellc10cv3, main = "Aggregation with threshold")
-  plot(datcc$geometry[datcc$andelFjell>0.8], add=T, col = heat.colors(datcc$andelFjell*10, alpha=.5))
+myCols <- sf.colors(5, alpha = 0.5)
+datcc$colour <- myCols[1]
+datcc$colour[datcc$andelFjell >=0.2 & datcc$andelFjell < 0.4] <- myCols[2]
+datcc$colour[datcc$andelFjell >=0.4 & datcc$andelFjell < 0.6] <- myCols[3]
+datcc$colour[datcc$andelFjell >=0.6 & datcc$andelFjell < 0.8] <- myCols[4]
+datcc$colour[datcc$andelFjell >=0.8]                          <- myCols[5]
 
-
+plot(fjellc10cv3, main = "Aggregation with threshold", legend=F)
+  plot(datcc$geometry, add=T, col = datcc$colour)
+  legend("bottomright",   
+      legend = c("<.2", ".2-.4", ".4-.6", ".6-.8", ">.8"), 
+      fill = myCols)
+  
 ```
-Dette differensierer territoriene etter hvor mye fjell de innehar. Vi kan 
+Dette differensierer territoriene etter hvor mye fjell de innehar. Gjennomsnittet i dette utsnittet er `r mean(datcc$andelFjell)`.
+
 
 
 
