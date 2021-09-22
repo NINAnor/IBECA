@@ -16,8 +16,10 @@ knit: (function(input_file, encoding) {
 ```{r setup, include=FALSE, message=FALSE}
 library(knitr)
 library(sf)
-library(raster)
+library(raster) # kunne kanskje byttet til stars
 library(dplyr)
+library(lwgeom)
+library(tmap)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -30,7 +32,11 @@ knitr::opts_chunk$set(echo = TRUE)
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
-## Analyser av breareal
+# Analyser av breareal
+
+## Importerer data
+
+### Breatlas
 
 Her er det nye breatlasset med breareal fra 2018 og 2019 hentet fra Sentinell (ref Liss Marie Andreassen, NVE)
 ```{r}
@@ -56,7 +62,8 @@ plot(breatlas$area)
 De fleste polygonene er små. Og så er det noen få veldig store. Den største er 50 km2.
 
 
-## Kart over Norge
+### Kart over Norge
+
 ```{r}
 nor <- readRDS('../data/norway_outline.RDS')%>%
   st_as_sf()%>%
@@ -67,6 +74,9 @@ plot(nor$geometry, axes=T, main = "Breatlas 2018-2019")
 ```
 
 UTM33 WGS84
+
+
+### N50
 
 Her er utstrekningen til breer i perioden 1952 til 1985, basert på gamle kart.
 ```{r}
@@ -95,20 +105,22 @@ plot(nor$geometry, axes=T)
 plot(nor$geometry, xlim=c(0, 100000),
           ylim=c(6840000, 6900000),
           axes=T)
-    plot(n50$geometry, add=T, col = "black")
+    plot(n50$geometry, add=T, col = "grey")
     plot(myExt2, add=T, lwd=3, col="orange")
     
 plot(nor$geometry, xlim=c(5000, 10000),
           ylim=c(6880000, 6885000),
      axes=T)
     plot(n50$geometry, add=T, col = "red")
-    plot(breatlas$geometry, add=T, col = "black")
+    plot(breatlas$geometry, add=T, col = "grey")
     
 ```
 
 De røde områdene i kartet til høyre er hvor isen har trekt seg tilbake. 
 Nå må vi dele kartlage inn etter regioner for så å sammenligne arealet i n50 med breatlaset. Hvordan vi gjør det med kalkulering av usikkerhet vet jeg fortsatt ikke.
 
+
+### Regioner
 Henter shp med regionene
 
 ```{r}
@@ -137,8 +149,14 @@ st_is_valid(breatlas, reason=T)[1:10]
 ```
 
 ```{r}
-breatlas2 <- st_buffer(breatlas, 0.0)
+# krever lwgeom
+breatlas2 <- st_make_valid(breatlas)
 table(st_is_valid(breatlas2))
+
+# samme resultat:
+#breatlas2 <- st_buffer(breatlas, 0.0)
+#table(st_is_valid(breatlas2))
+
 ```
 
 ```{r}
@@ -149,4 +167,116 @@ plot(nor$geometry, xlim=c(5000, 10000),
     plot(breatlas$geometry, add=T, col = scales::alpha("yellow",0.5))
 ```
 
-Dette ser ut til å ha funket fint
+Dette ser ut til å ha funket fint. Denne litt kunstige inndelingen av tilgrensende polygoner er forresten bare i det nye breatlaset, ikke i n50.
+
+```{r}
+breatlas <- breatlas2
+rm(breatlas2)
+```
+
+```{r}
+unique(reg$region)
+```
+
+Fikser øæå
+```{r}
+reg$region[reg$region=="Ã\u0098stlandet"] <- "Østlandet"
+reg$region[reg$region=="SÃ¸rlandet"] <- "Sørlandet"
+```
+
+## Breareal per region
+### Dagens breer
+Her er en metode for å finne breareal per region.
+
+```{r}
+brealtas_reg <- st_intersection(breatlas, reg)
+```
+Skjekker hva som skjer med breer som ligger midt mellom to regioner
+```{r}
+plot(brealtas_reg$geometry[brealtas_reg$region=="Midt-Norge"], 
+    col = scales::alpha("red",0.5), border=NA, axes=T, 
+     ylim=c(6900000, 6905000),
+     xlim=c(85000, 100000))
+plot(brealtas_reg$geometry[brealtas_reg$region=="Vestlandet"], 
+     col = scales::alpha("green",0.5), border=NA, add=T)
+  plot(nor$geometry, add=T)
+```
+
+Det deler polygonene ved grensen. Det er bra
+
+
+```{r}
+brealtas_reg$area_crop <- st_area(brealtas_reg)
+
+bretabell <- tapply(
+       brealtas_reg$area_crop,
+       brealtas_reg$region,
+       FUN = sum)
+bretabell <- bretabell/1000000 
+barplot(
+  bretabell,
+  ylab="Breareal (km2)"
+)
+```
+### Samme for N50
+
+```{r}
+n50x <- st_make_valid(n50)
+n50_reg <- st_intersection(n50x, reg)
+
+```
+```{r}
+plot(n50_reg$geometry[n50_reg$region=="Midt-Norge"], 
+    col = scales::alpha("red",0.5), border=NA, axes=T, 
+     ylim=c(6900000, 6905000),
+     xlim=c(85000, 100000))
+plot(n50_reg$geometry[n50_reg$region=="Vestlandet"], 
+     col = scales::alpha("green",0.5), border=NA, add=T)
+  plot(nor$geometry, add=T)
+```
+```{r}
+n50_reg$area_crop <- st_area(n50_reg)
+
+n50tabell <- tapply(
+       n50_reg$area_crop,
+       n50_reg$region,
+       FUN = sum)
+n50tabell <- n50tabell/1000000 
+
+
+barplot(
+  n50tabell,
+  ylab="Breareal (km2)",
+  col="grey"
+)
+barplot(
+  bretabell,
+  ylab="Breareal (km2)",
+  add=T,
+  col="grey30"
+)
+
+```
+
+## Skalerte verdier
+
+```{r}
+myTbl <- tibble(region          = names(bretabell),
+                indikator        = bretabell,
+                referanseverdi   = n50tabell)
+myTbl$skalert_indikator <- myTbl$indikator/myTbl$referanseverdi
+  
+```
+```{r}
+reg$skalert_indikator <- myTbl$skalert_indikator[match(reg$region, myTbl$region)]
+reg_clipped <- st_intersection(reg, nor)
+
+tm_shape(reg_clipped) + 
+  tm_polygons(col="skalert_indikator", border.col = "white")+
+  tm_shape(nor)+
+  tm_polygons(alpha = 0,border.col = "black")
+```
+
+
+
+
