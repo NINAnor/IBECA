@@ -39,7 +39,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ### Breatlas
 
 Her er det nye breatlasset med breareal fra 2018 og 2019 hentet fra Sentinell (ref Liss Marie Andreassen, NVE)
-```{r}
+```{r import1}
 breatlas <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/breatlas_2018_2019/Breatlas_20182019_temp20210922_lma.shp')
 ```
 
@@ -52,7 +52,7 @@ plot(breatlas[1], main = "Breatlas 2018-2019", col = "black")
 
 Arealet ser større ut en det er fordi det er lagt på kantlinjer.
 
-```{r}
+```{r breareal}
 breatlas$area <- st_area(breatlas)
 par(mfrow=c(1,2))
 hist(breatlas$area)
@@ -64,7 +64,7 @@ De fleste polygonene er små. Og så er det noen få veldig store. Den største 
 
 ### Kart over Norge
 
-```{r}
+```{r import2}
 nor <- readRDS('../data/norway_outline.RDS')%>%
   st_as_sf()%>%
   st_transform(crs=crs(breatlas))
@@ -79,7 +79,7 @@ UTM33 WGS84
 ### N50
 
 Her er utstrekningen til breer i perioden 1952 til 1985, basert på gamle kart.
-```{r}
+```{r import3}
 n50 <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/n50/cryoclim_GAO_NO_1952_1985_UTM_33N.shp')%>%
   st_transform(crs = crs(breatlas))
 
@@ -92,7 +92,7 @@ plot(nor$geometry, axes=T, main = "n50 - 1952-1985")
 
 La oss plotte alt sammen oppå hverandre
 
-```{r}
+```{r plotter-alt}
 
 myExt <- raster::extent(c(0, 100000, 6840000, 6900000))
 myExt2 <- raster::extent(c(5000, 10000, 6880000, 6885000))
@@ -123,7 +123,7 @@ Nå må vi dele kartlage inn etter regioner for så å sammenligne arealet i n50
 ### Regioner
 Henter shp med regionene
 
-```{r}
+```{r import4}
 reg <- st_read("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
   st_transform(crs = crs(breatlas))
 ```
@@ -148,7 +148,7 @@ st_is_valid(breatlas, reason=T)[1:10]
 
 ```
 
-```{r}
+```{r make-valid}
 # krever lwgeom
 breatlas2 <- st_make_valid(breatlas)
 table(st_is_valid(breatlas2))
@@ -188,7 +188,7 @@ reg$region[reg$region=="SÃ¸rlandet"] <- "Sørlandet"
 ### Dagens breer
 Her er en metode for å finne breareal per region.
 
-```{r}
+```{r intersection}
 brealtas_reg <- st_intersection(breatlas, reg)
 ```
 Skjekker hva som skjer med breer som ligger midt mellom to regioner
@@ -205,7 +205,7 @@ plot(brealtas_reg$geometry[brealtas_reg$region=="Vestlandet"],
 Det deler polygonene ved grensen. Det er bra
 
 
-```{r}
+```{r pltting-area-per-region}
 brealtas_reg$area_crop <- st_area(brealtas_reg)
 
 bretabell <- tapply(
@@ -220,7 +220,7 @@ barplot(
 ```
 ### Samme for N50
 
-```{r}
+```{r intersection2}
 n50x <- st_make_valid(n50)
 n50_reg <- st_intersection(n50x, reg)
 
@@ -234,7 +234,7 @@ plot(n50_reg$geometry[n50_reg$region=="Vestlandet"],
      col = scales::alpha("green",0.5), border=NA, add=T)
   plot(nor$geometry, add=T)
 ```
-```{r}
+```{r plotting-ref-and-ind}
 n50_reg$area_crop <- st_area(n50_reg)
 
 n50tabell <- tapply(
@@ -260,13 +260,14 @@ barplot(
 
 ## Skalerte verdier
 
-```{r}
+```{r skalert}
 myTbl <- tibble(region          = names(bretabell),
                 indikator        = bretabell,
                 referanseverdi   = n50tabell)
 myTbl$skalert_indikator <- myTbl$indikator/myTbl$referanseverdi
   
 ```
+
 ```{r}
 reg$skalert_indikator <- myTbl$skalert_indikator[match(reg$region, myTbl$region)]
 reg_clipped <- st_intersection(reg, nor)
@@ -276,7 +277,33 @@ tm_shape(reg_clipped) +
   tm_shape(nor)+
   tm_polygons(alpha = 0,border.col = "black")
 ```
+Det er 3 måter å kalkulere den nasjonale indikatorverdien på:
+
+1) ta gjennomsnitt av de skalerte regionale indikatorverdiene og la alle regoinene telle likt (regional skaleringsmetode)
+```{r}
+mean(reg_clipped$skalert_indikator)
+```
+
+2) summer indikatorverdien for hele landet og del på den summerte referanseverdien for hele landet (nasjonal metode)
+```{r}
+mean(bretabell)/mean(n50tabell)
+```
 
 
+3) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet areal (arealveid metode)
+
+```{r}
+reg_clipped$areal <- st_area(reg_clipped$geometry)/1000000
+
+totalArea <- sum(reg_clipped$areal)
+
+reg_clipped$skalert_indikator_v <- reg_clipped$skalert_indikator*
+  reg_clipped$areal
+
+
+sumSkalerteIndikatorer <- sum(reg_clipped$skalert_indikator_v)
+
+sumSkalerteIndikatorer/totalArea
+```
 
 
