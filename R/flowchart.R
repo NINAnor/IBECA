@@ -7,19 +7,19 @@ library(dplyr)
 # IMPORT ------------------------------------------------------------------
 
 
-ind <- read_excel("data/indData.xlsx", 
+ind <- read_excel("../data/indData.xlsx", 
                   sheet = "tilstandsindikatorer")
 
-paa <- read_excel("data/indData.xlsx", 
+paa <- read_excel("../data/indData.xlsx", 
                   sheet = "paavirkninger")
 
-ege <- read_excel("data/indData.xlsx", 
+ege <- read_excel("../data/indData.xlsx", 
                   sheet = "egenskaper")
 
-dat <- read_excel("data/indData.xlsx", 
+dat <- read_excel("../data/indData.xlsx", 
                   sheet = "datasett")
 
-edges <- read_excel("data/indData.xlsx", 
+edges <- read_excel("../data/indData.xlsx", 
                     sheet = "relasjoner")
 
 

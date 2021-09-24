@@ -1,0 +1,44 @@
+---
+title: "Økosystem Fjell"
+
+output:
+  html_document:
+    toc: true
+    toc_depth: 6
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'fjell.html'))})
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+### Flytskjema
+Indikatorenes tilknyttning til påvirkninger og egenskaper.
+Klikk på boksene for å lese mer, eller gå rett til [faktarksiden](faktaark.html).
+
+Denne figurene er under arbeid, man skal vise hvordan tilstandsikatorene knytter seg til de ulike påvirkningene og egenskapene. Boksene er klikkbare og tar deg til faktaarket. Hold musepeker over boksene får å se noe utfyllende informasjon, og klikk for se enda mer detaljer.
+
+```{r plotting, message=FALSE, echo=FALSE}
+library(DiagrammeR)
+source('flowchart.R', encoding = "UTF-8")
+DiagrammeR::render_graph(dag,  height = 1600)
+
+```
+
+
+
+
+
+
