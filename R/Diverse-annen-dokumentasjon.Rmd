@@ -27,7 +27,10 @@ library(knitr)
 ## Medarbeidere
 kommer snart...
 
-## MEtadata og rutiner
+## Fjellareal
+[En analyse av fjellareal i de fem regionene. ]('fjellareal-per-region.html')
+
+## Metadata og rutiner
 
 ### Sjekkliste for tilstandsindikatorer
 

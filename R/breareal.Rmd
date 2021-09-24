@@ -24,17 +24,12 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-[Hjem](https://ninanor.github.io/IBECA) | 
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
-![test](../figures/fjellLogo.png){width=1cm} |
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
-![test](../figures/skogLogo.png){width=0.5cm} |
-[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
-
 
 # Analyser av breareal
 
 ## Importerer data
+Det er fire datasett - breatlaset, 50, regioninndelingen, og omriss av Norge.
+Vi trenger ikke fjellmasker da vi kan anta at alle isebreer ligger i fjellet.
 
 ### Breatlas
 
@@ -189,7 +184,9 @@ reg$region[reg$region=="SÃ¸rlandet"] <- "Sørlandet"
 Her er en metode for å finne breareal per region.
 
 ```{r intersection}
-brealtas_reg <- st_intersection(breatlas, reg)
+#brealtas_reg <- st_intersection(breatlas, reg)
+#saveRDS(brealtas_reg, "../data/brealtas_reg_helperfile.rds")
+brealtas_reg <- readRDS("../data/brealtas_reg_helperfile.rds")
 ```
 Skjekker hva som skjer med breer som ligger midt mellom to regioner
 ```{r}
@@ -222,9 +219,11 @@ barplot(
 
 ```{r intersection2}
 n50x <- st_make_valid(n50)
-n50_reg <- st_intersection(n50x, reg)
-
+#n50_reg <- st_intersection(n50x, reg)
+#saveRDS(n50_reg, "../data/n50_helperfile.rds")
+n50_reg <- readRDS("../data/n50_helperfile.rds")
 ```
+
 ```{r}
 plot(n50_reg$geometry[n50_reg$region=="Midt-Norge"], 
     col = scales::alpha("red",0.5), border=NA, axes=T, 
@@ -268,16 +267,26 @@ myTbl$skalert_indikator <- myTbl$indikator/myTbl$referanseverdi
   
 ```
 
-```{r}
+Skalerer og klipper regionene etter norgeskartet
+```{r, message=FALSE}
 reg$skalert_indikator <- myTbl$skalert_indikator[match(reg$region, myTbl$region)]
 reg_clipped <- st_intersection(reg, nor)
+```
 
+
+```{r}
+reg_clipped$skalert_indikator_r <- round(reg_clipped$skalert_indikator, 2)
+tmap_mode("view")
 tm_shape(reg_clipped) + 
   tm_polygons(col="skalert_indikator", border.col = "white")+
+  tm_text("skalert_indikator_r", size=1.5)+
   tm_shape(nor)+
   tm_polygons(alpha = 0,border.col = "black")
+
 ```
-Det er 3 måter å kalkulere den nasjonale indikatorverdien på:
+
+
+Det er 4 måter å kalkulere den nasjonale indikatorverdien på:
 
 1) ta gjennomsnitt av de skalerte regionale indikatorverdiene og la alle regoinene telle likt (regional skaleringsmetode)
 ```{r}
@@ -286,11 +295,11 @@ mean(reg_clipped$skalert_indikator)
 
 2) summer indikatorverdien for hele landet og del på den summerte referanseverdien for hele landet (nasjonal metode)
 ```{r}
-mean(bretabell)/mean(n50tabell)
+sum(bretabell)/sum(n50tabell)
 ```
 
 
-3) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet areal (arealveid metode)
+3) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet totalarealet til regionen (arealveid metode)
 
 ```{r}
 reg_clipped$areal <- st_area(reg_clipped$geometry)/1000000
@@ -305,5 +314,29 @@ sumSkalerteIndikatorer <- sum(reg_clipped$skalert_indikator_v)
 
 sumSkalerteIndikatorer/totalArea
 ```
+4) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet fjellareal (fjellarealveid metode)
 
+For dette trenger jeg [fjellareal per region]('fjellareal-per-region.html'):
+```{r}
+(fjellareal <- readRDS("../data/fjellareal.rds"))
+```
+```{r}
+reg_clipped$fjellareal <- fjellareal$Fjellareal[match(reg_clipped$region, fjellareal$Region)]
+reg_clipped$skalert_indikator_v2 <- reg_clipped$skalert_indikator*
+  reg_clipped$fjellareal
+sum(reg_clipped$skalert_indikator_v2)/sum(reg_clipped$fjellareal)
+```
+
+Alt 1 er nok ikke særlig bra. 
+Alt 2 kan forsvares.
+Alt 3 er nok ikke særlig bra.
+Alt 4 kan forsvares og ligner veldig på hvordan NI kalkuleres. 
+
+Alt 2 sier 'hvordan er den TOTALE ENDRINGEN i breareal i norge sett under ett'.
+Alt 4 sier 'hvordan er den GJENNOMSNITTLIGE endringen i breareal i i de ulike regionene i Norge.
+
+Min intuisjon sier at alt 2 er mer riktig. 
+
+## Usikkerhet
+Jeg kan ikke se noen god måte å inkorporere usikkerhet inn i indikatorverdien. Det eneste jeg kan se for meg er en måte å lage en geografisk usikkerhet ved å først produsere indikatorverdier for mindre arealer (lage en raster med middels oppløning, f.eks. 10x10km2) og bootstrappe fra disse verdiene, men dette vil jeg ikke anbefale.
 
