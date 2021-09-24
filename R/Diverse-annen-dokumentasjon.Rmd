@@ -28,7 +28,7 @@ library(knitr)
 kommer snart...
 
 ## Fjellareal
-[En analyse av fjellareal i de fem regionene. ]('fjellareal-per-region.html')
+[En analyse av fjellareal i de fem regionene. ](fjellareal-per-region.html)
 
 ## Metadata og rutiner
 

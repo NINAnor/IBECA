@@ -257,6 +257,8 @@ barplot(
 
 ```
 
+I figuren over er brearealet i referanseperioden i lyegrått og brearealet i 2018-2019 i mørkegrått. Høyden på det lysegråe partiet viser med andre ord reduksjonen i breareal i denne perioden.
+
 ## Skalerte verdier
 
 ```{r skalert}
@@ -290,12 +292,12 @@ Det er 4 måter å kalkulere den nasjonale indikatorverdien på:
 
 1) ta gjennomsnitt av de skalerte regionale indikatorverdiene og la alle regoinene telle likt (regional skaleringsmetode)
 ```{r}
-mean(reg_clipped$skalert_indikator)
+(alt1 <- mean(reg_clipped$skalert_indikator))
 ```
 
 2) summer indikatorverdien for hele landet og del på den summerte referanseverdien for hele landet (nasjonal metode)
 ```{r}
-sum(bretabell)/sum(n50tabell)
+(alt2 <- sum(bretabell)/sum(n50tabell))
 ```
 
 
@@ -312,11 +314,11 @@ reg_clipped$skalert_indikator_v <- reg_clipped$skalert_indikator*
 
 sumSkalerteIndikatorer <- sum(reg_clipped$skalert_indikator_v)
 
-sumSkalerteIndikatorer/totalArea
+(alt3 <- sumSkalerteIndikatorer/totalArea)
 ```
 4) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet fjellareal (fjellarealveid metode)
 
-For dette trenger jeg [fjellareal per region]('fjellareal-per-region.html'):
+For dette trenger jeg [fjellareal per region](fjellareal-per-region.html):
 ```{r}
 (fjellareal <- readRDS("../data/fjellareal.rds"))
 ```
@@ -324,18 +326,22 @@ For dette trenger jeg [fjellareal per region]('fjellareal-per-region.html'):
 reg_clipped$fjellareal <- fjellareal$Fjellareal[match(reg_clipped$region, fjellareal$Region)]
 reg_clipped$skalert_indikator_v2 <- reg_clipped$skalert_indikator*
   reg_clipped$fjellareal
-sum(reg_clipped$skalert_indikator_v2)/sum(reg_clipped$fjellareal)
+(alt4 <- sum(reg_clipped$skalert_indikator_v2)/sum(reg_clipped$fjellareal))
 ```
+Her er alternativene oppsummert:
 
-Alt 1 er nok ikke særlig bra. 
-Alt 2 kan forsvares.
-Alt 3 er nok ikke særlig bra.
-Alt 4 kan forsvares og ligner veldig på hvordan NI kalkuleres. 
+1. Indeksverdi `r round(alt1, 2)`. Aggregeringsmetoden er tvilsom.
 
-Alt 2 sier 'hvordan er den TOTALE ENDRINGEN i breareal i norge sett under ett'.
-Alt 4 sier 'hvordan er den GJENNOMSNITTLIGE endringen i breareal i i de ulike regionene i Norge.
+2. Indeksverdi `r round(alt2, 2)`. Aggregeringsmetoden sier oss hvordan den TOTALE endringen i breareal har vært for Norge sett under ett.
 
-Min intuisjon sier at alt 2 er mer riktig. 
+3. Indeksverdi `r round(alt3, 2)`. Aggregeringsmetoden er igjen tvilsom.
+
+4. Indeksverdi `r round(alt4, 2)`. Aggregeringsmetoden sier oss hvordan den GJENNOMSNITTLIGE endringen i breareal har vært for Norge sett under ett (jf metoden i NI).
+
+
+Jeg tror alt. 2 er best, og mer riktig enn f.eks. alt. 4. Alt. 4 gir for eksempel Sørlandet en del vekt fordi det er en del fjell der. Men der er ingen breer der, hverken nå eller før. Aggregeringen bør bare skje over de arealene hvor indikatoren har dekning. På Sørlandet kan man si at indikatoren kunne hatt dekning om vi hadde noen grunn for å tro at brearealet økte, for da knune det ha økt inn i det eksisterende fjellarealet.
+
+Indikatorverdien for Norge er da 0.7, som sier oss at 30% av brearealet er borte siden referanseperioden. Dette er med forbehold om at GØT er gitt fra en lineær skalering, men det kan godt tenkes at f.eks NVI vil ha grunnlag for å mene noe annet.
 
 ## Usikkerhet
 Jeg kan ikke se noen god måte å inkorporere usikkerhet inn i indikatorverdien. Det eneste jeg kan se for meg er en måte å lage en geografisk usikkerhet ved å først produsere indikatorverdier for mindre arealer (lage en raster med middels oppløning, f.eks. 10x10km2) og bootstrappe fra disse verdiene, men dette vil jeg ikke anbefale.
