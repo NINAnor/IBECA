@@ -3,10 +3,12 @@ name: "Økologisk tilstand"
 navbar:
   title: "Økologisk tilstand"
   left:
-    - text: "Hjem"
-      href: index.html
     - text: "Fjell"
       href: fjell.html
     - text: "Skog"
       href: skog.html
-output_dir: "docs"
+    - text: Faktaark for indikatorer
+      href: "faktaark.html"
+    - text: Annen dokumentasjon
+      href: "diverse.dtml"
+output_dir: "../docs"
