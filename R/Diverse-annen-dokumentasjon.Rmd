@@ -25,14 +25,33 @@ library(knitr)
 
 
 ## Medarbeidere
+<br>
 kommer snart...
 
+
+<br><br><br>
+
 ## Fjellareal
+<br>
 [En analyse av fjellareal i de fem regionene. ](fjellareal-per-region.html)
+<br><br><br>
+
+
+## Supplerende indikatorer
+<br>
+
+### Fugler i fjellet
+Dette er en supplerende indikator som viser tilstanden/utviklingen til syv alpine fuglearter. Indikatoren er ikke med i hovedindikatorsettet siden datagrunnlaget overlapper i stor grad med naturindeksen for fjell. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fuglerifjellet.html) for å se tekniske detaljer analysene.
+
+
+<br><br><br>
+
 
 ## Metadata og rutiner
+<br>
 
 ### Sjekkliste for tilstandsindikatorer
+<br>
 
 [Klikk her](https://github.com/NINAnor/IBECA/tree/main/output/sjekkliste.pdf) for å gå rett til sjekklisten som fylles ut av ekspertpanelet for hver indikator (jf. figuren over).
 
