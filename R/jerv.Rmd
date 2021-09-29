@@ -1,0 +1,24 @@
+---
+title: "Jerv"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'jerv.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Analyser av jervbestand
+kommer snart...

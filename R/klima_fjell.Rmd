@@ -19,14 +19,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-[Hjem](https://ninanor.github.io/IBECA) | 
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
-![test](../figures/fjellLogo.png){width=1cm} |
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
-![test](../figures/skogLogo.png){width=0.5cm} |
-[Faktaark](https://ninanor.github.io/IBECA/faktaark)
-
-
 ## Beskrivelse
 Klimaendringer som påvirker fjelløkosystemet inkluderer oppvarming og endring i 
 nedbørsmengde og -mønster.
@@ -34,7 +26,7 @@ nedbørsmengde og -mønster.
 
 ## Påvirkningsindikatorer
 Her vil du kunne lese om ulike påvirkningsindikatorer som sier oss noe om
-trender og status for den aktuelle påvirkningen 
+trender og status for den aktuelle påvirkningen. 
 
 ```{r cars}
 summary(cars)

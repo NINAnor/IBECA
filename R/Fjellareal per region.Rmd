@@ -1,0 +1,135 @@
+---
+title: "Fjellareal per region"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'fjellareal-per-region.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(sf)
+library(dplyr)
+library(raster)
+library(stars)
+library(tmap)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Her ønsker vi å finne fjellarealet per region og andel fjell per region.
+
+```{r import-regions}
+nor <- readRDS('../data/norway_outline.RDS')%>%
+  st_as_sf()
+reg <- st_read("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")
+reg <-   st_transform(reg, crs = crs(nor))
+reg <- st_intersection(reg, nor)
+
+```
+
+```{r colours-and-renaming}
+myColours <- c("blue","red","green","yellow","brown")
+reg$region[reg$region=="Ã\u0098stlandet"] <- "Østlandet"
+reg$region[reg$region=="SÃ¸rlandet"] <- "Sørlandet"
+regionNames <- reg$region
+```
+
+
+```{r plot1}
+plot(nor$geometry, axes=T)
+  plot(reg$geometry, add=T, border = "black", 
+       col = scales::alpha(myColours, .2))
+  legend("bottomright",   
+      legend = regionNames, 
+      fill = myColours)
+
+```
+
+Samme kartet, bare med tmap
+```{r plot2}
+tmap_mode("plot")
+tm_shape(reg) + 
+  tm_polygons(col="region", 
+              border.col = "white",
+              title = "")+
+  tm_layout(title="Regioner i Norge",
+            legend.text.size = 1)+
+  tm_shape(nor)+
+  tm_polygons(alpha = 0,border.col = "black")
+```
+
+```{r import-fjellmaske}
+file <- "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif"
+fjell <- raster::raster(file, proxy=F)
+fjell
+```
+
+Vi trenger ikke så god oppløsning for dette. Reduserer fra 50x50m til 1x1km ved å ta gjennomsnittet. Jeg finner ikke noen løsning for å redusere oppløsning til stars-objekter så jeg går tilbake til raster. Mulig tarra-pakken kunne klart det like fint.
+
+```{r}
+#fjell[fjell[]>0] <- 1
+#fjell_low <- aggregate(fjell, fact=20)
+#saveRDS(fjell_low, "../output/fjell_1km.rds")
+# tar noen minutter...
+
+fjell_low <- readRDS("../output/fjell_1km.rds")
+
+fjell_low_star <- st_as_stars(fjell_low)
+fjell_low_star[fjell_low_star[]==0] <- NA # for plotting
+```
+
+
+
+```{r}
+
+summary(fjell_low)
+# reg$arealFjell <- raster::extract(fjell_low, reg, fun = sum)
+#saveRDS(reg, "../data/reg_helperfile.rds")
+reg_inn <- readRDS("../data/reg_helperfile.rds")
+```
+
+Lager et datafil som jeg lagrer på disk slik at jeg kan bruken den i andre sammenhenger
+```{r}
+(fjellareal <- data.frame(Region = reg_inn$region,
+                         Fjellareal = reg_inn$arealFjell))
+#saveRDS(fjellareal, "../data/fjellareal.rds")
+```
+Total antall km2 fjell:
+```{r}
+sum(fjellareal$Fjellareal) # i km2
+```
+```{r}
+barplot(fjellareal$Fjellareal, names.arg = fjellareal$Region,
+        ylab = "Fjellareal (km2)")
+```
+
+
+
+```{r, message=F}
+reg_inn$arealFjell_round <- round(reg_inn$arealFjell)
+tmap_mode("view")
+tm_shape(reg_inn) + 
+  tm_polygons(col="region", 
+              border.col = "white",
+              title = "Regioner i Norge",
+              alpha=.5)+
+  tm_text("arealFjell_round",
+          size = 1.5)+
+  tm_layout(title="Fjellareal km2",
+            legend.text.size = 1)+
+  tm_shape(nor$geometry)+
+  tm_polygons(alpha = 0,border.col = "black")+
+  tm_shape(fjell_low_star)+
+    tm_raster(title = "Andel fjellareal")
+  
+```
+```
+

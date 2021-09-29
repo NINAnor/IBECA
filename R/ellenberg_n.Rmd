@@ -1,0 +1,33 @@
+---
+title: "Ellenberg N"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'ellenberg-n.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+## Analyser av Ellenberg N
+Her kan du skrive Joachim...
+
+
+
+## Sjekkliste
+Sjekklisten er ikke utfylt enda.
+
+![Sjekkliste](../output/test/abc.pdf){width=100%}
+
+

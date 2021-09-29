@@ -7,19 +7,19 @@ library(dplyr)
 # IMPORT ------------------------------------------------------------------
 
 
-ind <- read_excel("data/indData.xlsx", 
+ind <- read_excel("../data/indData.xlsx", 
                   sheet = "tilstandsindikatorer")
 
-paa <- read_excel("data/indData.xlsx", 
+paa <- read_excel("../data/indData.xlsx", 
                   sheet = "paavirkninger")
 
-ege <- read_excel("data/indData.xlsx", 
+ege <- read_excel("../data/indData.xlsx", 
                   sheet = "egenskaper")
 
-dat <- read_excel("data/indData.xlsx", 
+dat <- read_excel("../data/indData.xlsx", 
                   sheet = "datasett")
 
-edges <- read_excel("data/indData.xlsx", 
+edges <- read_excel("../data/indData.xlsx", 
                     sheet = "relasjoner")
 
 
@@ -81,7 +81,7 @@ nodes <- rbind(nodes, space)
 
 
 # subset -----------------------------------------------------------------
-# Removing the dataset stuff from this figure
+# Removing the data set stuff from this figure
 
 nodes2 <- nodes[nodes$type!="dat",]
 edges2 <- edges[edges$kategori!="dat-ind",]
@@ -111,7 +111,7 @@ toID <- row.names(nodes2)[nodes2$nodes %in% theTo]
 
 
 
-# the dag craches if there's a column called tooltip
+# the figure function craches if there's a column called tooltip
 edges2 <- rename(edges2, tooltip_edge = tooltip)
 
 
@@ -134,9 +134,18 @@ nodes2$br[nodes2$type=="ege"] <- c(
 nodes2$URL <- "https://ninanor.github.io/IBECA/faktaark"
 
 # Custum URLs
-nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#bestandsnivå-fjellrev"
-nodes2$URL[nodes2$nodes== "Bestandsnivå jerv"] <- "https://ninanor.github.io/IBECA/faktaark#bestandsnivå-jerv"
-nodes2$URL[nodes2$nodes== "Kongeørn"] <- "https://ninanor.github.io/IBECA/faktaark#kongeoern"
+nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrev"
+nodes2$URL[nodes2$nodes== "Bestandsnivå jerv"] <- "https://ninanor.github.io/IBECA/faktaark#jerv"
+nodes2$URL[nodes2$nodes== "Kongeørn"] <- "https://ninanor.github.io/IBECA/faktaark#kongeørn"
+nodes2$URL[nodes2$nodes== "Ellenberg N"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-n"
+nodes2$URL[nodes2$nodes== "Ellenberg L"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-l"
+nodes2$URL[nodes2$nodes== "Areal uten tekniske inngrep"] <- "https://ninanor.github.io/IBECA/faktaark#areal-uten-tekniske-inngrep"
+nodes2$URL[nodes2$nodes== "Smågnagere"] <- "https://ninanor.github.io/IBECA/faktaark#smågnagere"
+nodes2$URL[nodes2$nodes== "Bestandsnivå lirype"] <- "https://ninanor.github.io/IBECA/faktaark#lirype"
+nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrype"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrype"
+nodes2$URL[nodes2$nodes== "NI for fjell"] <- "https://ninanor.github.io/IBECA/faktaark#naturindeks-for-fjell"
+nodes2$URL[nodes2$nodes== "Areal av isbreer"] <- "https://ninanor.github.io/IBECA/faktaark#areal-av-isbreer"
+nodes2$URL[nodes2$nodes== "Snømengde"] <- "https://ninanor.github.io/IBECA/faktaark#snømengde"
 
 # Påvirkninger
 nodes2$URL[nodes2$nodes== "Beskatning"] <- 
@@ -237,3 +246,9 @@ dag <- create_graph(
   set_node_attrs(node_attr = fillcolor, values =  "white", nodes = supID)%>%
   
   set_node_attrs(node_attr = label, values = nodes2$br)
+
+rm(dat, edges, edges2, ege, fakeEdge, ind, lineBreaks,
+   nodes, nodes2, paa, space, datID, egeID,
+   fromID, indID, mainID, paaID, space2ID,
+   spaceID, supID, theFrom, theTo, toID)
+# render_graph(dag)
