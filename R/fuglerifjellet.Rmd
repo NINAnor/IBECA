@@ -27,8 +27,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ![test](../figures/skogLogo.png){width=0.5cm} |
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
-Test commit and push
-<!-- This is a comment -->
+
+<!-- This is my token: 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 -->
 ```{r, echo=FALSE}
 getwd()
 ```
