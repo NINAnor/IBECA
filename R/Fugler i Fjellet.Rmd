@@ -29,8 +29,6 @@ knitr::opts_chunk$set(echo = TRUE)
 [Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
-
-
 <!-- This is my token: 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 -->
 ```{r, echo=FALSE}
 getwd()
