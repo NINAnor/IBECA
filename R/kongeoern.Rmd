@@ -19,17 +19,11 @@ library(sf)
 library(raster) # burde kanskje byttes ut med stars
 library(sp)  # usikker på om jeg trenger denne
 library(rgdal)
+library(plainview) # for using native-crs in mapview
+library(mapview)
 # library(stars) # vil ikke la seg installere på server
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-
-[Hjem](https://ninanor.github.io/IBECA) | 
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
-![test](../figures/fjellLogo.png){width=1cm} |
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
-![test](../figures/skogLogo.png){width=0.5cm} |
-[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
 
 
 ## Analyser av kongeørnterritorier
@@ -37,8 +31,16 @@ Datasettet ligger på P:// som er en server på NINA.
 
 
 ```{r import}
-dat <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+
+#dat <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+
+
+# Denne funker for rstudio server. Den over funker p lokal maskin.
+dat <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+
+
 head(dat)
+getwd()
 ```
 Datasettet inneholder alle kjente kongeørnterritorier i Norge (vi bryr oss ikke om streiffulger). Ikke alle territorier er okkupert til en hver tid. Det er to kolonner (`Visit_2021` og `Visit_20`) som indikarer hvorvidt territoriene har blitt overvåket i hhv 2010-2014 og/eller 2015-2019. Det er med andre ord data mellom 2010 og 2019. La oss se hvor mange territorier det er:
 
@@ -87,7 +89,7 @@ nor <- readRDS('../data/norway_outline.RDS')
 
 Lets also get a zoom box ready
 ```{r}
-myExt <- raster::extent(100000, 300000, 6800000, 7000000)
+myExt <- raster::extent(100000, 300000, 6900000, 7100000)
 ```
 
 
@@ -118,11 +120,12 @@ Det neste vi må gjøre er å ekskludere territorier som ikke har fjell. Her har
 #                           proxy=F)
 
 #fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
-fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif")
+#fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif")
+fjell <- raster::raster("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif")
 
 class(fjell)
 ```
-Fila erganske stor.
+Fila er ganske stor.
 
 
 ```{r}
@@ -145,23 +148,132 @@ summary(fjell)
 Alle 0'er kan bli NA
 
 ```{r}
-fjellc <-  raster::mask(fjell, fjell[fjell==0],maskvalue = 0, updatevalue = NA)
-fjell[fjell[]==0] <- NA
+# fjellc <-  raster::mask(fjell, fjell[fjell==0],maskvalue = 0, updatevalue = NA)
+```
+Opperasjonen over tar for lang tid (ike ferdig på 2 timer)
 
+Finner centroiden til territoriene for å defeinere de til skog eller fjell
+```{r}
+dat$centroid <- st_centroid(dat$geometry)
 ```
 
+```{r plotting centroids}
+# crop again
+datc <- sf::st_crop(dat, myExt)
+datc$centroid <- st_centroid(datc$geometry)
 
-Nå må vi fjerne territorier (sf-objects) som ikke har noe fjell (raster) i seg. Det er problematisk at territoriene er polygoner og masken er raster. En løsning er å gjøre polygonene om til raster (raster::rasterize), men da tror jeg vi mister for mye nyanser.  
+nor_sf <- st_as_sf(nor)
+norc <- sf::st_crop(nor_sf, myExt)
+
+fjellc <- raster::crop(fjell, myExt)
+
+fjellc[fjellc[]==0] <- NA
+fjellc[fjellc[]>0] <- 1
+
+
+par(mfrow=c(1,1))
+plot(norc$geometry, axes=T)
+plot(fjellc, add=T)
+plot(datc$geometry, add=T)
+plot(datc$centroid, add=T)
+```
+Om vi skal bruke centroidene til å kategoriese territoriene som skog- eller fjellterritorier så må nok fjellmasken være på den oppløsningen den er. 
+Men om vi skal istede regne ut andel av fjellpiksler per territorie så kan vi redusere oppløsningen betraktelig uten å miste informasjon.
+Prøver først med centroidene:
+```{r}
+datc2 <- as(datc$centroid, 'Spatial') # extract-funksjonen krever spatial points dataframe
+datc2$class <- raster::extract(fjellc, datc2, fun=sum, df=F)
+
+plot(norc$geometry, axes=T)
+  plot(fjellc, add=T)
+  plot(datc2[!is.na(datc2$class),], add=T, pch=21)
+  plot(datc2[is.na(datc2$class),], add=T)
+
+
+```
+Her vises centroidene som ligger i fjell som fylte sirkler, og de som ligger utenfor som plusstegn. De fleste ligger utenfor. Dette er bare et lite utsnitt av Norge, Men det kan være representatbelt da kongeørn ofte vil ha trær for å bygge reir, men de kan fortsatt jakte på fjellet. Jeg prøver derfor også den andre metoden. Først reduserer jeg oppløsningen på fjellmasken fra 50x50m til 1000x1000 (factor = 20).
 
 ```{r}
-fjell2 <- st_as_sf(fjell)
-joined <- intersect(dat, fjell)
-joined <- st_intersection(dat, fjell)
+fjellc10 <- raster::aggregate(fjellc, fact = 20)
+par(mfrow=c(1,2))
+plot(fjellc); plot(fjellc10)
 ```
+Noen av øyene ser ut til å ha blitt litt større. Kanskje vi kunne brukt fact = 10. La oss zoom inn litt til for å se.
+
+```{r}
+myExt2 <- raster::extent(200000, 300000, 6900000, 7000000)
+fjellcc <- crop(fjellc, myExt2)
+fjellc10c <- crop(fjellc10, myExt2)
+par(mfrow=c(1,2))
+plot(fjellcc); plot(fjellc10c)
+
+```
+Dette kan være en konsekvens av at jeg satta 0-verdier til NA, slik at alle aggregerte celler blir 1 gitt at det er >=1 fjellcelle der.
+
+```{r}
+fjellc[is.na(fjellc[])] <- 0
+fjellc10v2 <- raster::aggregate(fjellc, fact = 20) # 5 sec. processing time
+fjellccv2 <- crop(fjellc, myExt2)
+fjellc10cv2 <- crop(fjellc10v2, myExt2)
+
+# definerer nye fjellceller som de med fjellareal over 50%
+fjellc10cv3 <- fjellc10cv2
+fjellc10cv3[fjellc10cv3[]<0.5] <- 0
+fjellc10cv3[fjellc10cv3[]>=0.5] <- 1
+
+par(mfrow=c(2,2))
+plot(fjellccv2, main="Original"); 
+plot(fjellc10c, main = "With NA's instead of zeros"); 
+plot(fjellc10cv2, main = "Aggregation with mean values"); 
+plot(fjellc10cv3, main = "Aggregation with threshold")
+```
+Den siste ser grei ut. Plotter territoriene over masken for å sammenligne oppløsningen.
+
+```{r}
+datcc <- st_crop(datc, myExt2)
+```
+```{r}
+plot(fjellc10cv3, main = "Aggregation with threshold")
+  plot(datcc$geometry, add=T)
+
+```
+
+
+
+Ekstraktherer fraksjon fjellareal per polygon.
+```{r}
+datcc$andelFjell <- raster::extract(fjellc10cv3, datcc, fun = mean) # 9 sec processing time
+```
+
+```{r}
+hist(datcc$andelFjell)
+```
+Territoriene har god spredning når det gjelder andel fjellareal
+
+```{r}
+myCols <- sf.colors(5, alpha = 0.5)
+datcc$colour <- myCols[1]
+datcc$colour[datcc$andelFjell >=0.2 & datcc$andelFjell < 0.4] <- myCols[2]
+datcc$colour[datcc$andelFjell >=0.4 & datcc$andelFjell < 0.6] <- myCols[3]
+datcc$colour[datcc$andelFjell >=0.6 & datcc$andelFjell < 0.8] <- myCols[4]
+datcc$colour[datcc$andelFjell >=0.8]                          <- myCols[5]
+
+plot(fjellc10cv3, main = "Aggregation with threshold", legend=F)
+  plot(datcc$geometry, add=T, col = datcc$colour)
+  legend("bottomright",   
+      legend = c("<.2", ".2-.4", ".4-.6", ".6-.8", ">.8"), 
+      fill = myCols)
+  
+```
+Dette differensierer territoriene etter hvor mye fjell de innehar. Gjennomsnittet i dette utsnittet er `r mean(datcc$andelFjell)`.
+
+
+
+
 
 ## Sjekkliste
 Sjekklisten er ikke utfylt enda.
 
 ![Sjekkliste](../output/test/abc.pdf){width=100%}
 
-
+ Se endring

@@ -1,0 +1,40 @@
+---
+title: "Diverse annen dokumentasjon"
+
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'diverse.html'))})
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=F}
+library(knitr)
+```
+
+
+## Medarbeidere
+kommer snart...
+
+## Fjellareal
+[En analyse av fjellareal i de fem regionene. ](fjellareal-per-region.html)
+
+## Metadata og rutiner
+
+### Sjekkliste for tilstandsindikatorer
+
+[Klikk her](https://github.com/NINAnor/IBECA/tree/main/output/sjekkliste.pdf) for å gå rett til sjekklisten som fylles ut av ekspertpanelet for hver indikator (jf. figuren over).
+
+
+

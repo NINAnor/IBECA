@@ -1,0 +1,348 @@
+---
+title: "Breareal"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'areal-av-isbreer.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(sf)
+library(raster) # kunne kanskje byttet til stars
+library(dplyr)
+library(lwgeom)
+library(tmap)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Analyser av breareal
+
+## Importerer data
+Det er fire datasett - breatlaset, 50, regioninndelingen, og omriss av Norge.
+Vi trenger ikke fjellmasker da vi kan anta at alle isebreer ligger i fjellet.
+
+### Breatlas
+
+Her er det nye breatlasset med breareal fra 2018 og 2019 hentet fra Sentinell (ref Liss Marie Andreassen, NVE)
+```{r import1}
+breatlas <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/breatlas_2018_2019/Breatlas_20182019_temp20210922_lma.shp')
+```
+
+CRS: UTM 33N ETRS89
+Det er 6915 polygoner
+
+```{r}
+plot(breatlas[1], main = "Breatlas 2018-2019", col = "black")
+```
+
+Arealet ser større ut en det er fordi det er lagt på kantlinjer.
+
+```{r breareal}
+breatlas$area <- st_area(breatlas)
+par(mfrow=c(1,2))
+hist(breatlas$area)
+plot(breatlas$area)
+```
+
+De fleste polygonene er små. Og så er det noen få veldig store. Den største er 50 km2.
+
+
+### Kart over Norge
+
+```{r import2}
+nor <- readRDS('../data/norway_outline.RDS')%>%
+  st_as_sf()%>%
+  st_transform(crs=crs(breatlas))
+plot(nor$geometry, axes=T, main = "Breatlas 2018-2019")
+  plot(breatlas$geometry, add=T, border = "blue")
+
+```
+
+UTM33 WGS84
+
+
+### N50
+
+Her er utstrekningen til breer i perioden 1952 til 1985, basert på gamle kart.
+```{r import3}
+n50 <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/n50/cryoclim_GAO_NO_1952_1985_UTM_33N.shp')%>%
+  st_transform(crs = crs(breatlas))
+
+```
+
+```{r}
+plot(nor$geometry, axes=T, main = "n50 - 1952-1985")
+  plot(n50$geometry, add=T, border = "red")
+```
+
+La oss plotte alt sammen oppå hverandre
+
+```{r plotter-alt}
+
+myExt <- raster::extent(c(0, 100000, 6840000, 6900000))
+myExt2 <- raster::extent(c(5000, 10000, 6880000, 6885000))
+
+par(mfrow=c(1,3))
+plot(nor$geometry, axes=T)
+    plot(n50$geometry,  border = "orange", col = scales::alpha("orange", 1), add=T)
+    plot(myExt, add=T, lwd=2)
+
+plot(nor$geometry, xlim=c(0, 100000),
+          ylim=c(6840000, 6900000),
+          axes=T)
+    plot(n50$geometry, add=T, col = "grey")
+    plot(myExt2, add=T, lwd=3, col="orange")
+    
+plot(nor$geometry, xlim=c(5000, 10000),
+          ylim=c(6880000, 6885000),
+     axes=T)
+    plot(n50$geometry, add=T, col = "red")
+    plot(breatlas$geometry, add=T, col = "grey")
+    
+```
+
+De røde områdene i kartet til høyre er hvor isen har trekt seg tilbake. 
+Nå må vi dele kartlage inn etter regioner for så å sammenligne arealet i n50 med breatlaset. Hvordan vi gjør det med kalkulering av usikkerhet vet jeg fortsatt ikke.
+
+
+### Regioner
+Henter shp med regionene
+
+```{r import4}
+reg <- st_read("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
+  st_transform(crs = crs(breatlas))
+```
+
+
+```{r}
+plot(nor$geometry, axes=T)
+  plot(reg$geometry, add=T, border = "black", 
+       col = scales::alpha(c("blue", 
+                             "red", 
+                             "green",
+                             "yellow",
+                             "brown"), .2))
+```
+
+Før vi henter brearealet inn i tabellen for regionene må jeg prøve å fikse et problem med noen brepolygoner som krysser seg selv
+```{r}
+table(st_is_valid(breatlas))
+```
+```{r}
+st_is_valid(breatlas, reason=T)[1:10]
+
+```
+
+```{r make-valid}
+# krever lwgeom
+breatlas2 <- st_make_valid(breatlas)
+table(st_is_valid(breatlas2))
+
+# samme resultat:
+#breatlas2 <- st_buffer(breatlas, 0.0)
+#table(st_is_valid(breatlas2))
+
+```
+
+```{r}
+plot(nor$geometry, xlim=c(5000, 10000),
+          ylim=c(6880000, 6885000),
+     axes=T)
+    plot(breatlas2$geometry, add=T, col = scales::alpha("blue",0.5))
+    plot(breatlas$geometry, add=T, col = scales::alpha("yellow",0.5))
+```
+
+Dette ser ut til å ha funket fint. Denne litt kunstige inndelingen av tilgrensende polygoner er forresten bare i det nye breatlaset, ikke i n50.
+
+```{r}
+breatlas <- breatlas2
+rm(breatlas2)
+```
+
+```{r}
+unique(reg$region)
+```
+
+Fikser øæå
+```{r}
+reg$region[reg$region=="Ã\u0098stlandet"] <- "Østlandet"
+reg$region[reg$region=="SÃ¸rlandet"] <- "Sørlandet"
+```
+
+## Breareal per region
+### Dagens breer
+Her er en metode for å finne breareal per region.
+
+```{r intersection}
+#brealtas_reg <- st_intersection(breatlas, reg)
+#saveRDS(brealtas_reg, "../data/brealtas_reg_helperfile.rds")
+brealtas_reg <- readRDS("../data/brealtas_reg_helperfile.rds")
+```
+Skjekker hva som skjer med breer som ligger midt mellom to regioner
+```{r}
+plot(brealtas_reg$geometry[brealtas_reg$region=="Midt-Norge"], 
+    col = scales::alpha("red",0.5), border=NA, axes=T, 
+     ylim=c(6900000, 6905000),
+     xlim=c(85000, 100000))
+plot(brealtas_reg$geometry[brealtas_reg$region=="Vestlandet"], 
+     col = scales::alpha("green",0.5), border=NA, add=T)
+  plot(nor$geometry, add=T)
+```
+
+Det deler polygonene ved grensen. Det er bra
+
+
+```{r pltting-area-per-region}
+brealtas_reg$area_crop <- st_area(brealtas_reg)
+
+bretabell <- tapply(
+       brealtas_reg$area_crop,
+       brealtas_reg$region,
+       FUN = sum)
+bretabell <- bretabell/1000000 
+barplot(
+  bretabell,
+  ylab="Breareal (km2)"
+)
+```
+### Samme for N50
+
+```{r intersection2}
+n50x <- st_make_valid(n50)
+#n50_reg <- st_intersection(n50x, reg)
+#saveRDS(n50_reg, "../data/n50_helperfile.rds")
+n50_reg <- readRDS("../data/n50_helperfile.rds")
+```
+
+```{r}
+plot(n50_reg$geometry[n50_reg$region=="Midt-Norge"], 
+    col = scales::alpha("red",0.5), border=NA, axes=T, 
+     ylim=c(6900000, 6905000),
+     xlim=c(85000, 100000))
+plot(n50_reg$geometry[n50_reg$region=="Vestlandet"], 
+     col = scales::alpha("green",0.5), border=NA, add=T)
+  plot(nor$geometry, add=T)
+```
+```{r plotting-ref-and-ind}
+n50_reg$area_crop <- st_area(n50_reg)
+
+n50tabell <- tapply(
+       n50_reg$area_crop,
+       n50_reg$region,
+       FUN = sum)
+n50tabell <- n50tabell/1000000 
+
+
+barplot(
+  n50tabell,
+  ylab="Breareal (km2)",
+  col="grey"
+)
+barplot(
+  bretabell,
+  ylab="Breareal (km2)",
+  add=T,
+  col="grey30"
+)
+
+```
+
+I figuren over er brearealet i referanseperioden i lyegrått og brearealet i 2018-2019 i mørkegrått. Høyden på det lysegråe partiet viser med andre ord reduksjonen i breareal i denne perioden.
+
+## Skalerte verdier
+
+```{r skalert}
+myTbl <- tibble(region          = names(bretabell),
+                indikator        = bretabell,
+                referanseverdi   = n50tabell)
+myTbl$skalert_indikator <- myTbl$indikator/myTbl$referanseverdi
+  
+```
+
+Skalerer og klipper regionene etter norgeskartet
+```{r, message=FALSE}
+reg$skalert_indikator <- myTbl$skalert_indikator[match(reg$region, myTbl$region)]
+reg_clipped <- st_intersection(reg, nor)
+```
+
+
+```{r}
+reg_clipped$skalert_indikator_r <- round(reg_clipped$skalert_indikator, 2)
+tmap_mode("view")
+tm_shape(reg_clipped) + 
+  tm_polygons(col="skalert_indikator", border.col = "white")+
+  tm_text("skalert_indikator_r", size=1.5)+
+  tm_shape(nor)+
+  tm_polygons(alpha = 0,border.col = "black")
+
+```
+
+
+Det er 4 måter å kalkulere den nasjonale indikatorverdien på:
+
+1) ta gjennomsnitt av de skalerte regionale indikatorverdiene og la alle regoinene telle likt (regional skaleringsmetode)
+```{r}
+(alt1 <- mean(reg_clipped$skalert_indikator))
+```
+
+2) summer indikatorverdien for hele landet og del på den summerte referanseverdien for hele landet (nasjonal metode)
+```{r}
+(alt2 <- sum(bretabell)/sum(n50tabell))
+```
+
+
+3) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet totalarealet til regionen (arealveid metode)
+
+```{r}
+reg_clipped$areal <- st_area(reg_clipped$geometry)/1000000
+
+totalArea <- sum(reg_clipped$areal)
+
+reg_clipped$skalert_indikator_v <- reg_clipped$skalert_indikator*
+  reg_clipped$areal
+
+
+sumSkalerteIndikatorer <- sum(reg_clipped$skalert_indikator_v)
+
+(alt3 <- sumSkalerteIndikatorer/totalArea)
+```
+4) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet fjellareal (fjellarealveid metode)
+
+For dette trenger jeg [fjellareal per region](fjellareal-per-region.html):
+```{r}
+(fjellareal <- readRDS("../data/fjellareal.rds"))
+```
+```{r}
+reg_clipped$fjellareal <- fjellareal$Fjellareal[match(reg_clipped$region, fjellareal$Region)]
+reg_clipped$skalert_indikator_v2 <- reg_clipped$skalert_indikator*
+  reg_clipped$fjellareal
+(alt4 <- sum(reg_clipped$skalert_indikator_v2)/sum(reg_clipped$fjellareal))
+```
+Her er alternativene oppsummert:
+
+1. Indeksverdi `r round(alt1, 2)`. Aggregeringsmetoden er tvilsom.
+
+2. Indeksverdi `r round(alt2, 2)`. Aggregeringsmetoden sier oss hvordan den TOTALE endringen i breareal har vært for Norge sett under ett.
+
+3. Indeksverdi `r round(alt3, 2)`. Aggregeringsmetoden er igjen tvilsom.
+
+4. Indeksverdi `r round(alt4, 2)`. Aggregeringsmetoden sier oss hvordan den GJENNOMSNITTLIGE endringen i breareal har vært for Norge sett under ett (jf metoden i NI).
+
+
+Jeg tror alt. 2 er best, og mer riktig enn f.eks. alt. 4. Alt. 4 gir for eksempel Sørlandet en del vekt fordi det er en del fjell der. Men der er ingen breer der, hverken nå eller før. Aggregeringen bør bare skje over de arealene hvor indikatoren har dekning. På Sørlandet kan man si at indikatoren kunne hatt dekning om vi hadde noen grunn for å tro at brearealet økte, for da knune det ha økt inn i det eksisterende fjellarealet.
+
+Indikatorverdien for Norge er da 0.7, som sier oss at 30% av brearealet er borte siden referanseperioden. Dette er med forbehold om at GØT er gitt fra en lineær skalering, men det kan godt tenkes at f.eks NVI vil ha grunnlag for å mene noe annet.
+
+## Usikkerhet
+Jeg kan ikke se noen god måte å inkorporere usikkerhet inn i indikatorverdien. Det eneste jeg kan se for meg er en måte å lage en geografisk usikkerhet ved å først produsere indikatorverdier for mindre arealer (lage en raster med middels oppløning, f.eks. 10x10km2) og bootstrappe fra disse verdiene, men dette vil jeg ikke anbefale.
+
