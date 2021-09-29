@@ -19,7 +19,7 @@ library(sf)
 library(raster) # burde kanskje byttes ut med stars
 library(sp)  # usikker på om jeg trenger denne
 library(rgdal)
-library(plainview) # for using native-crs in mapview
+#library(plainview) # for using native-crs in mapview
 library(mapview)
 # library(stars) # vil ikke la seg installere på server
 knitr::opts_chunk$set(echo = TRUE)
@@ -35,23 +35,28 @@ Datasettet ligger på P:// som er en server på NINA.
 #dat <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
 
 
-# Denne funker for rstudio server. Den over funker p lokal maskin.
+# Denne funker for rstudio server. Den over funker på lokal maskin.
 dat <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
 
 
 head(dat)
-getwd()
 ```
-Datasettet inneholder alle kjente kongeørnterritorier i Norge (vi bryr oss ikke om streiffulger). Ikke alle territorier er okkupert til en hver tid. Det er to kolonner (`Visit_2021` og `Visit_20`) som indikarer hvorvidt territoriene har blitt overvåket i hhv 2010-2014 og/eller 2015-2019. Det er med andre ord data mellom 2010 og 2019. La oss se hvor mange territorier det er:
+Datasettet inneholder alle kjente kongeørnterritorier i Norge (vi bryr oss ikke om streiffugler). 
 
 ```{r}
 length(unique(dat$Terr_total))
 ```
+Det er 1371 kjente territorier i Norge i dag.
+
 Er det noen duplikater?
 ```{r}
 nrow(dat)
 ```
 Nei, det er det ikke.
+
+
+Ikke alle territorier er okkupert til en hver tid. Det er to kolonner (`Visit_2021` og `Visit_20`) som indikarer hvorvidt territoriene har blitt overvåket i hhv 2010-2014 og/eller 2015-2019. I tillegg er det noen territorier som er lagt inn i rovbase før dette og som v ikke vet om er okkupert eller ikke i nyere tid. 
+
 
 Hvor mange territorier ble overvåket i siste periode?
 ```{r}
@@ -62,7 +67,10 @@ Det er 533 territorier som ble overvåket i siste periode. Av disse var det kun 
 ```{r}
 table(dat$Visit_2010, dat$Visited_20, deparse.level = 2)
 ```
-Tabellen over sier oss at 635 territorier ikke har vært overvåket i noen av periodene (!?), og at 335 har vært overvåket i begge. 
+Tabellen over sier oss at 635 territorier ikke har vært overvåket i noen av periodene (dvs de er registrer før 2010 og det er uviust om det er fugler der nå), og at 335 har vært overvåket i begge periodene.
+Dette datasettet er nyttig for å se på fordelingen av territorier i regioner og mellom fjell og ikke-fjell. Det er ikke dette datasettet vi bruker for å si hvor mange territorier det er i dag. Da bruker vi modellerte data (fra Jenny) som finnes i form av antalle territorier per fylke. 
+
+Etter diskusjon med Jenny er det klart at det ikke finnes godt nok grunnlag for å spesifisere egne referansetilstander for fjell og ikke-fjell (egentlig skog). Derfor er det ikke heller nødvendig å regne ut nøyaktig antall territorier, eller andel av territorieareal, som overlapper med fjell. Men vi gjør det her for å gi oss en oversikt.
 
 
 Ett territorie er en sirkel med radius 10 km plassert rundt sentrumspunktet for de reirene som er inkludert i det samme territoriet (det kan være flere, men bare ett er okkupert til en hvert tid).
@@ -72,8 +80,6 @@ La oss se hvordan territoriene fordeler seg i landet. Først, las oss se hvilke 
 ```{r crs}
 crs(dat)
 ```
-
-
 
 
 ## Outline of Norway
@@ -100,7 +106,8 @@ plot(myExt, add=T, lwd=10)
 
 
 ```
-Det er ingenting på Østlandet. Ellers så er landet godt dekt.
+
+Det er ingenting på Østlandet. Ellers så er landet godt dekt. På Østlandet er det trolig stor underrapportering, siden vi vet det finnes mange territorier rett over grensa til Svergie, og habitatet er helt likt. Dette gjør det problematisk å sammenligne indiaktorverdie med referanseverdi på Østlandet. Kanskje må vi definere en 'underregion' av Østlandet (fjerne noen fylker) og sette ny referansetilstand.
 
 Zoomer inn i ruta...
 ```{r}
@@ -108,6 +115,7 @@ datc <- sf::st_crop(dat, myExt)
 plot(datc[,c('Terr_total', 'geometry')])
 
 ```
+
 Det er som vi ser veldig mye overlapp mellom de teoretiske territoriene.
 
 
@@ -265,6 +273,7 @@ plot(fjellc10cv3, main = "Aggregation with threshold", legend=F)
       fill = myCols)
   
 ```
+
 Dette differensierer territoriene etter hvor mye fjell de innehar. Gjennomsnittet i dette utsnittet er `r mean(datcc$andelFjell)`.
 
 
