@@ -28,8 +28,15 @@ knitr::opts_chunk$set(echo = TRUE)
 # Analyser av breareal
 
 ## Importerer data
-Det er fire datasett - breatlaset, 50, regioninndelingen, og omriss av Norge.
-Vi trenger ikke fjellmasker da vi kan anta at alle isebreer ligger i fjellet.
+Det er fire datasett:
+
+* breatlaset
+* n50
+* regioninndelingen
+* omriss av Norge
+
+
+Vi trenger ikke fjellmasken da vi kan anta at alle isebreer ligger i fjellet.
 
 ### Breatlas
 
@@ -215,6 +222,7 @@ barplot(
   ylab="Breareal (km2)"
 )
 ```
+
 ### Samme for N50
 
 ```{r intersection2}

@@ -1,0 +1,76 @@
+---
+title: "Naturindeks for fjell"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'naturindeks.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(NIcalc)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Analyser av Naturindeks for fjell
+
+
+Fyll inn ditt eget passord og brukernavn
+```{r}
+myUser <- "anders.kolstad@nina.no"
+myPwd  <- "" # hemmelig passord
+```
+
+Importerer data fra NI-databasen og lagrer datasettet på server
+```{r import, eval=F}
+
+fjelldat <- NIcalc::importDatasetApi(
+  username = myUser,
+  password = myPwd,
+  eco = "Fjell", 
+  indic = NULL,
+  year = "2019")
+
+saveRDS(fjelldat, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellarter2019.rds")
+
+rm(fjelldat)
+rm(myPwd)
+```
+
+Laster tilbake datasettet:
+```{r, message=F}
+fjelldat <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellarter2019.rds")
+```
+
+Liste over arter som inngår
+```{r}
+fjelldat$indicators$name
+```
+
+
+Strukturerer datasettet
+```{r, eval=FALSE}
+fjell_assemeble <- NIcalc::assembleNiObject(
+  inputData = fjelldat,
+  predefNIunits = c(allArea = T, parts = T, counties = F),
+  indexType = "thematic")
+
+saveRDS(fjell_assemeble, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble.rds")
+
+rm(fjell_assemeble)
+```
+
+Henter tilbake datasettet
+```{r}
+fjell_assemeble <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble.rds")
+```
+
+
+
