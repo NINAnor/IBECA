@@ -22,6 +22,7 @@ library(rgdal)
 library(tmap)
 library(NIcalc)
 library(readxl)
+library(ggplot2)
 #library(mapview)
 library(stars)
 knitr::opts_chunk$set(echo = TRUE)
@@ -142,7 +143,7 @@ Modelleringer tilseier at det skal være rundt 1027 okkuperte territorier i Norg
 
 
 
-```{r tbl}
+```{r tbl, echo=F}
 tbl <- read_excel("../data/kongeornterritorier_modellerte_perFylke.xlsx", 
      sheet = "tbl")
 knitr::kable(tbl,
@@ -177,6 +178,24 @@ for N-Norge, og
 ```
 for S-Norge.
 
+```{r}
+scaled <- data.frame(
+  Region = c("Sør-Norge", "Nord-Norge"),
+  Indikatorverdi = c(652, 375),
+  Low_2.5 = c(586, 329),
+  High_97.5 = c(721,423),
+  referansetilstand = c(724.444, 416.667))
+scaled$scaledMean <- scaled$Indikatorverdi/scaled$referansetilstand
+scaled$scaledLow <- scaled$Low_2.5/scaled$referansetilstand
+scaled$scaledHigh <- scaled$High_97.5/scaled$referansetilstand
+scaled
+
+```
+
+```{r, eval=FALSE}
+saveRDS(scaled, "../output/kongeorn_scaledOutput.Rda")
+```
+
 
 ## Spørring mot NI-databasen
 Denne opperasjonen er litt overflødig nå, men her gjør jeg en spørring mot NIdatabasen for å se mer nøyaktig hva som ligger der.
@@ -188,7 +207,7 @@ myPwd  <- "" # hemmelig passord
 ```
 
 Importerer data fra NI-databasen og lagrer datasettet på server
-```{r import, eval=F}
+```{r NIimport, eval=F}
 
 golden <- NIcalc::importDatasetApi(
   username = myUser,
@@ -252,13 +271,105 @@ Det er som vi ser veldig mye overlapp mellom de teoretiske territoriene. Husk at
 
 
 ### Fjellmasken
-La oss først ta inn fjellmasken. Deretter kan vi bruke den til å gi oss litt statistikk. Til dette
+La oss først ta inn fjellmasken. Deretter kan vi bruke den til å gi oss litt statistikk. Til dette trenger vi ikke den høyeste oppløsningen.
 
 ```{r}
-fjell_low <- readRDS("../output/fjell_1km.rds")
+fjell_low <- raster("../output/fjell_1km.tif")
 fjell_low_star <- st_as_stars(fjell_low)
 fjell_low_star[fjell_low_star[]==0] <- NA # for plotting
 ```
+
+```{r}
+tmap_mode("view")
+tm_shape(dat) + 
+  tm_polygons(border.col = "black", 
+                col = 'Visited_20',
+                title = "Overvåket i 2015-2019?",
+                style = "cat",
+                drop.levels = T,
+                alpha=0)+
+tm_shape(nor)+
+  tm_polygons(alpha = 0,
+                border.col = "black")+
+tm_shape(reg_clipped)+
+  tm_polygons(alpha = 0,
+                border.col = "black")+
+tm_layout(title = "Alle kjente norske\nkongeørnterritorier")+
+tm_shape(fjell_low_star)+
+  tm_raster(title = "Andel fjellareal")
+  
+```
+
+Så tar vi gjennomsnitt fjellareal per polygon. Det er ganske rett fra siden fjell = 1 og ikke-fjell =0. Opperasjonen tar litt tid, ca 7 min.
+
+```{r, eval=FALSE}
+dat$andelFjell <- raster::extract(fjell_low, dat, fun = mean) 
+saveRDS(dat, "../data/kongeorn-helperfile.Rda")
+```
+
+```{r}
+terr_fjell <- readRDS("../data/kongeorn-helperfile.Rda")
+hist(terr_fjell$andelFjell)
+```
+
+Gjennomsnittlig for hele Norge er andelen av territoriene som overlapper med fjell lik
+
+```{r}
+mean(terr_fjell$andelFjell)
+```
+Det er sikkert litt variasjon mellom regionene. 
+
+```{r, message=FALSE}
+nord <- st_intersection(terr_fjell, reg[1,])
+midt <- st_intersection(terr_fjell, reg[2,])
+ost <-  st_intersection(terr_fjell, reg[3,])
+vest <- st_intersection(terr_fjell, reg[4,])
+sor <-  st_intersection(terr_fjell, reg[5,])
+
+par(mfrow=c(2,3))
+plot(nord$geometry, main="Nord-")
+plot(midt$geometry, main="Midt-")
+plot(ost$geometry, main ="Øst-")
+plot(vest$geometry, main="vest-")
+plot(sor$geometry, main="Sør-")
+plot(dat$geometry, main="Norge")
+
+```
+
+Funskjon for standard error:
+```{r}
+se <- function(x) sd(x, na.rm=T)/sqrt(length(x))
+```
+
+Regner ut gjennomsnitt for hver region
+```{r}
+comb                <- rbind(nord, ost, sor, vest, midt)
+gjOverlappMedFjell  <- tapply(comb$andelFjell,comb$region, FUN=mean)
+SDOverlappMedFjell  <- tapply(comb$andelFjell,comb$region, FUN=se)
+fracFjell           <- as.data.frame(gjOverlappMedFjell)
+fracFjell$se        <- SDOverlappMedFjell
+fracFjell$region    <- row.names(fracFjell)
+fracFjell
+
+```
+
+```{r}
+ggplot(fracFjell)+
+  geom_bar(aes(y=gjOverlappMedFjell, x=region), stat="identity", fill="skyblue")+
+  geom_errorbar(aes(x=region, ymin=gjOverlappMedFjell-se,
+                    ymax=gjOverlappMedFjell+se),
+                width=0.4, colour="orange", alpha=0.9, size=1.3)+
+  xlab("")+
+  ylab("Andel av kongeørnterritoriene som overlapper med fjell")
+
+```
+
+
+
+
+
+### Centroider
+Her er barer en skisse på hvordan man kan definere territorier til fjell eller ikke-fjell basert på centroiden. Dette krever fjellmaske med høyere oppløsning.
 
 ```{r import fjell}
 fjell <- raster::raster("../data/fjellmasken.tif")
@@ -273,24 +384,22 @@ dim(fjell)
 ```
 32k * 32k gir litt over en milliard verdier (piksler)
 
-
-```{r plotting fjell}
-plot(fjell)
+```{r}
+summary(fjell)
 ```
+
 Denne masken ser ut til å være piksler med verdi 202 fra dette kartlaget:
 P:\41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly\FINAL\Raw_data\Ecosystems\ecoMap_50m.tif
 
 Fila er ganske tung å jobbe med så vi må prøve å redusere størrelsen
-```{r}
-summary(fjell)
-```
+
 
 Alle 0'er kan bli NA
 
 ```{r}
 # fjellc <-  raster::mask(fjell, fjell[fjell==0],maskvalue = 0, updatevalue = NA)
 ```
-Opperasjonen over tar for lang tid (ike ferdig på 2 timer)
+Opperasjonen over tar for lang tid (ikke ferdig på 2 timer)
 
 Finner centroiden til territoriene for å defeinere de til skog eller fjell
 ```{r}
@@ -317,9 +426,9 @@ plot(fjellc, add=T)
 plot(datc$geometry, add=T)
 plot(datc$centroid, add=T)
 ```
+
 Om vi skal bruke centroidene til å kategoriese territoriene som skog- eller fjellterritorier så må nok fjellmasken være på den oppløsningen den er. 
-Men om vi skal istede regne ut andel av fjellpiksler per territorie så kan vi redusere oppløsningen betraktelig uten å miste informasjon.
-Prøver først med centroidene:
+
 ```{r}
 datc2 <- as(datc$centroid, 'Spatial') # extract-funksjonen krever spatial points dataframe
 datc2$class <- raster::extract(fjellc, datc2, fun=sum, df=F)
@@ -331,13 +440,21 @@ plot(norc$geometry, axes=T)
 
 
 ```
-Her vises centroidene som ligger i fjell som fylte sirkler, og de som ligger utenfor som plusstegn. De fleste ligger utenfor. Dette er bare et lite utsnitt av Norge, Men det kan være representatbelt da kongeørn ofte vil ha trær for å bygge reir, men de kan fortsatt jakte på fjellet. Jeg prøver derfor også den andre metoden. Først reduserer jeg oppløsningen på fjellmasken fra 50x50m til 1000x1000 (factor = 20).
+
+Her vises centroidene som ligger i fjell som fylte sirkler, og de som ligger utenfor som plusstegn. De fleste ligger utenfor. Dette er bare et lite utsnitt av Norge, Men det kan være representatbelt da kongeørn ofte vil ha trær for å bygge reir, men de kan fortsatt jakte på fjellet. 
+
+
+## Gammele analyser (ikke i bruk)
+
+
+Jeg prøver jeg en annen måte for å regne ut andel fjellareal per territorie. Først reduserer jeg oppløsningen på fjellmasken fra 50x50m til 1000x1000 (factor = 20).
 
 ```{r}
 fjellc10 <- raster::aggregate(fjellc, fact = 20)
 par(mfrow=c(1,2))
 plot(fjellc); plot(fjellc10)
 ```
+
 Noen av øyene ser ut til å ha blitt litt større. Kanskje vi kunne brukt fact = 10. La oss zoom inn litt til for å se.
 
 ```{r}
