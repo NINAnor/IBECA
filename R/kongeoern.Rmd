@@ -21,8 +21,9 @@ library(sp)  # usikker på om jeg trenger denne
 library(rgdal)
 library(tmap)
 library(NIcalc)
+library(readxl)
 #library(mapview)
-# library(stars)
+library(stars)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -35,10 +36,11 @@ Datasettet ligger på P:// som er en server på NINA.
 
 #dat <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
 
-#dat <- sf::st_read('C:/Users/anders.kolstad/Documents/Github/IBECA_NINA/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+# lokalt:
+dat <- sf::st_read('C:/Users/anders.kolstad/Documents/Github/IBECA_NINA/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
 
 # Denne funker for rstudio server. Den over funker på lokal maskin.
-dat <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+#dat <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
 
 
 head(dat)
@@ -141,37 +143,49 @@ Modelleringer tilseier at det skal være rundt 1027 okkuperte territorier i Norg
 
 
 ```{r tbl}
-tbl <- read_excel("data/kongeornterritorier_modellerte_perFylke.xlsx", 
+tbl <- read_excel("../data/kongeornterritorier_modellerte_perFylke.xlsx", 
      sheet = "tbl")
 knitr::kable(tbl,
+             align='l',
              caption = 
-               "Tabell 1. Fylkesvis oversikt over antall estimerte okkuperte kongeørnterritorier (ekstensiv) samt okkupert intensivterritorier, og det totale antallet okkuperte territorier med øvre og nedre 95 % kredibilitetsintervaller. Data fra perioden 2010–2014 er hentet fra Dahl mfl. (2015).")
+               "Tabell 1. Fylkesvis oversikt over antall estimerte okkuperte kongeørnterritorier (ekstensiv) samt okkupert intensivterritorier, og det totale antallet okkuperte territorier med øvre og nedre 95 % kredibilitetsintervaller. Data fra perioden 2010–2014 er hentet fra Dahl mfl. (2015). <br> <br> Tabellen er hentet fra Mattisson, J., Nilsen, E.B. & Brøseth, H. 2020. Estimering av antall hekkende par kongeørn basert på kjent forekomst i Norge for perioden 2015-2019. NINA Rapport 1858. Norsk Institutt for Naturforskning.")
 ```
 
-Vi trenger referansetilstander. Fra NI-databasen ser jeg at referansetilstanden kun er delt i to, dvs det er en referansetilstand for Nord-Norge og en for Sør-Norge. Begge er definert/satt til 100% etter at årene 2010-2019 er satt til 90%. Arealene øst for Oslo er ikke med i deknignskartet for denne indikatoren i NI, slik at vi trenger ikke bekymre oss med å kutte vekk Vestfold, Oslo, Østfold og Akershus. I disse fylkene er det ingen kjente territorier (trolig mye underrapportering) som betyr at indikatoren ikke har gyldighet der. Det er også lite fjell i disse fylkene.
+## Referansetilstand
+Vi trenger referansetilstander. Fra NI-databasen ser jeg at referansetilstanden kun er to-delt, dvs det er en referansetilstand for Nord-Norge og en for Sør-Norge. Begge er definert/satt til 100% etter at årene 2010-2019 er satt til 90%. Arealene øst for Oslo er ikke med i deknignskartet for denne indikatoren i NI, slik at vi trenger ikke bekymre oss med å kutte vekk Vestfold, Oslo, Østfold og Akershus. I disse fylkene er det ingen kjente territorier (trolig mye underrapportering) som betyr at indikatoren ikke har gyldighet der. Det er også lite fjell i disse fylkene.
 
-I naturindeks er det ikke registrert antall territorier, men bare % av opprinnelig bestand (kun basert på ekspertvurderinger). Referansetilstanden er som sagt satt til 100%. Jeg foreslår at vi fortsetter å bruke 100% som en referanseverdi og setter dagens bestandsstørrelse til 90% av referansetilstandedn. I motsettning til NI kan vi bruke de faktiske estimatene for antall territorier, og enda viktigere, de usikkerhetene som følger med. 
+Her er to screenshot fra Naturindeksdatabasen:
 
-Da trenger vi å summer opp antall territorier i sør og i nord, sam 
+![Kongeørn](../figures/kongeorn-sor.png){width=20cm}
+<br>
+![Kongeørn](../figures/kongeorn-nord.png){width=20cm}
+
+
+I naturindeks er det ikke registrert antall territorier, men bare % av opprinnelig bestand (kun basert på ekspertvurderinger). Referansetilstanden er som sagt satt til 100%. Jeg foreslår at vi fortsetter å bruke 100% som en referanseverdi og setter dagens bestandsstørrelse til 90% av referansetilstandedn. I motsettning til NI kan vi bruke usikkerhetene fra modelleringen av antall territorier. I tabellen over manger det separate estimater for Nord-Norge og Sør-Norge. Jeg spurte Jenny om dette og hun kjørte modellen bak tabell 1 på nytt og fikk:
+
+Nord Norge: 375 (329-423)
+
+Sør Norge: 652 (586-721)
+
+Referansetilstanden blir da
+```{r}
+(375/90)*100
+```
+for N-Norge, og 
+```{r}
+(652/90)*100
+```
+for S-Norge.
+
 
 ## Spørring mot NI-databasen
+Denne opperasjonen er litt overflødig nå, men her gjør jeg en spørring mot NIdatabasen for å se mer nøyaktig hva som ligger der.
 
 Fyll inn ditt eget passord og brukernavn
-```{r}
+```{r, eval=F}
 myUser <- "anders.kolstad@nina.no"
 myPwd  <- "" # hemmelig passord
 ```
-
-```{r, eval=F}
-NItabl <- NIcalc::getIndicatorValues(322)                   
-```
-```{r}
-NItabl
-```
-
-Tabellen sier at tilstanden er 0.9 for 2019. Vi må også ha usikkerheten.
-
-
 
 Importerer data fra NI-databasen og lagrer datasettet på server
 ```{r import, eval=F}
@@ -180,7 +194,7 @@ golden <- NIcalc::importDatasetApi(
   username = myUser,
   password = myPwd,
   indic = "Kongeørn",
-  year = "2019")
+  year="2019")
 
 saveRDS(golden, "../data/kongeorn_NIdatabasen.rds")
 rm(golden)
@@ -188,76 +202,66 @@ rm(myPwd)
 
 ```
 
+
+
+
 ```{r}
 golden          <- readRDS("../data/kongeorn_NIdatabasen.rds")
 goldenAssemble  <- NIcalc::assembleNiObject(inputData = golden)
 goldenIndex     <- NIcalc::calculateIndex(x = goldenAssemble, 
                                           nsim = 1000,
-                                          awBSunit = "Fjell")
-plot(goldenIndex)
+                                          awBSunit = "Fjell"
+                                          )
+summary(goldenIndex$wholeArea)
+
 ```
-
-
-
-
-
-Det er bare to nivå på referanseverdiene, en for nord og en for sør.
-Men jeg må finne referanseverdiene som faktiske tall. 
-
 ```{r}
-golden$referenceValues
+plot(goldenIndex$wholeArea)
+
 ```
 
- 
+
+
+Tabellen sier at tilstanden er 0.9 for 2019. Jeg har ikke fått ut usikkerheten separat for nord og sør her. Det er sikkert mulig, men ikke nødvendig.
+
+
+## Tilhørigheten til fjell
+
+Etter diskusjon med Jenny er det klart at det ikke finnes godt nok grunnlag for å spesifisere egne referansetilstander for fjell og ikke-fjell (egentlig skog). Derfor er det ikke heller nødvendig å regne ut nøyaktig antall territorier, eller andel av territorieareal, som overlapper med fjell, men vi gjør det her for å gi oss en oversikt.
+
+Ett territorie er en sirkel med radius 10 km plassert rundt sentrumspunktet for de reirene som er inkludert i det samme territoriet (det kan være flere, men bare ett er okkupert til en hvert tid). 
 
 
 
 
 
-Etter diskusjon med Jenny er det klart at det ikke finnes godt nok grunnlag for å spesifisere egne referansetilstander for fjell og ikke-fjell (egentlig skog). Derfor er det ikke heller nødvendig å regne ut nøyaktig antall territorier, eller andel av territorieareal, som overlapper med fjell. Men vi gjør det her for å gi oss en oversikt.
+Det er ingenting på Østlandet (se kartet over), men ellers så er landet godt dekt. På Østlandet er det trolig stor underrapportering, siden vi vet det finnes mange territorier rett over grensa til Sverige, og habitatet er helt likt. 
 
-
-Ett territorie er en sirkel med radius 10 km plassert rundt sentrumspunktet for de reirene som er inkludert i det samme territoriet (det kan være flere, men bare ett er okkupert til en hvert tid).
-
-
-
-Lets also get a zoom box ready
+Her er et lite utsnatt fra Trøndelag som viser fordlingen og grad av overlapp mellom territorier.
 ```{r}
 myExt <- raster::extent(100000, 300000, 6900000, 7100000)
 ```
 
-
-```{r plotting}
-plot(nor, axes=T)
-plot(dat[,c('Terr_total', 'geometry')], add=T)
-plot(myExt, add=T, lwd=10)
-
-
-```
-
-Det er ingenting på Østlandet. Ellers så er landet godt dekt. På Østlandet er det trolig stor underrapportering, siden vi vet det finnes mange territorier rett over grensa til Svergie, og habitatet er helt likt. Dette gjør det problematisk å sammenligne indiaktorverdie med referanseverdi på Østlandet. Kanskje må vi definere en 'underregion' av Østlandet (fjerne noen fylker) og sette ny referansetilstand.
-
-Zoomer inn i ruta...
 ```{r}
 datc <- sf::st_crop(dat, myExt)
 plot(datc[,c('Terr_total', 'geometry')])
 
 ```
 
-Det er som vi ser veldig mye overlapp mellom de teoretiske territoriene.
+Det er som vi ser veldig mye overlapp mellom de teoretiske territoriene. Husk at ikke alle er okkuperte, men vi vet ikke nøyaktig hvem av de som er okkuperte til en hver tid.
 
 
+### Fjellmasken
+La oss først ta inn fjellmasken. Deretter kan vi bruke den til å gi oss litt statistikk. Til dette
 
-## Fjellmasken
-Det neste vi må gjøre er å ekskludere territorier som ikke har fjell. Her har vi flere muligheter. La oss først ta inn fjellmasken.
+```{r}
+fjell_low <- readRDS("../output/fjell_1km.rds")
+fjell_low_star <- st_as_stars(fjell_low)
+fjell_low_star[fjell_low_star[]==0] <- NA # for plotting
+```
 
 ```{r import fjell}
-#fjell <- stars::read_stars("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif",
-#                           proxy=F)
-
-#fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/ecoMap_50m.tif")
-#fjell <- raster::raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif")
-fjell <- raster::raster("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif")
+fjell <- raster::raster("../data/fjellmasken.tif")
 
 class(fjell)
 ```
