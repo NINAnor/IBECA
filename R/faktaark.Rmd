@@ -29,10 +29,10 @@ library(kableExtra)
 library(dplyr)
 
 # local path
-#doc <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
+doc <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
 
 # server path
-doc <- read_excel("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
+#doc <- read_excel("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
 
 ```
 
