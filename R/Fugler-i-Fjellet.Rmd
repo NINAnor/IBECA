@@ -29,14 +29,6 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-[Hjem](https://ninanor.github.io/IBECA) | 
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell)
-![test](../figures/fjellLogo.png){width=1cm} |
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog)
-![test](../figures/skogLogo.png){width=0.5cm} |
-[Faktaark](https://ninanor.github.io/IBECA/faktaark) |
-
-
 <!-- This is a comment that will not be included -->
 ```{r, include=FALSE, echo=FALSE}
 
@@ -74,13 +66,11 @@ trimdata_new = left_join(trimdata_new, region, by = c("Species", "Site", "Year")
 
 
 Begrens datasettet til de artene vi er interessert i og del datasettet på nord/sør regionene.
-```{r}
+### Alpine ecosystem - North and South region
+```{r AlpineEco}
 
-#####################################################
-#### Alpine ecosystem - North and South Region ######
-#####################################################
 species = species_EC %>% filter(Art == "Heilo" | Art == "Blåstrupe" | Art == "Steinskvett" | Art == "Ringtrost" | Art == "Heipiplerke") # Subset on species of interest
-#species$Species
+
 alpine_ns = trimdata_new %>% filter(Species %in% species$Species) 
 alpine_ns = arrange(alpine_ns, Species) # Sort the data by the species ID
 alpine_ns$Region = as.character(alpine_ns$Region)
