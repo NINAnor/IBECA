@@ -228,7 +228,7 @@ alpa_smp_mean = as_tibble(alpa_smp_mean) %>% mutate(Region = c("north", "south")
 
 ```
 
-Bruker de k antall samplinger over til å visalisere endringene i indeksverdien over tid, med et 95% usikkerhetsestimat.
+Bruker de k antall samplinger til å visalisere endringene i indeksverdien over tid, med et 95% usikkerhetsestimat.
 ```{r, warning = FALSE}
 ## Plot mean of the sample and their CI
 alpa_n_lower = c(1)
