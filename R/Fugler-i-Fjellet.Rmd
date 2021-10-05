@@ -65,8 +65,8 @@ trimdata_new = left_join(trimdata_new, region, by = c("Species", "Site", "Year")
 ```
 
 
-Begrens datasettet til de artene vi er interessert i og del datasettet på nord/sør regionene.
 ### Alpine ecosystem - North and South region
+Begrens datasettet til de artene vi er interessert i og del datasettet på nord/sør regionene.
 ```{r AlpineEco}
 
 species = species_EC %>% filter(Art == "Heilo" | Art == "Blåstrupe" | Art == "Steinskvett" | Art == "Ringtrost" | Art == "Heipiplerke") # Subset on species of interest
