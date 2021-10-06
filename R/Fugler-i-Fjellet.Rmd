@@ -1,0 +1,257 @@
+---
+title: "Fugler i Fjellet"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'fuglerifjellet.html'))})
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE, message=FALSE}
+
+rm(list=ls())
+library(knitr)
+library(sf)
+library(rtrim)
+library(dplyr)
+library(NIcalc)
+library(readxl)
+library(writexl)
+library(odbc)
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+<!-- This is a comment that will not be included -->
+```{r, include=FALSE, echo=FALSE}
+
+# Load species list
+species_EC = read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i Fjellet/data/species_EC.xlsx")
+species_EC$Art = as.character(species_EC$Art)
+species_EC = species_EC[, 1:17]
+
+# Load trimdata
+trimdata_orig_pass = read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i Fjellet/data/ObsDat/ObsDat_Trim_pass_2020-09-29.csv")
+trimdata_orig_line = read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i Fjellet/data/ObsDat/ObsDat_Trim_line_2020-09-29.csv")
+trimdata_orig = rbind(trimdata_orig_pass, trimdata_orig_line)
+trimdata_orig = trimdata_orig[trimdata_orig$speciesID%in%species_EC$ArtsID, ]
+
+TrimResults = read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i Fjellet/data/ObsDat/TrimResults.csv")
+
+```
+
+Bruker kun data fra 2011-2020, da det var flere områder som ikke ble overvåket før 2011 (Finnmark fylke). Legger også til økosystem og region variablene til observasjonsdatasettet.
+```{r, echo = TRUE}
+
+# Copy of the original data
+trimdata_new = TrimResults %>% filter(Year >= 2011, Species > 0) %>% mutate(Count = ifelse(Count == -1, NA, Count)) # Subset on data from 2011
+trimdata_new = trimdata_new[which(trimdata_new$Species %in% species_EC$ArtsID), ] # Subset on the species in "species_EC"
+species_EC = species_EC %>% rename(Species = ArtsID) # Rename ArtsID to Species to match trimdata
+species_EC$Species = as.numeric(species_EC$Species)
+ecovar = species_EC %>% select(Species, ecosystem, regions)
+region = trimdata_orig %>% select(speciesID, site, year, region, county)
+region = region %>% rename(Species = speciesID, Site = site, Year = year, Region = region, County = county)
+
+trimdata_new = left_join(trimdata_new, ecovar, by = "Species") # Append "ecosystem" and "regions" to the count data
+trimdata_new = left_join(trimdata_new, region, by = c("Species", "Site", "Year")) # Append "region" to the count data
+
+```
+
+
+### Alpine ecosystem - North and South region
+Begrens datasettet til de artene vi er interessert i og del datasettet på nord/sør regionene.
+```{r AlpineEco}
+
+species = species_EC %>% filter(Art == "Heilo" | Art == "Blåstrupe" | Art == "Steinskvett" | Art == "Ringtrost" | Art == "Heipiplerke") # Subset on species of interest
+
+alpine_ns = trimdata_new %>% filter(Species %in% species$Species) 
+alpine_ns = arrange(alpine_ns, Species) # Sort the data by the species ID
+alpine_ns$Region = as.character(alpine_ns$Region)
+alpine_ns = alpine_ns %>% mutate(Region = ifelse(Region == "Ã¸st", "øst", ifelse(Region == "sÃ¸r", "sør", Region)))
+
+# Alpine
+alpa_n = alpine_ns %>% filter(Region == "nord")
+alpa_s = alpine_ns %>% filter(Region == "øst" | Region == "midt" | Region == "sør" | Region == "vest")
+```
+
+While-loop som kjører "trim" funksjonen for hver art i hver region og lagrer resultatene i en egen tabell.
+```{r, warning = FALSE}
+# While-loop that runs trim for each region and species in alpine_ns
+alpa_n_list = list()
+alpa_s_list = list()
+species_list = sort(unique(alpine_ns$Species))
+i = 1
+
+while(i < (length(unique(alpine_ns$Species))+1)){
+  alpa_n_list[[i]] = trim(Count ~ Site + Year, data = alpa_n %>% filter(Species == species_list[i]), 
+                         model = 2, changepoints="all", stepwise=FALSE, serialcor=TRUE, overdisp=TRUE)
+  
+  alpa_s_list[[i]] = trim(Count ~ Site + Year, data = alpa_s %>% filter(Species == species_list[i]), 
+                         model = 2, changepoints="all", stepwise=FALSE, serialcor=TRUE, overdisp=TRUE)
+
+  i = i+1
+}
+
+# Add species names to the model lists
+model_names = arrange(species_EC %>% filter(Species %in% sort(unique(alpine_ns$Species))), Species)$Art
+names(alpa_n_list) = model_names
+names(alpa_s_list) = model_names
+
+# Create the table that will hold the index data 
+alpa_tab = species_EC %>% filter(Species %in% sort(unique(alpine_ns$Species))) %>% select(Art, Species, ecosystem, regions, n_tot)
+alpa_tab = alpa_tab[rep(1:nrow(alpa_tab), rep(c(2), dim(alpa_tab)[1])), ] 
+alpa_tab = arrange(alpa_tab, Species) # Sort table by Species ID
+
+# Create table for each Rectype.
+alpa_tab1 = alpa_tab %>% mutate(Rectype = 1, "2011" = 0, "2012" = 0, "2013" = 0, "2014" = 0, "2015" = 0, "2016" = 0, "2017" = 0, "2018" = 0, "2019" = 0, "2020" = 0, Region = rep(c("north", "south"), length(unique(alpa_tab$Species))), Slope_add = 0, Slope_add_se = 0, Slope_mul = 0, Slope_mul_se = 0, p_trend = 0, Trend_class = 0)
+alpa_tab1 = alpa_tab1 %>% arrange(factor(Region, levels = c("north", "south")))
+alpa_tab2 = alpa_tab1 %>% mutate(Rectype = 2)
+alpa_tab3 = alpa_tab1 %>% mutate(Rectype = 3)
+alpa_tab4 = alpa_tab1 %>% mutate(Rectype = 4)
+
+# For loop that gets the index and totals values for each model  
+alpa_n_index = list()
+alpa_n_tot = list()
+alpa_s_index = list()
+alpa_s_tot = list()
+
+n_species = length(unique(alpine_ns$Species))
+for(i in 1:n_species){
+  alpa_n_index[[i]] = index(alpa_n_list[[i]], which = "imputed", base = 1)
+  alpa_n_tot[[i]] = totals(alpa_n_list[[i]], which = "imputed", obs = TRUE)
+  alpa_s_index[[i]] = index(alpa_s_list[[i]], which = "imputed", base = 1)
+  alpa_s_tot[[i]] = totals(alpa_s_list[[i]], which = "imputed", obs = TRUE)
+}
+
+alpa_tab1 = data.frame(alpa_tab1)
+alpa_tab2 = data.frame(alpa_tab2)
+alpa_tab3 = data.frame(alpa_tab3)
+alpa_tab4 = data.frame(alpa_tab4)
+
+# For loop that adds the index and totals values to the "Rectype" tables created above
+for(i in 1:n_species){
+  alpa_tab1[i, 7:16] = alpa_n_index[[i]]$imputed
+  alpa_tab1[i+n_species, 7:16] = alpa_s_index[[i]]$imputed
+  
+  alpa_tab2[i, 7:16] = alpa_n_index[[i]]$se_imp
+  alpa_tab2[i+n_species, 7:16] = alpa_s_index[[i]]$se_imp
+
+  alpa_tab3[i, 7:16] = alpa_n_tot[[i]]$imputed
+  alpa_tab3[i+n_species, 7:16] = alpa_s_tot[[i]]$imputed
+
+  alpa_tab4[i, 7:16] = alpa_n_tot[[i]]$se_imp
+  alpa_tab4[i+n_species, 7:16] = alpa_s_tot[[i]]$se_imp
+}
+
+# For loop that gets the additive and multiplicative slopes, as well as the trend class for each model
+model_list = c(alpa_n_list, alpa_s_list)
+tmp_add = c()
+tmp_add_se = c()
+tmp_mul = c()
+tmp_mul_se = c()
+tmp_p = c()
+tmp_meaning = c()
+for(i in 1:length(model_list)){
+  tmp_add = append(tmp_add, overall(model_list[[i]], which = "imputed")$slope$add)
+  tmp_add_se = append(tmp_add_se, overall(model_list[[i]], which = "imputed")$slope$se_add)
+  tmp_mul = append(tmp_mul, overall(model_list[[i]], which = "imputed")$slope$mul)
+  tmp_mul_se = append(tmp_mul_se, overall(model_list[[i]], which = "imputed")$slope$se_mul)
+  tmp_p = append(tmp_p, overall(model_list[[i]], which = "imputed")$slope$p)
+  tmp_meaning = append(tmp_meaning, overall(model_list[[i]], which = "imputed")$slope$meaning)
+}
+alpa_tab1$Slope_add = tmp_add
+alpa_tab1$Slope_add_se = tmp_add_se
+alpa_tab1$Slope_mul = tmp_mul
+alpa_tab1$Slope_mul_se = tmp_mul_se
+alpa_tab1$p_trend = tmp_p
+alpa_tab1$Trend_class = tmp_meaning
+
+# Append all the "Rectypes" tables into one
+alpine_ns_df = rbind(alpa_tab1, alpa_tab2, alpa_tab3, alpa_tab4)
+alpine_ns_df = alpine_ns_df %>% arrange(factor(Region, levels = c("north", "south")), Species) # Sort the table by Species ID and Region
+
+alpine_ns_df[, 7:16] = round(alpine_ns_df[, 7:16], digits = 3)
+alpine_ns_df[, 18:22] = round(alpine_ns_df[, 18:22], digits = 3)
+alpine_ns_df = alpine_ns_df %>% mutate(n_tot = ifelse(Rectype != 1, NA, n_tot), Slope_add = ifelse(Rectype != 1, NA, Slope_add), Slope_add_se = ifelse(Rectype != 1, NA, Slope_add_se), Slope_mul = ifelse(Rectype != 1, NA, Slope_mul), Slope_mul_se = ifelse(Rectype != 1, NA, Slope_mul_se), p_trend = ifelse(Rectype != 1, NA, p_trend), Trend_class = ifelse(Rectype != 1, NA, Trend_class))
+alpine_ns_df1 = alpine_ns_df
+colnames(alpine_ns_df1) = c("Art", "SpeciesID", "Ecosystem", "Regions", "n_tot", "Rectype", "2011", "2012", "2013"  , "2014", "2015", "2016", "2017", "2018", "2019", "2020", "Region", "Slope_add", "Slope_add_se", "Slope_mul", "Slope_mul_se", "P_trend", "Trend_class")
+
+# Export the table
+# write_xlsx(alpine_ns_df1, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i fjellet/Output/alpine_ns_01_10_2021.xlsx")
+```
+
+Transformasjon av indeks verdiene til lognormal skala for så å kjøre en "for loop" som går gjennom hvert år, og hver art og sampler lognormale indeksverdier. Det tas så et gjennomsnitt av de fem indeks verdiene for hvert år og lagrer resultatet. Dette gjentas k antall ganger (10000 i dette tilfellet) og lagres i et datasett. Fra det nye datasettet blir så tatt et kolonnegjennomsnitt for hvert år, som ender opp i en samleindeks for fugler i fjellet, basert på de fem inkluderte artene. 
+```{r, warning = FALSE}
+# Transform the index and index se values to lognormal scale
+lnorm_alpa_n = normal2Lognormal(alpa_tab1[1:5, 7:16], alpa_tab2[1:5, 7:16])
+lnorm_alpa_s = normal2Lognormal(alpa_tab1[6:10, 7:16], alpa_tab2[6:10, 7:16])
+
+# For loop that loops over all the years and a for loop that samples mean lognormal indices k-number of times
+alpa_n_smp = c()
+alpa_s_smp = c()
+tmp1 = c()
+tmp2 = c()
+k = 10000
+for(i in 1:length(unique(alpa_n$Year))){
+  for(j in 1:k){
+    for(h in 1:length(unique(alpa_n$Species))){
+      tmp1 = append(tmp1, rlnorm(n = 1, meanlog = lnorm_alpa_n$mean[[i]][h], 
+                                                  sdlog = lnorm_alpa_n$sd[[i]][h]))
+      
+      tmp2 = append(tmp2, rlnorm(n = 1, meanlog = lnorm_alpa_s$mean[[i]][h], 
+                                                  sdlog = lnorm_alpa_s$sd[[i]][h]))
+    }
+    alpa_n_smp = append(alpa_n_smp, mean(tmp1)) # Take the mean of all five species for the northern region
+    alpa_s_smp = append(alpa_s_smp, mean(tmp2)) # Take the mean of all five speies for the southern region
+    tmp1 = c()
+    tmp2 = c()
+  }
+}
+
+# Create a matrix of the samples for each region
+alpa_n_smp = matrix(data = alpa_n_smp, nrow = k, ncol = length(unique(alpa_n$Year)), dimnames = list(c(), c(as.character(2011:2020))))
+alpa_s_smp = matrix(data = alpa_s_smp, nrow = k, ncol = length(unique(alpa_s$Year)), dimnames = list(c(), c(as.character(2011:2020))))
+
+# Mean of the 10000 sample means for the 7 species in each region in the alpine_ns ecosystem 
+alpa_smp_mean = rbind(colMeans(alpa_n_smp), colMeans(alpa_s_smp))
+alpa_smp_mean = as_tibble(alpa_smp_mean) %>% mutate(Region = c("north", "south"))
+
+# Export the table of the mean of the 10000 sample means 
+# write_xlsx(alpa_smp_mean, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i fjellet/Output/alpine_ns_mean_sample_01_10_2021.xlsx")
+
+```
+
+Bruker de k antall samplinger til å visalisere endringene i indeksverdien over tid, med et 95% usikkerhetsestimat.
+```{r, warning = FALSE}
+## Plot mean of the sample and their CI
+alpa_n_lower = c(1)
+alpa_n_upper = c(1)
+alpa_s_lower = c(1)
+alpa_s_upper = c(1)
+for(i in 2:dim(alpa_n_smp)[2]){
+  alpa_n_lower = append(alpa_n_lower, quantile(alpa_n_smp[, i], probs = c(0.025, 0.975))[[1]])
+  alpa_n_upper = append(alpa_n_upper, quantile(alpa_n_smp[, i], probs = c(0.025, 0.975))[[2]])
+  alpa_s_lower = append(alpa_s_lower, quantile(alpa_s_smp[, i], probs = c(0.025, 0.975))[[1]])
+  alpa_s_upper = append(alpa_s_upper, quantile(alpa_s_smp[, i], probs = c(0.025, 0.975))[[2]])
+}
+
+# North - With CI
+par(mfrow = c(1,2))
+plot("2011":"2020", colMeans(alpa_n_smp), type = "l", lwd = 2, xlab = "Year", ylab = "Index", ylim = c(0, max(alpa_n_upper)), main = "Alpine - North")
+lines("2011":"2020", alpa_n_lower, col = "steelblue", lwd = 2)
+lines("2011":"2020", alpa_n_upper, col = "steelblue", lwd = 2)
+
+# South - With CI
+plot("2011":"2020", colMeans(alpa_s_smp), type = "l", lwd = 2, xlab = "Year", ylab = "Index", ylim = c(0, max(alpa_s_upper)), main = "Alpine - South")
+lines("2011":"2020", alpa_s_lower, col = "steelblue", lwd = 2)
+lines("2011":"2020", alpa_s_upper, col = "steelblue", lwd = 2)
+
+```
+
