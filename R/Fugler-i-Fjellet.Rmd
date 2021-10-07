@@ -24,6 +24,8 @@ library(NIcalc)
 library(readxl)
 library(writexl)
 library(odbc)
+library(kableExtra)
+library(DT)
 knitr::opts_chunk$set(echo = TRUE)
 
 ```
@@ -225,6 +227,21 @@ alpa_smp_mean = as_tibble(alpa_smp_mean) %>% mutate(Region = c("north", "south")
 
 # Export the table of the mean of the 10000 sample means 
 # write_xlsx(alpa_smp_mean, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i fjellet/Output/alpine_ns_mean_sample_01_10_2021.xlsx")
+
+```
+
+```{r tbl, echo=FALSE, warning=FALSE}
+tbl = read_excel(path = "~/GitHub/NINANOR/IBECA/data/alpine_ns_01_10_2021.xlsx")
+DT::datatable(
+  tbl, 
+  editable = 'cell',
+  extensions = "FixedColumns",
+  options = list(
+    dom = "t",
+    scrollX = TRUE,
+    scrollCollapse = TRUE,
+    caption = "Tabell 1. Trimtabell for artene Heilo, Blåstrupe, Steinskvett, Ringtrost og Heipiplerke for Nord og Sør-Norge."
+  ))
 
 ```
 
