@@ -67,7 +67,7 @@ tm_shape(reg) +
 ```
 
 ```{r import-fjellmaske}
-file <- "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Fjell/Mountain ecosystem Norge 50m.tif"
+file <- "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Mountain ecosystem Norge 50m.tif"
 fjell <- raster::raster(file, proxy=F)
 fjell
 ```
@@ -79,8 +79,12 @@ Vi trenger ikke så god oppløsning for dette. Reduserer fra 50x50m til 1x1km ve
 #fjell_low <- aggregate(fjell, fact=20)
 #saveRDS(fjell_low, "../output/fjell_1km.rds")
 # tar noen minutter...
+#writeRaster(fjell_low, "../output/fjell_1km.tif")
+
 
 fjell_low <- readRDS("../output/fjell_1km.rds")
+#fjell_low2 <- raster("../output/fjell_1km.tif")
+#plot(fjell_low2)
 
 fjell_low_star <- st_as_stars(fjell_low)
 fjell_low_star[fjell_low_star[]==0] <- NA # for plotting
