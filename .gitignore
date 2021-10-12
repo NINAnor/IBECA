@@ -27,3 +27,4 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 IBECA_NINA.Rproj
+Thumbs.db

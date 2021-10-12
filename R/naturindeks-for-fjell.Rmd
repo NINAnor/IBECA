@@ -20,6 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Analyser av Naturindeks for fjell
+Først så prøver jeg å gjenskape fjellindeksen slik den er på nettsiden. Indeksen skal være 0.56.
 
 
 Fyll inn ditt eget passord og brukernavn
@@ -60,7 +61,10 @@ Strukturerer datasettet
 fjell_assemeble <- NIcalc::assembleNiObject(
   inputData = fjelldat,
   predefNIunits = c(allArea = T, parts = T, counties = F),
-  indexType = "thematic")
+  #partOfTotal = 0.2,     # usikker hva denne gjør. klippet fra eksempelet  
+  indexType = "ecosystem",
+  part = "ecosystem",
+  total = "terrestrial")  
 
 saveRDS(fjell_assemeble, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble.rds")
 
@@ -73,4 +77,25 @@ fjell_assemeble <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastl
 ```
 
 
+```{r}
+fjellCalk <- NIcalc::calculateIndex(x        = fjell_assemeble, 
+                                    nsim     = 1000,
+                                    awBSunit = "Fjell",
+                                    fids     = TRUE,
+                                    #fidelity = NULL,
+                                    tgroups  = TRUE,
+                                    keys     = "specialWeight", #"ignore",
+                                    w        = 0.5,
+                                    awbs     = TRUE
+                                          )
+```
+
+```{r}
+summary(fjellCalk$wholeArea)
+```
+
+
+```{r}
+plot(fjellCalk$wholeArea)
+```
 
