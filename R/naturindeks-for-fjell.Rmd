@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Analyser av Naturindeks for fjell
 Først så prøver jeg å gjenskape fjellindeksen slik den er på nettsiden. Indeksen skal være 0.56.
 
-
+# Import - Importerer data fra NI
 Fyll inn ditt eget passord og brukernavn
 ```{r}
 myUser <- "anders.kolstad@nina.no"
@@ -37,9 +37,9 @@ fjelldat <- NIcalc::importDatasetApi(
   password = myPwd,
   eco = "Fjell", 
   indic = NULL,
-  year = "2019")
+  year = c("1990","2000","2010","2014","2019"))
 
-saveRDS(fjelldat, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellarter2019.rds")
+saveRDS(fjelldat, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-1990-2019.rds")
 
 rm(fjelldat)
 rm(myPwd)
@@ -47,21 +47,35 @@ rm(myPwd)
 
 Laster tilbake datasettet:
 ```{r, message=F}
-fjelldat <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellarter2019.rds")
+fjelldat <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-1990-2019.rds")
 ```
 
 Liste over arter som inngår
 ```{r}
-fjelldat$indicators$name
+(inds <- fjelldat$indicators$name)
+```
+
+Dette er hovedsakelig en liste over arter eller artsgrupper. Untaket er lavhei og kanskje vier alpint belte.
+
+
+# Assemble - Strukturerer datasettet
+
+
+Specify whole land area of Norway and all five country parts as Niunits:
+```{r}
+myNIunits <- c(allArea = T, parts = T, counties = F)
+```
+Only include Bsunits (kommuner) where the mountain ecosystem covers more than x% of the  terrestrial area.
+```{r}
+myPartOfTotal <- .2
 ```
 
 
-Strukturerer datasettet
 ```{r, eval=FALSE}
 fjell_assemeble <- NIcalc::assembleNiObject(
   inputData = fjelldat,
-  predefNIunits = c(allArea = T, parts = T, counties = F),
-  #partOfTotal = 0.2,     # usikker hva denne gjør. klippet fra eksempelet  
+  predefNIunits = myNIunits, 
+  partOfTotal = myPartOfTotal, 
   indexType = "ecosystem",
   part = "ecosystem",
   total = "terrestrial")  
@@ -77,25 +91,304 @@ fjell_assemeble <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastl
 ```
 
 
+
+## Reduce the number of functional groups
+Reduce the number of functional groups in the data set in order to avoid
+unintentionally emphasizing single non-key indicators. I.e. merge
+generalists and specialists into one group for each trophic level.
+```{r reduce functional groups, message=F}
+xxx <- yyy <- fjell_assemeble$indicators$functionalGroup
+xxxId <- yyyId <- fjell_assemeble$indicators$functionalGroupId
+yyy[xxxId %in% c(1,2)] <- "Mellompredator"
+yyyId[xxxId %in% c(1,2)] <- 1
+yyy[xxxId %in% c(6,7)] <- "Primærprodusent"
+yyyId[xxxId %in% c(6,7)] <- 6
+yyy[xxxId %in% c(8,9)] <- "Topp-predator"
+yyyId[xxxId %in% c(8,9)] <- 8
+fjell_assemeble$indicators$functionalGroup <- yyy
+fjell_assemeble$indicators$functionalGroupId <- yyyId
+```
+
+## Imputations for missing values
+```{r imputeDiagnostics, inklude=FALSE}
+mountainDiagnostics <- NIcalc::imputeDiagnostics(x = fjell_assemeble,
+nSim = 10,
+transConst = 0.01,
+maxit = 20)
+```
+
+```{r imputeDiagnostics, eval=FALSE}
+mountainDiagnostics <- NIcalc::imputeDiagnostics(x = fjell_assemeble,
+nSim = 10,
+transConst = 0.01,
+maxit = 20)
+```
+
+
+```{r, fig.cap="Figuren viser hvor det mangler data."}
+mountainDiagnostics$diagnostics$mdDistribuiton
+```
+
+Det er noen datahull hvor standardsmetoden har imputerert data. (For 2019 er det kun snakk om vier og lavhei, så det kan være bedre for ØT-analysene å bare ekskludere disse.) Denne operasjonen tar en del tid, så jeg lagrer outputen på server og henter den tilbake (så slipper jeg å kjøre funksjonen på nytt hver gang).
+
+```{r imputeData, eval=FALSE}
+fjell_imputes <- NIcalc::imputeData(x = fjell_assemeble,
+    nSim = 1000,
+    transConst = 0.01,
+    maxit = 20,
+    printFlag = TRUE)
+
+saveRDS(fjell_imputes, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes.rds")
+```
+
+Henter tilbake datasettet
 ```{r}
-fjellCalk <- NIcalc::calculateIndex(x        = fjell_assemeble, 
-                                    nsim     = 1000,
-                                    awBSunit = "Fjell",
-                                    fids     = TRUE,
-                                    #fidelity = NULL,
-                                    tgroups  = TRUE,
-                                    keys     = "specialWeight", #"ignore",
-                                    w        = 0.5,
-                                    awbs     = TRUE
-                                          )
+fjell_imputes <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes.rds")
+```
+
+
+```{r imputesCorr}
+mountainImputesCorr <- NIcalc::impStand(x = fjell_assemeble,
+imputations = fjell_imputes)
+```
+
+
+# Regne ut fjellindeksen - calculateIndex
+Her regner jeg ut fjellindeksen tilsvarende den 'offisielle' versjonen
+```{r, message=FALSE}
+fjellIndex <- NIcalc::calculateIndex(
+  x       = fjell_assemeble,
+  imputations = mountainImputesCorr,
+  nsim     = 1000,
+  awBSunit = "Fjell",
+  fids     = F,    # should fidelities be ignored in 
+                   # the calculation of Wi?
+  tgroups  = TRUE, # should grouping of indicators 
+                   # into trophic and key indicator 
+                   # groups be ignored
+  keys     = "specialWeight", #"ignore",
+  w        = 0.5
+)
 ```
 
 ```{r}
-summary(fjellCalk$wholeArea)
+summary(fjellIndex$wholeArea)
 ```
+Disse tallene stemmer med det som presenteres på nettsiden.
+
+```{r, fig.cap="Figuren over: Naturindeksen for fjell slik den presenteres på nettsiden."}
+plot(fjellIndex$wholeArea)
+```
+
+## Vekting
+La oss se hvordan denne standardmetoden har vektlagt de ulike indikatorene
+```{r}
+wgt <- NIcalc::summaryWeights(fjellIndex$wholeArea)
+wgt <- wgt[,ncol(wgt)]
+wgt <- sort(wgt, decreasing = T)
+par(mar=c(12,5,0.5,0))
+barplot(wgt, las=2)
+```
+
+Fjellindeksen er i praksis oppgjort av kun rundt 6 indikatorer. Disse er trolig først og fremst de som har blit gitt ekstra vekt som nøkkelarter, og 5 av de 6 høyest vektede indikatorene er med i ØT-fjell som egne, separete indikatorer fra før. 
 
 
 ```{r}
-plot(fjellCalk$wholeArea)
+wgtT <- NIcalc::summaryWeights(fjellIndex$wholeArea, group = "troph")
+wgtT<- wgtT[,ncol(wgtT)]
+wgtT <- sort(wgtT, decreasing = T)
+par(mar=c(12,5,0.5,0))
+barplot(wgtT, las=2)
 ```
+
+Her ser vi igjen hvor viktige nøkkelartene er i utregningen av indeksen. Standardmetoden vekter også ned indikatorer som representerer trofiske grupper hvor det allerede finnes flere andre indikatorer (lik vekt til alle trofiske nivå). Indeksen er med andre ord designet for å gi et bilde av tilstanden på et gitt areal, og ikke tilstanden til artene som ingår som indikatorer.
+
+
+
+
+
+
+
+
+
+
+
+# Index uten vekting av nøkkelarter trofiske grupper
+
+Først vil jeg fjerne to indikatorer fra indikatorsettet - vier og lavhei. Disse har ikke data fra 2019 og siden vi ikke analyserer tidserien og ikke er interessert i trenden i indeksen over tid, så seg jeg ingen grunn til å gjøre imuteringer. Jeg tror det letteste er å hente dataene på nytt fra databasen.
+
+Her er listen over indikatorene jeg ønsker å ha med
+```{r}
+(inds_red <- inds[!inds %in% c("Vier alpint belte", "Lavhei")])
+```
+
+## Import
+Her tar jeg inn bare de indikatorene som har data fra 2019 og så bryr jeg meg heller ikke om å lage en tidsserie, så jeg tar bare dataene fra 2019
+```{r import, eval=F}
+
+fjelldat_red <- NIcalc::importDatasetApi(
+  username = myUser,
+  password = myPwd,
+  indic = inds_red,
+  year = "2019")
+
+saveRDS(fjelldat_red, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell_red-2019.rds")
+
+rm(fjelldat_red)
+rm(myPwd)
+```
+
+Laster tilbake datasettet:
+```{r, message=F}
+fjelldat_red <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell_red-2019.rds")
+```
+
+## Assemble
+Her må jeg velge indexTtype thematic siden jeg bruker mitt eget utvalg av indikatorer. Hvis ikke blir output en liste og ikke en niInput. Videre så skrur jeg av denne ekskluderingen av kommuner BSunits som har mindre en 20% fjellareal, siden jeg uansett vekter de skalerte indikatorene basert på total fjellareal senere.
+```{r, eval=FALSE}
+fjell_assemeble_red <- NIcalc::assembleNiObject(
+  inputData = fjelldat_red,
+  predefNIunits = myNIunits,
+  indexType = "thematic"
+  )  
+
+saveRDS(fjell_assemeble_red, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble_red.rds")
+
+rm(fjell_assemeble_red)
+```
+
+```{r}
+fjell_assemeble_red <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble_red.rds")
+```
+
+
+
+## Reduser antall funksjonelle grupper
+Dette trenger jeg ikke gjøre nå ettersom jeg ikke skal bruke de trofiske nivåene til å bestemme vekting.
+
+# Kalulerer indeksen
+```{r nyFjellindeks, message=FALSE}
+
+fjellIndex2 <- NIcalc::calculateIndex(
+  x       = fjell_assemeble_red,
+  nsim     = 1000,
+  awBSunit = "Fjell",
+  fids     = F,    # should fidelities be ignored in 
+                   # the calculation of Wi?
+  tgroups  = F, # should grouping of indicators 
+                   # into trophic and key indicator 
+                   # groups be ignored
+  keys     = "ignore",
+  awbs=TRUE # arealvekting basert på fjellareal i hver kommune
+)
+```
+
+
+Her er verdiene for hele landet og for regionene.
+```{r}
+tbl <-  as.data.frame(summary(fjellIndex2$wholeArea))
+tbl2 <- as.data.frame(summary(fjellIndex2$E))
+tbl3 <- as.data.frame(summary(fjellIndex2$S))
+tbl4 <- as.data.frame(summary(fjellIndex2$W))
+tbl5 <- as.data.frame(summary(fjellIndex2$C))
+tbl6 <- as.data.frame(summary(fjellIndex2$N))
+
+myTbl <- rbind(tbl,
+               tbl2,
+               tbl3,
+               tbl4,
+               tbl5,
+               tbl6)
+myTbl[,-4]
+```
+
+Indeksverdien blir en del høyere med denne metoden: 0.65 istedet for 0.56.
+(Kommentar: jeg fikk samme verdi 0.65 om jeg forstsatt hadde med lavhei og vier-indikatorene, så det hadde liten betydning i realiteten)
+
+
+## Vekting
+La oss se hvordan denne custom-metoden har vektlagt de ulike trofiske nivåene, derette de enklete indikatorene:
+
+```{r}
+(wgtT_red <- NIcalc::summaryWeights(fjellIndex2$wholeArea, group = "troph"))
+
+#wgtT_red<- wgtT_red[,ncol(wgtT_red)]
+#wgtT_red <- sort(wgtT_red, decreasing = T)
+#par(mar=c(12,5,0.5,0))
+#barplot(wgtT_red, las=2)
+```
+
+Her skjer det noe rart. Jeg få bare ut vektingen for våtmark. Jeg vet ikke om dette også gjelder under.
+
+
+```{r}
+wgt2 <- NIcalc::summaryWeights(fjellIndex2$wholeArea, indicData=T)
+DT::datatable(
+  wgt2, 
+  extensions = "FixedColumns",
+  options = list(
+    dom = "t",
+    scrollX = TRUE,
+    scrollY=T,
+    scrollCollapse = TRUE,
+    caption = "..."
+  ))
+```
+
+```{r, fig.cap="Figuren over: Vekting av indikatorer i fjellindeksen når det ikke gis spesiell vekt til nøkkelarter og det ikke tvinges fram en lik vekting for hvert trofiske nivå"}
+wgt2 <- NIcalc::summaryWeights(fjellIndex2$wholeArea, indicData=F)
+wgt2 <- wgt2[,ncol(wgt2)]
+wgt2 <- sort(wgt2, decreasing = T)
+par(mar=c(12,5,0.5,0))
+barplot(wgt2, las=2)
+```
+
+Nå var det mye mer jevnt. Ulikhetene nå skyldes to ting. 1) Ulik dekningsgrad - ikke alle indikatorene finnes eller har data fra alle BSunits (kommuner). Denne vektingen kan det nok være lurt å beholde. 2) Arealvekting basert på fjellareal i hver kommune. Denne kan det også være lurt å beholde tror jeg, men jeg kan prøve å fjerne den bare for å se: 
+
+
+# Index uten awbs (area weight from basal units)
+```{r, message=FALSE}
+fjellIndex3 <- NIcalc::calculateIndex(
+  x       = fjell_assemeble,
+  imputations = mountainImputesCorr,
+  nsim     = 1000,
+  awBSunit = "Fjell",
+  fids     = F,    # should fidelities be ignored in 
+                   # the calculation of Wi?
+  tgroups  = F, # should grouping of indicators 
+                   # into trophic and key indicator 
+                   # groups be ignored
+  keys     = "ignore",
+  awbs=FALSE
+)
+```
+
+## Vekting
+La oss se hvordan denne custom-metoden har vektlagt de ulike indikatorene
+```{r, fig.cap="Figuren over: Vekting av indikatorer i fjellindeksen når alle kommuner (BSunits) teller likt uavhengig av totalareal eller fjellareal"}
+wgt3 <- NIcalc::summaryWeights(fjellIndex3$wholeArea)
+wgt3 <- wgt3[,ncol(wgt3)]
+wgt3 <- sort(wgt3, decreasing = T)
+par(mar=c(12,5,0.5,0))
+barplot(wgt3, las=2)
+```
+
+
+# Skaleringsnivå
+En annen ting å tenke på er skaleringen og hvordan den forgår. Standardmetoden er slik at skaleringen foregår for hver ICunit basert på indikator verdien og referanseverdien for dette arealet. Vi ønsker kanskje egentlig at skaleringen skal foregå bare for hver region (NIunits: e,s,w,n,c), samt at for totalen så bør den bare være felles for hele landet. Dette ser ikke ut til å være en funskjon i NIcalc og krever at jeg gjør endringer i funksjonene, eller i datasettet  med å summere opp referasneverdier og indikatorverdier for hver NIunit. Det er ikke så lett synbtes jeg.
+
+Noen indikatorer har bare en referanseverdi som er felles for hele Norge, slik som blåstrupe
+
+```{r}
+fjelldat$referenceValues$referenceValues[fjelldat$referenceValues$referenceValues$indName=="Blåstrupe", c("indName", "ICunitName", "expectedValue")]
+```
+
+Andre indikatorer har ulike referanseverdier for ulike arealenheter. Eksempelvis fjellrev:
+```{r}
+fjelldat$referenceValues$referenceValues[fjelldat$referenceValues$referenceValues$indName=="Fjellrev", c("indName", "ICunitName", "expectedValue")]
+```
+
+Vi ønsker at indikatorene og indeksen skal være indikatorfokusert og ikke areal-foksuert. Vi ønsker altså at man summerer (eller tar gjennomsnitt) av referanseverdien i alle ICunits i samme region og deler den summerte indikatorverdien på denne. For den skalerte indikatorverdien for hele landet  bør man summere  referanseverdien i absolutt alle ICunits og dele den summerte indikatorverdien på denne.
+
+
 
