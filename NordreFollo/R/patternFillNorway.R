@@ -15,14 +15,16 @@ dev.off()
 
 plot(nor, col="grey")
 
-
+# Skravert Norgeskart
 patternNor <- ggplot(nor2)+
   geom_sf_pattern(
+    fill = "white",
+    pattern_alpha = .8,
     pattern = 'crosshatch',
-    pattern_fill    = 'black',
+    pattern_fill    = 'grey',
     pattern_colour  = 'black',
-    pattern_size = .5,
-    pattern_density = .5
+    pattern_size = .1,
+    pattern_density = .3
   )+
   theme(axis.line=element_blank(),axis.text.x=element_blank(),
         axis.text.y=element_blank(),axis.ticks=element_blank(),
@@ -35,10 +37,13 @@ patternNor <- ggplot(nor2)+
         panel.grid.minor=element_blank(),
         plot.background=element_blank())
 
-png("output/NorgePNG.png")
+png("output/NorgeSkravertPNG.png")
 patternNor
 dev.off()
 
+
+
+# Prikkete Norgeskart
 dotsNor <- ggplot(nor2)+
   geom_sf_pattern(
     pattern = 'circle',

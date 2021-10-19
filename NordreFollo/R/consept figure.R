@@ -31,7 +31,7 @@ gantt <- ganttrify(project = dummyData,
   scale_y_discrete(position = "right",
                    expand = expansion(mult=c(.1,.2))) +
   ylab("Scaled indicators")+
-  xlab("Validity")+
+  xlab("Indicator validity")+
   theme(
     axis.title = element_text(size=30),
     plot.margin = margin(0.5, 0.8, .5, 0.5, "cm")
@@ -47,6 +47,12 @@ gantt <- ganttrify(project = dummyData,
                colour="chartreuse3")+
   geom_segment(aes(x = as.Date("2021-03-15"), 
                    y = .5, xend = as.Date("2021-03-15"), yend = 9),
+               lineend = 'round', linejoin = 'round',
+               arrow = arrow(length = unit(0.5, "cm")),
+               size=3,
+               colour="chartreuse3")+
+  geom_segment(aes(x = as.Date("2021-05-15"), 
+                   y = .5, xend = as.Date("2021-05-15"), yend = 9),
                lineend = 'round', linejoin = 'round',
                arrow = arrow(length = unit(0.5, "cm")),
                size=3,
