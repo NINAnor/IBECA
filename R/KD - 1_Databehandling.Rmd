@@ -1,0 +1,542 @@
+---
+title: "KD - 1_Databehandling"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'klima-databehandling.html'))})
+---
+<!-- Clear variables from memory and load packages -->
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+
+rm(list=ls())
+require(rgdal)
+require(raster)
+require(rgeos)
+require(spatial)
+require(maptools)
+require(foreach)
+require(doParallel)
+require(rlist)
+require(doSNOW)
+
+```
+
+
+## 1 - Databehandling av Klimadata 
+### Nedbør - Summer mengden nedbør & antall dager med nedbør (Mai - Okt.)
+```{r, echo = TRUE, eval = FALSE}
+
+# IndicatorType should be entered as either "sumPrecip" for sum precipitation or "daysPrecip" for number of days with precipitation in the period May - Oct
+PrecipIndicators = function(IndicatorType){
+  
+  # Set up for parallel run 
+  UseCores = 12
+  cl = makeCluster(UseCores)
+  registerDoParallel(cl)
+  
+  # List files in R:/ directory (daily data; rr = precipitation)
+  AllFilesInRR = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/rr",full.names = TRUE, pattern = ".bil$")
+  
+  # Define years  (1957 - 2020)
+  uniq_y = c(1957:2020) 
+  
+  # Define months, w. leading '0'
+  uniq_m = c(paste("0", 5:9, sep=""), 10) # May - October
+  
+  # Subsetting the dataset by selecting only the months we are interested in (all years)
+  SampleMonths = foreach(i = 1:length(AllFilesInRR), .combine = c) %dopar% {
+    if((substring(AllFilesInRR[i], first = nchar(AllFilesInRR[i])-8, last = nchar(AllFilesInRR[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the            months we are interested in, append that line to SampleMonths
+    AllFilesInRR[i] 
+    }
+  }
+  
+  if(IndicatorType == "sumPrecip"){
+    # Summing the amount of precipitation for each year
+    sumPrecip_all_years = list()
+    sumPrecip_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
+      sumPrecip_all_years = stack(SampleMonths[grepl(paste("rr", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
+      sumPrecip_year = list() # New code
+      sumPrecip_year = foreach(j = 1:nlayers(sumPrecip_all_years), .packages = c("doParallel", "raster")) %dopar% {
+        rs = raster(sumPrecip_all_years, layer = j)
+        rs[rs > 0] = rs[rs > 0] / 10
+        sumPrecip_year[[j]] = rs
+      }
+      sumPrecip_all_years[[i]] = stackApply(stack(sumPrecip_year), c(1), fun = sum)
+    }
+
+    # Stacking the years to one raster stack
+    sumPrecip_all_years = stack(sumPrecip_all_years) 
+
+    names(sumPrecip_all_years) = uniq_y # Name by years
+    
+    # Rasterstack directory;
+    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/",
+                        paste(paste("rr", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+    
+    # Write raster
+    writeRaster(sumPrecip_all_years, RasterLocation, format="raster", overwrite = TRUE)
+    
+    return(sumPrecip_all_years)
+  
+  }
+  
+  else if(IndicatorType == "daysPrecip"){
+    # Summing the days with precipitation for each year
+    daysPrecip_all_years = list()
+    daysPrecip_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
+      daysPrecip_year = stack(SampleMonths[grepl(paste("rr", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
+      daysPrecip = list()
+      daysPrecip = foreach(j = 1:nlayers(daysPrecip_year), .packages = c("doParallel", "raster")) %dopar% {
+        r = raster(daysPrecip_year, layer = j)
+        r[r > 0] = 1 # Only integers. Lowest integer value is 1 (divided by 10 we get the threshold for a day with precipitation, AT LEAST 0.1mm), so all integers greater than 0 should be included. 
+        daysPrecip[[j]] = r
+      }
+      
+      daysPrecip_all_years[[i]] = stackApply(stack(daysPrecip), c(1), fun = sum)
+    }
+
+    # Stacking the years to one raster stack
+    daysPrecip_all_years = stack(daysPrecip_all_years) 
+
+    names(daysPrecip_all_years) = uniq_y # Name by years
+    
+    # Rasterstack directory; change
+    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/",
+                        paste(paste("rr", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+    
+    # Write raster
+    writeRaster(daysPrecip_all_years, RasterLocation, format="GTiff", overwrite = TRUE)
+    
+    return(daysPrecip_all_years)
+  }
+  stopImplicitCluster()
+}
+
+```
+
+### Temperatur - Gjennomsnittlig sommer (Juni - Aug.) og vinter temperatur (Des. - Feb.)
+```{r, echo = TRUE, eval = FALSE}
+# IndicatorType should be entered as either "meanSummer" for mean summer temp (Jun - Aug) or "meanWinter" for mean winter temp (Dec - Feb)
+TempIndicators = function(IndicatorType){
+  
+  # Set up for parallel run 
+  UseCores = 12 
+  cl = makeCluster(UseCores)
+  registerDoParallel(cl)
+  
+  # List files in R:/ directory (daily data; tm = temperature)
+  AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
+
+  # Define years
+  uniq_y <- c(1957:2020) 
+
+  if(IndicatorType == "meanSummer"){
+    
+    # Define months
+    uniq_m <- c("06", "07", "08") # July - August
+  
+    SampleMonths = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+      if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+      AllFilesInTM[i] 
+      }
+    }
+    
+    meanSummer_all_years = list()
+    meanSummer_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
+      meanSummer_years = stack(SampleMonths[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
+      meanSummer_year = list()
+      meanSummer_year = foreach(j = 1:nlayers(meanSummer_years), .packages = c("doParallel", "raster")) %dopar% {
+        ms = raster(meanSummer_years, layer = j)
+        ms[ms > 0] = (ms[ms > 0] - 2731) / 10
+        meanSummer_year[[j]] = ms
+      }
+      meanSummer_all_years[[i]] = stackApply(stack(meanSummer_year), c(1), fun = mean) 
+    }
+
+    # Stacking the years to one raster stack
+    meanSummer_all_years = stack(meanSummer_all_years) 
+
+    names(meanSummer_all_years) = uniq_y # Name by years
+    
+    # Rasterstack directory; change
+    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/",
+                        paste(paste("tm", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+    
+    # Write raster
+    writeRaster(meanSummer_all_years, RasterLocation, format="raster", overwrite = TRUE)
+  
+  }
+  
+  else if(IndicatorType == "meanWinter"){
+    
+    # Calculating the mean winter temperature for each year
+    uniq_mw = c("12", "01", "02") # Define months for winter (First year 1957 have data from January, take mean of Jan+Feb for 1957)
+    
+    # Subsetting the dataset by selecting only the months we are interested in (all years)
+    SampleMonths = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+      if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_mw){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+      AllFilesInTM[i] 
+      }
+    }
+    
+    meanWinter_all_years = list()
+    meanWinter_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
+      if (i == 1){
+        meanWinter_year = SampleMonths[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
+        meanWinter_year = meanWinter_year[!grepl(paste("tm", uniq_y[i], 12, sep = "_"), meanWinter_year, fixed = TRUE)]
+        meanWinter_ys1 = stack(meanWinter_year)
+        meanWinter_y = list()
+        meanWinter_y = foreach(j = 1:nlayers(meanWinter_ys1), .packages = c("doParallel", "raster")) %dopar% {
+          mw1 = raster(meanWinter_ys1, layer = j)
+          mw1[mw1 > 0] = (mw1[mw1 > 0] - 2731) / 10
+          meanWinter_y[[j]] = mw1
+        }
+        meanWinter_all_years[[i]] = stackApply(stack(meanWinter_y), c(1), fun = mean)
+      }
+      else if(i > 1){
+        meanWinter_year = SampleMonths[grepl(paste("tm", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
+        meanWinter_year = list.append(meanWinter_year, SampleMonths[grepl(paste("tm", uniq_y[i], uniq_mw[2], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("tm", uniq_y[i], uniq_mw[3], sep = "_"), SampleMonths, fixed = TRUE)])
+        meanWinter_ys2 = stack(meanWinter_year)
+        meanWinter_y2 = list()
+        meanWinter_y2 = foreach(k = 1:nlayers(meanWinter_ys2), .packages = c("doParallel", "raster")) %dopar% {
+          mw2 = raster(meanWinter_ys2, layer = k)
+          mw2[mw2 > 0] = (mw2[mw2 > 0] - 2731) / 10
+          meanWinter_y2[[k]] = mw2
+        }
+        meanWinter_all_years[[i]] = stackApply(stack(meanWinter_y2), c(1), fun = mean)
+      }
+    }
+      
+    # Stacking the years to one raster stack
+    meanWinter_all_years = stack(meanWinter_all_years) 
+
+    names(meanWinter_all_years) = uniq_y # Name by years
+    
+    # Rasterstack directory; change
+    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/",
+                        paste(paste("tm", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+    
+    # Write raster
+    writeRaster(meanWinter_all_years, RasterLocation, format="raster", overwrite = TRUE)
+    
+  }
+  stopImplicitCluster()
+}
+
+```
+
+### Snow cover - Days with snow cover
+```{r, echo = TRUE, eval = FALSE}
+
+SnowIndicators = function(SimpleOrComplex){
+  
+  # Set up for parallel run 
+  UseCores = 12 
+  cl = makeCluster(UseCores)
+  registerDoParallel(cl)
+  
+  # List files in R:/ directory (daily data; rr = precipitation)
+  AllFilesInSD = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd",full.names = TRUE, pattern = ".bil$")
+  
+  # Define years
+  uniq_y = c(1957:2020) 
+
+  # Define months
+  uniq_m = c("10", "11", "12", "01", "02", "03") # Dec - Mars (Data starts in Sept 1957, should therefore start at i = 2 with mean of Dec 1957+Jan 58+Feb 58+Mar 58)
+  
+  # Subsetting the dataset by selecting only the months we are interested in (all years)
+  SampleMonths = foreach(i = 1:length(AllFilesInSD), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+    if((substring(AllFilesInSD[i], first = nchar(AllFilesInSD[i])-8, last = nchar(AllFilesInSD[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+      AllFilesInSD[i] 
+    }
+  }
+  
+  if(SimpleOrComplex == "Simple") {
+  
+    # Calculating the number of days with snow cover for each year
+    daysSnowCover_all_years = list()
+    
+    daysSnowCover_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel","raster", "rlist")) %dopar% {
+    if (i == 1){
+        daysSnowCover_year = SampleMonths[grepl(paste("sd", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
+        daysSnowCover_year = stack(daysSnowCover_year)
+        daysSnowCover = list()
+        daysSnowCover = foreach(j = 1:nlayers(daysSnowCover_year), .packages = c("doParallel","raster")) %dopar% {
+          r = raster(daysSnowCover_year, layer = j)
+          r[r > 0] = 1
+          daysSnowCover[[j]] = r
+        }
+      daysSnowCover_all_years[[i]] = stackApply(stack(daysSnowCover), c(1), fun = sum)
+    }
+  
+   else if(i > 1){
+        daysSnowCover_year = SampleMonths[grepl(paste("sd", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
+        daysSnowCover_year = list.append(daysSnowCover_year, SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[2], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[3], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)])
+        daysSnowCover_year = stack(daysSnowCover_year)
+        daysSnowCover = list()
+        daysSnowCover = foreach(j = 1:nlayers(daysSnowCover_year), .packages = c("doParallel","raster")) %dopar% {
+          r = raster(daysSnowCover_year, layer = j)
+          r[r > 0] = 1
+          daysSnowCover[[j]] = r
+        }
+        daysSnowCover_all_years[[i]] = stackApply(stack(daysSnowCover), c(1), fun = sum)
+      }
+    }
+
+    # Stacking the years to one raster stack
+    daysSnowCover_all_years = stack(daysSnowCover_all_years) 
+
+    names(daysSnowCover_all_years) = uniq_y # Name by years
+    
+    # Rasterstack directory; change
+    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/",
+                        paste(paste("sd_s", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+    
+    # Write raster
+    writeRaster(daysSnowCover_all_years, RasterLocation, format="raster", overwrite = TRUE)
+    
+  }
+  
+  if(SimpleOrComplex == "Complex"){
+    
+    # Temperature
+    AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
+
+    SampleMonthsTemp = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+      if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_m){
+        AllFilesInTM[i]
+      }
+    }
+
+    SnowTempCover_all_years = list()
+
+    SnowTempCover_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
+      if (i == 1){
+        SnowRaster = SampleMonths[grepl(paste("sd", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
+        TempRaster = SampleMonthsTemp[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonthsTemp, fixed = TRUE)]
+        SnowRaster = stack(SnowRaster)
+        TempRaster = stack(TempRaster)
+
+        SnowTempCover = list()
+
+        SnowTempCover = foreach(j = 1:nlayers(SnowRaster), .packages = c("doParallel", "raster")) %dopar% {
+          r = raster(SnowRaster, layer = j)
+
+          k = raster(TempRaster, layer = j)
+
+          TempRows = which(k[] > 2731)
+          SnowRows = which(r[] > 0)
+
+          if(length(TempRows) >= length(SnowRows)){
+            TempSnowRows = which(SnowRows %in% TempRows)
+            r[][SnowRows[TempSnowRows]] = -1337
+            r[r != -1337] = 0
+            r[r == -1337] = 1
+          }
+          else {
+            TempSnowRows = which(TempRows %in% SnowRows)
+            r[][TempRows[TempSnowRows]] = -1337
+            r[r != -1337] = 0
+            r[r == -1337] = 1
+          }
+
+          SnowTempCover[[j]] = r
+        }
+        SnowTempCover_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
+      }
+  
+      else if(i > 1) {
+        SnowRaster = SampleMonths[grepl(paste("sd", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
+        SnowRaster = list.append(SnowRaster, SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[2], sep = "_"), SampleMonths, fixed = TRUE)], .data = SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[3], sep = "_"), SampleMonths, fixed = TRUE)])
+        TempRaster = SampleMonthsTemp[grepl(paste("tm", uniq_y[i]-1, 12, sep = "_"), SampleMonthsTemp, fixed = TRUE)]
+        TempRaster = list.append(TempRaster, SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[2], sep = "_"), SampleMonthsTemp, fixed = TRUE)], SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[3], sep = "_"), SampleMonthsTemp, fixed = TRUE)], SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[4], sep = "_"), SampleMonthsTemp, fixed = TRUE)])
+        SnowRaster = stack(SnowRaster)
+        TempRaster = stack(TempRaster)
+    
+        SnowTempCover = list()
+    
+        SnowTempCover = foreach(j = 1:nlayers(SnowRaster), .packages = c("doParallel", "raster")) %dopar% {
+          r = raster(SnowRaster, layer = j)
+      
+          k = raster(TempRaster, layer = j)
+      
+          TempRows = which(k[] > 2731)
+          SnowRows = which(r[] > 0)
+      
+          if(length(TempRows) >= length(SnowRows)){
+            TempSnowRows = which(SnowRows %in% TempRows)
+            r[][SnowRows[TempSnowRows]] = -1337 # random variable value
+            r[r != -1337] = 0
+            r[r == -1337] = 1
+          }
+          else {
+            TempSnowRows = which(TempRows %in% SnowRows)
+            r[][TempRows[TempSnowRows]] = -1337
+            r[r != -1337] = 0
+            r[r == -1337] = 1
+          }
+      
+          SnowTempCover[[j]] = r
+        }
+        SnowTempCover_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
+      }
+    }
+
+    SnowTempCover_all_years = stack(SnowTempCover_all_years)
+
+    names(SnowTempCover_all_years) = uniq_y # Name by years
+
+    # Rasterstack directory
+    RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover Condition on Temperature/", paste(paste("sd_c", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
+
+    # Write Raster
+    writeRaster(SnowTempCover_all_years, RasterLocation, format = "raster", overwrite = TRUE)
+    }
+  stopImplicitCluster()
+}
+
+```
+
+### Growth season - Length of the growth season
+```{r, echo = TRUE, eval = FALSE}
+
+GrowthSeasonIndicator = function() {
+  # Set up for parallel run 
+  UseCores = 12 
+  cl = makeCluster(UseCores)
+  registerDoParallel(cl)
+
+  # Snow cover
+  AllFilesInSD = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd", full.names = TRUE, pattern = ".bil$")
+
+  # Define years (had to run in 10 year intervals to get it to run without crashing, therefore 2008:2020 in the code here)
+  uniq_y = c(2008:2020)
+  
+  # Working with a sample of the dataset (The year 2018 and 2019)
+  SampleDataSnow = AllFilesInSD[grepl(paste("sd_", uniq_y[1], sep=""), AllFilesInSD, fixed = TRUE)]
+  for(i in 2:length(uniq_y)){
+    SampleDataSnow = list.append(SampleDataSnow, AllFilesInSD[grepl(paste("sd_", uniq_y[i], sep=""), AllFilesInSD, fixed = TRUE)])
+  }
+
+  # Temperature
+  AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm", full.names = TRUE, pattern = ".bil$")
+
+  # Working with a sample of the dataset
+  SampleDataMeanTemp = AllFilesInTM[grepl(paste("tm_", uniq_y[1], sep = ""), AllFilesInTM, fixed = TRUE)]
+  for(i in 2:length(uniq_y)){
+    SampleDataMeanTemp = list.append(SampleDataMeanTemp, AllFilesInTM[grepl(paste("tm_", uniq_y[i], sep = ""), AllFilesInTM, fixed = TRUE)])  
+  }
+  
+  rm(AllFilesInTM)
+
+  GrowthSeason_all_years = list()
+
+  SnowRaster = stack(SampleDataSnow)
+  TempRaster = stack(SampleDataMeanTemp)
+
+  GrowthSeason_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
+    
+    SnowTempCover = list()
+    
+    SnowTempCover = foreach(j = 1:length(AllFilesInSD[grepl(paste("sd_",uniq_y[i], sep=""), AllFilesInSD, fixed = TRUE)]), .packages = c("doParallel", "raster")) %dopar% {
+      r = raster(SnowRaster, layer = j)
+      
+      k = raster(TempRaster, layer = j)
+      
+      TempRows = which(k[] >= 2781)
+      SnowRows = which(r[] == 0)
+      
+      if(length(TempRows) >= length(SnowRows)){
+        TempSnowRows = which(SnowRows %in% TempRows)
+        r[][SnowRows[TempSnowRows]] = -1337
+        r[r != -1337] = 0
+        r[r == -1337] = 1
+      }
+      
+      else {
+        TempSnowRows = which(TempRows %in% SnowRows)
+        r[][TempRows[TempSnowRows]] = -1337
+        r[r != -1337] = 0
+        r[r == -1337] = 1
+      }
+      
+      SnowTempCover[[j]] = r
+    }
+    GrowthSeason_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
+  }
+
+  GrowthSeason_all_years = stack(GrowthSeason_all_years)
+
+  names(GrowthSeason_all_years) = uniq_y # Name by years
+
+  # Rasterstack directory
+  RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/", paste(paste("sd_gw", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
+
+  # Write Raster
+  writeRaster(GrowthSeason_all_years, RasterLocation, format = "raster", overwrite = TRUE)
+}
+
+
+```
+
+### Run indicator function
+```{r, echo = TRUE, eval = FALSE}
+
+### Precipitation indicators function ###
+# IndicatorType should be entered as either "sumPrecip" for sum precipitation or "daysPrecip" for number of days with precipitation in the period May - Oct
+start = Sys.time()
+PrecipIndicators(IndicatorType = "sumPrecip") # Amount of precipitation (mm) in the period May - Oct
+finish = Sys.time()
+finish - start
+
+start = Sys.time()
+PrecipIndicators(IndicatorType = "daysPrecip") # Number of days with precipitation in the period May - Oct
+finish = Sys.time()
+finish - start 
+
+### Temperature indicators function ###
+# IndicatorType should be entered as either "meanSummer" for mean summer temperature (June, July, August) or "meanWinter" for mean winter temperature (December, January, February)
+start = Sys.time()
+TempIndicators(IndicatorType = "meanSummer") # Mean temperature in the period June - August
+finish = Sys.time()
+finish - start 
+
+start = Sys.time()
+TempIndicators(IndicatorType = "meanWinter") # Mean temperature in the period December - February
+finish = Sys.time()
+finish - start 
+
+### Snow cover indicator function (Simple) ###
+# "Simple" means that the function only calculates the sum of the number of days with snow cover
+start = Sys.time()
+SnowIndicators("Simple")
+finish = Sys.time()
+finish - start
+
+# "Complex" means that the function calculates the sum of the number of days with snow cover conditioned on days with temperature > 0 degrees celsius
+start = Sys.time()
+SnowIndicators("Complex")
+finish = Sys.time()
+finish - start
+
+### Growth season indicator function ###
+start = Sys.time()
+GrowthSeasonIndicator()
+end = Sys.time()
+end - start
+
+```
+
+
+## 2 - Google Earth Engine -> Begrens området til fjellet og beregn antall "fjellpixler"
+
+## 3 - Slå sammen behandlede klimadata og rasterne av fjellområdet
+
+## 4 - Beregn avvik fra normalperioden 1960 - 1990
