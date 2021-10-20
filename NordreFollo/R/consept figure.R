@@ -1,5 +1,4 @@
 library(ggplot2)
-
 library("ganttrify")
 library(readxl)
 
@@ -7,6 +6,7 @@ library(readxl)
 
 
 dummyData <- read_excel("NordreFollo/data/dummyData.xlsx")
+spots <- read_excel("NordreFollo/data/dummyData.xlsx", sheet = "spots")
 labs <- c("Sub-local", 
           "Local",
           "Regional",
@@ -20,20 +20,47 @@ length(labs)
 
 gantt <- ganttrify(project = dummyData,
           project_start_date = "2021-01",
-          size_text_relative = 1.2, 
+          size_text_relative = 3, 
           month_number = FALSE,
           font_family = "Roboto Condensed",
-          x_axis_position = "bottom"
-          )
-
-gantt <- gantt + coord_flip()+
-  scale_y_discrete(position = "right") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        axis.title.x = element_blank(),
-        axis.title.y = element_blank())+
+          x_axis_position = "bottom",
+          hide_wp = TRUE,
+          spots=spots
+          )+
+  coord_flip()+
+  scale_y_discrete(position = "right",
+                   expand = expansion(mult=c(.1,.2))) +
+  ylab("Scaled indicators")+
+  xlab("Indicator validity")+
+  theme(
+    axis.title = element_text(size=30),
+    plot.margin = margin(0.5, 0.8, .5, 0.5, "cm")
+    )+
   scale_x_date(breaks = brk,
-               labels = labs)
-               
+               labels = labs)+
+  
+  geom_segment(aes(x = as.Date("2021-01-15"), 
+                   y = .5, xend = as.Date("2021-01-15"), yend = 9),
+               lineend = 'round', linejoin = 'round',
+               arrow = arrow(length = unit(0.5, "cm")),
+               size=3,
+               colour="chartreuse3")+
+  geom_segment(aes(x = as.Date("2021-03-15"), 
+                   y = .5, xend = as.Date("2021-03-15"), yend = 9),
+               lineend = 'round', linejoin = 'round',
+               arrow = arrow(length = unit(0.5, "cm")),
+               size=3,
+               colour="chartreuse3")+
+  geom_segment(aes(x = as.Date("2021-05-15"), 
+                   y = .5, xend = as.Date("2021-05-15"), yend = 9),
+               lineend = 'round', linejoin = 'round',
+               arrow = arrow(length = unit(0.5, "cm")),
+               size=3,
+               colour="chartreuse3")
+     
+
+gantt
+
 tiff("NordreFollo/output/conseptFigure.tif")     
-  gantt
-  dev.off()
+gantt
+dev.off()

@@ -2,10 +2,11 @@ library(readxl)
 library(DiagrammeR)
 library(dplyr)
 
-
+# Denne figuren tror jeg hadde blitt bedre om den var skrevet i DOT
+# for da kan man bruke subgraphs, rank, og ranksep. 
+# Der er det valgt å bruke graphviz siden jeg linker direkte til et excelark.
 
 # IMPORT ------------------------------------------------------------------
-
 
 ind <- read_excel("../data/indData.xlsx", 
                   sheet = "tilstandsindikatorer")
@@ -52,8 +53,8 @@ nodes <- data.frame(nodes = c(ind$node,
 # (hackish)
 fakeEdge <- data.frame(ID = "",
                        from = c("Fremmede arter", "spacenode", 
-                                "Bestandsnivå villrein", "spacenode2"),
-                       to = c("spacenode","Bestandsnivå villrein", 
+                                "Rein", "spacenode2"),
+                       to = c("spacenode","Rein", 
                               "spacenode2", "Funksjonelt viktige arter og strukturer"),
                        tooltip = "",
                        beskrivelse = "",
@@ -62,10 +63,10 @@ fakeEdge <- data.frame(ID = "",
 
 edges <- rbind(edges, fakeEdge)
 
-theTo <- c("spacenode","Bestandsnivå villrein", 
+theTo <- c("spacenode","Rein", 
            "spacenode2", "Funksjonelt viktige arter og strukturer")
 theFrom <- c("Fremmede arter", "spacenode", 
-             "Bestandsnivå villrein", "spacenode2")
+             "Rein", "spacenode2")
 
 space <- data.frame(nodes = c("spacenode", "spacenode2"),
                     tooltip= c("", ""),
@@ -134,15 +135,15 @@ nodes2$br[nodes2$type=="ege"] <- c(
 nodes2$URL <- "https://ninanor.github.io/IBECA/faktaark"
 
 # Custum URLs
-nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrev"
-nodes2$URL[nodes2$nodes== "Bestandsnivå jerv"] <- "https://ninanor.github.io/IBECA/faktaark#jerv"
+nodes2$URL[nodes2$nodes== "Fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrev"
+nodes2$URL[nodes2$nodes== "Jerv"] <- "https://ninanor.github.io/IBECA/faktaark#jerv"
 nodes2$URL[nodes2$nodes== "Kongeørn"] <- "https://ninanor.github.io/IBECA/faktaark#kongeørn"
 nodes2$URL[nodes2$nodes== "Ellenberg N"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-n"
 nodes2$URL[nodes2$nodes== "Ellenberg L"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-l"
-nodes2$URL[nodes2$nodes== "Areal uten tekniske inngrep"] <- "https://ninanor.github.io/IBECA/faktaark#areal-uten-tekniske-inngrep"
+nodes2$URL[nodes2$nodes== "Inngrepsfri natur"] <- "https://ninanor.github.io/IBECA/faktaark#areal-uten-tekniske-inngrep"
 nodes2$URL[nodes2$nodes== "Smågnagere"] <- "https://ninanor.github.io/IBECA/faktaark#smågnagere"
-nodes2$URL[nodes2$nodes== "Bestandsnivå lirype"] <- "https://ninanor.github.io/IBECA/faktaark#lirype"
-nodes2$URL[nodes2$nodes== "Bestandsnivå fjellrype"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrype"
+nodes2$URL[nodes2$nodes== "Lirype"] <- "https://ninanor.github.io/IBECA/faktaark#lirype"
+nodes2$URL[nodes2$nodes== "Fjellrype"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrype"
 nodes2$URL[nodes2$nodes== "NI for fjell"] <- "https://ninanor.github.io/IBECA/faktaark#naturindeks-for-fjell"
 nodes2$URL[nodes2$nodes== "Areal av isbreer"] <- "https://ninanor.github.io/IBECA/faktaark#areal-av-isbreer"
 nodes2$URL[nodes2$nodes== "Snømengde"] <- "https://ninanor.github.io/IBECA/faktaark#snømengde"
@@ -163,9 +164,12 @@ nodes2$URL[nodes2$nodes== "Fremmede arter"] <-
 
 
 dag <- create_graph( 
-  attr_theme = "lr"
+  attr_theme = "lr",
 ) %>%   
   
+  add_global_graph_attrs(attr = "splines",
+                         value = "curved",
+                         attr_type = "graph")%>%
   add_nodes_from_table(
     table = nodes2,
     type_col = type,
@@ -201,8 +205,7 @@ dag <- create_graph(
   
   set_node_attrs(node_attr = penwidth, value = 4) %>%
   
-  set_node_attrs(node_attr = style, values =  'invisible', nodes = spaceID) %>%
-  set_node_attrs(node_attr = style, values =  'invisible', nodes = space2ID) %>%
+ 
   
   
   
@@ -221,6 +224,13 @@ dag <- create_graph(
   set_edge_attrs(edge_attr = color, values = "black") %>%
   set_edge_attrs(edge_attr = penwidth, values = 3) %>%
   set_edge_attrs(edge_attr = headport, values = "w") %>%
+  set_edge_attrs(edge_attr = tailport, values =  "e", from = indID) %>%
+  
+ 
+  
+  # space stuff
+  set_node_attrs(node_attr = style, values =  'invisible', nodes = spaceID) %>%
+  set_node_attrs(node_attr = style, values =  'invisible', nodes = space2ID) %>%
   set_edge_attrs(edge_attr = style, values =  'invisible',
                  from=fromID,
                  to =toID) %>%

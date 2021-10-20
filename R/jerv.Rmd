@@ -21,4 +21,79 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## Analyser av jervbestand
-kommer snart...
+
+# Import - Importerer data fra NI
+Fyll inn ditt eget passord og brukernavn
+```{r}
+myUser <- "anders.kolstad@nina.no"
+myPwd  <- "" # hemmelig passord
+```
+
+Importerer data fra NI-databasen og lagrer datasettet på server
+```{r import, eval=F}
+
+jerv <- NIcalc::importDatasetApi(
+  username = myUser,
+  password = myPwd,
+  eco = "Fjell", 
+  indic = "Jerv",
+  year = 2019)
+
+```
+
+# Assemble - Strukturerer datasettet
+
+Spesifiser hele landarealet til Norge, samt de tre regionene, som NIunits:
+```{r}
+myNIunits <- c(allArea = T, parts = T, counties = F)
+```
+
+Inkludrer kun BSunits (kommuner) som har mer en 205 fjell:
+```{r}
+myPartOfTotal <- 0
+```
+
+
+Siden denne opperasjonen tar litt tid så lagrer jeg outputen på server og henter det tilbake etterpå, så slipper jeg å kjøre gjennom hver gang.
+```{r, eval=FALSE}
+jerv_assemeble <- NIcalc::assembleNiObject(
+  inputData = jerv,
+  predefNIunits = myNIunits, 
+  partOfTotal = myPartOfTotal, 
+  indexType = "thematic",
+  part = "ecosystem",
+  total = "terrestrial")  
+
+```
+
+```{r}
+# bruker tradOb siden custumDist er NA. Dette er ikke en generisk løsning.
+obstype <- rep("tradObs", nrow(jerv_assemeble$indicatorValues$'2019'))
+
+myMat <- NIcalc::sampleObsMat(jerv_assemeble$indicatorValues$'2019'$ICunitId,                     jerv_assemeble$indicatorValues$'2019'$expectedValue,
+        jerv_assemeble$indicatorValues$'2019'$distributionFamilyName,
+        mu = jerv_assemeble$indicatorValues$'2019'$distParameter1,
+        sig = jerv_assemeble$indicatorValues$'2019'$distParameter2,
+        customDistribution = jerv_assemeble$indicatorValues$'2019'$customDistribution,
+        obsType = obstype
+        )
+```
+
+Fordeling av 
+```{r}
+median(colSums(myMat))
+```
+
+Dette ligner å de tallene som allerede finnes i tabllen:
+```{r}
+sum(jerv_assemeble$indicatorValues[[1]]$expectedValue)
+```
+
+men nå har vi også fordelingen, dvs usikkerheten:
+```{r}
+quantile(colSums(myMat), c(0.025, .5, .975))
+
+```
+I dette tilfelle har referanseverdiene også en usikkerhet. Vi kan regnet ut fordelingen på samme på som over - ta colsums - og dele mu med ref  for å få fordelingen av de skalerte indikatorverdiene. Husk å trunkere alle verdier over 1.
+
+For regioner så er det en mulighet å slå sammen Ø, V og S til en region. 
