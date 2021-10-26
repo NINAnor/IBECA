@@ -70,7 +70,7 @@ fig <-
         Area2A -> Area2_2A
         Area2B -> Area2_2B
         
-        SR2[label='Sub-region 1 = 0.18', style=filled, color=grey90]
+        SR2[label='Sub-region 2 = 0.18', style=filled, color=grey90]
         Area2_2A -> SR2
         Area2_2B -> SR2
     
