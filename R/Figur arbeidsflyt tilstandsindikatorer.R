@@ -78,7 +78,7 @@ subgraph cluster {
        Metadata -> 'GitHub-pages'
 }")
 
-
+flyt
 DiagrammeR::export_graph(graph = flyt, 
                          file_type = 'PNG', 
                          file_name = '../output/flytskjema.png')

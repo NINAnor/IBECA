@@ -31,15 +31,15 @@ Shiny app                          :crit,               07-2022, 12-2022
 
 section Norde Follo Pilot
 
-Identyfing stakeholder needs       :active,             01-2022, 06-2022
-Indicator development              :active,             02-2022, 09-2022
-Test identified indicators         :active,             08-2022, 12-2022
-ECA                                :crit,               09-2022, 02-2023
+Identyfing stakeholder needs       :done,               01-2022, 06-2022
+Indicator development              :done,               02-2022, 02-2023
+Test identified indicators         :active,             10-2022, 02-2023
+ECA                                :crit,done,           01-2023, 12-2023
 
 section Reporting
 
-Peer review paper                  :crit,               01-2023, 05-2023
-Kronikk                            :crit,               04-2023, 05-2023
+Peer review paper                  :crit,               05-2023, 01-2024
+Kronikk                            :crit,               01-2024, 02-2024
 
 
         ")
