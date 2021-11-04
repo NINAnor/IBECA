@@ -13,7 +13,7 @@ knit: (function(input_file, encoding) {
  output_file=file.path(dirname(input_file), out_dir, 'klima-databehandling.html'))})
 ---
 <!-- Clear variables from memory and load packages -->
-```{r, echo = FALSE, warning = FALSE, message = FALSE}
+```{r, echo = FALSE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 rm(list=ls())
 require(rgdal)
@@ -29,514 +29,1957 @@ require(doSNOW)
 ```
 
 
-## 1 - Databehandling av Klimadata 
-### Nedbør - Summer mengden nedbør & antall dager med nedbør (Mai - Okt.)
-```{r, echo = TRUE, eval = FALSE}
+## 1. Databehandling av Klimadata (Kjøres via Rstudio serveren) 
+### 1.1 Nedbør - Mengde
+Total mengde nedbør (mm) i perioden Mai - Oktober.
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+ 
+# Set up for parallel run 
+UseCores = 12
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
 
-# IndicatorType should be entered as either "sumPrecip" for sum precipitation or "daysPrecip" for number of days with precipitation in the period May - Oct
-PrecipIndicators = function(IndicatorType){
-  
-  # Set up for parallel run 
-  UseCores = 12
-  cl = makeCluster(UseCores)
-  registerDoParallel(cl)
-  
-  # List files in R:/ directory (daily data; rr = precipitation)
-  AllFilesInRR = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/rr",full.names = TRUE, pattern = ".bil$")
-  
-  # Define years  (1957 - 2020)
-  uniq_y = c(1957:2020) 
-  
-  # Define months, w. leading '0'
-  uniq_m = c(paste("0", 5:9, sep=""), 10) # May - October
-  
-  # Subsetting the dataset by selecting only the months we are interested in (all years)
-  SampleMonths = foreach(i = 1:length(AllFilesInRR), .combine = c) %dopar% {
-    if((substring(AllFilesInRR[i], first = nchar(AllFilesInRR[i])-8, last = nchar(AllFilesInRR[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the            months we are interested in, append that line to SampleMonths
+# List files in R:/ directory (daily data; rr = precipitation)
+setwd("/home/NINA.NO/markus.israelsen/Mounts/")
+AllFilesInRR = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/rr",full.names = TRUE, pattern = ".bil$")
+
+# Define years  (1957 - 2020)
+uniq_y = c(1957:2020) 
+
+# Define months
+uniq_m = c("05", "06", "07", "08", "09", "10") # May - October
+
+# Subsetting the dataset by selecting only the months we are interested in (all years)
+SampleMonths = foreach(i = 1:length(AllFilesInRR), .combine = c) %dopar% {
+  if((substring(AllFilesInRR[i], first = nchar(AllFilesInRR[i])-8, last = nchar(AllFilesInRR[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the            months we are interested in, append that line to SampleMonths
     AllFilesInRR[i] 
-    }
   }
-  
-  if(IndicatorType == "sumPrecip"){
-    # Summing the amount of precipitation for each year
-    sumPrecip_all_years = list()
-    sumPrecip_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
-      sumPrecip_all_years = stack(SampleMonths[grepl(paste("rr", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
-      sumPrecip_year = list() # New code
-      sumPrecip_year = foreach(j = 1:nlayers(sumPrecip_all_years), .packages = c("doParallel", "raster")) %dopar% {
-        rs = raster(sumPrecip_all_years, layer = j)
-        rs[rs > 0] = rs[rs > 0] / 10
-        sumPrecip_year[[j]] = rs
-      }
-      sumPrecip_all_years[[i]] = stackApply(stack(sumPrecip_year), c(1), fun = sum)
-    }
-
-    # Stacking the years to one raster stack
-    sumPrecip_all_years = stack(sumPrecip_all_years) 
-
-    names(sumPrecip_all_years) = uniq_y # Name by years
-    
-    # Rasterstack directory;
-    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/",
-                        paste(paste("rr", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
-    
-    # Write raster
-    writeRaster(sumPrecip_all_years, RasterLocation, format="raster", overwrite = TRUE)
-    
-    return(sumPrecip_all_years)
-  
-  }
-  
-  else if(IndicatorType == "daysPrecip"){
-    # Summing the days with precipitation for each year
-    daysPrecip_all_years = list()
-    daysPrecip_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
-      daysPrecip_year = stack(SampleMonths[grepl(paste("rr", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
-      daysPrecip = list()
-      daysPrecip = foreach(j = 1:nlayers(daysPrecip_year), .packages = c("doParallel", "raster")) %dopar% {
-        r = raster(daysPrecip_year, layer = j)
-        r[r > 0] = 1 # Only integers. Lowest integer value is 1 (divided by 10 we get the threshold for a day with precipitation, AT LEAST 0.1mm), so all integers greater than 0 should be included. 
-        daysPrecip[[j]] = r
-      }
-      
-      daysPrecip_all_years[[i]] = stackApply(stack(daysPrecip), c(1), fun = sum)
-    }
-
-    # Stacking the years to one raster stack
-    daysPrecip_all_years = stack(daysPrecip_all_years) 
-
-    names(daysPrecip_all_years) = uniq_y # Name by years
-    
-    # Rasterstack directory; change
-    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/",
-                        paste(paste("rr", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
-    
-    # Write raster
-    writeRaster(daysPrecip_all_years, RasterLocation, format="GTiff", overwrite = TRUE)
-    
-    return(daysPrecip_all_years)
-  }
-  stopImplicitCluster()
 }
+
+# Summing the amount of precipitation for each year
+sumPrecip_all_years = list()
+sumPrecip_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
+  sumPrecip_all_years = stack(SampleMonths[grepl(paste("rr", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
+  sumPrecip_year = list() # New code
+  sumPrecip_year = foreach(j = 1:nlayers(sumPrecip_all_years), .packages = c("doParallel", "raster")) %dopar% {
+    rs = raster(sumPrecip_all_years, layer = j)
+    rs[rs > 0] = rs[rs > 0] / 10
+    sumPrecip_year[[j]] = rs
+  }
+  sumPrecip_all_years[[i]] = stackApply(stack(sumPrecip_year), c(1), fun = sum)
+}
+
+# Stacking the years to one raster stack
+sumPrecip_all_years = stack(sumPrecip_all_years) 
+
+names(sumPrecip_all_years) = uniq_y # Name by years
+
+# Rasterstack directory;
+RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("rr_sum_", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+
+# Write raster
+writeRaster(sumPrecip_all_years, RasterLocation, format="raster", overwrite = TRUE)
+    
+stopImplicitCluster()
 
 ```
 
-### Temperatur - Gjennomsnittlig sommer (Juni - Aug.) og vinter temperatur (Des. - Feb.)
+### 1.2 Nedbør - Dager
+Antall dager med nedbør i perioden Mai - Oktober.
 ```{r, echo = TRUE, eval = FALSE}
-# IndicatorType should be entered as either "meanSummer" for mean summer temp (Jun - Aug) or "meanWinter" for mean winter temp (Dec - Feb)
-TempIndicators = function(IndicatorType){
-  
-  # Set up for parallel run 
-  UseCores = 12 
-  cl = makeCluster(UseCores)
-  registerDoParallel(cl)
-  
-  # List files in R:/ directory (daily data; tm = temperature)
-  AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
 
-  # Define years
-  uniq_y <- c(1957:2020) 
+# Set up for parallel run 
+UseCores = 12
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
 
-  if(IndicatorType == "meanSummer"){
-    
-    # Define months
-    uniq_m <- c("06", "07", "08") # July - August
-  
-    SampleMonths = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
-      if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
-      AllFilesInTM[i] 
-      }
-    }
-    
-    meanSummer_all_years = list()
-    meanSummer_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
-      meanSummer_years = stack(SampleMonths[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
-      meanSummer_year = list()
-      meanSummer_year = foreach(j = 1:nlayers(meanSummer_years), .packages = c("doParallel", "raster")) %dopar% {
-        ms = raster(meanSummer_years, layer = j)
-        ms[ms > 0] = (ms[ms > 0] - 2731) / 10
-        meanSummer_year[[j]] = ms
-      }
-      meanSummer_all_years[[i]] = stackApply(stack(meanSummer_year), c(1), fun = mean) 
-    }
+# List files in R:/ directory (daily data; rr = precipitation)
+setwd("/home/NINA.NO/markus.israelsen/Mounts/")
+AllFilesInRR = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/rr",full.names = TRUE, pattern = ".bil$")
 
-    # Stacking the years to one raster stack
-    meanSummer_all_years = stack(meanSummer_all_years) 
+# Define years  (1957 - 2020)
+uniq_y = c(1957:2020) 
 
-    names(meanSummer_all_years) = uniq_y # Name by years
-    
-    # Rasterstack directory; change
-    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/",
-                        paste(paste("tm", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
-    
-    # Write raster
-    writeRaster(meanSummer_all_years, RasterLocation, format="raster", overwrite = TRUE)
-  
+# Define months
+uniq_m = c("05", "06", "07", "08", "09", "10") # May - October
+
+# Subsetting the dataset by selecting only the months we are interested in (all years)
+SampleMonths = foreach(i = 1:length(AllFilesInRR), .combine = c) %dopar% {
+  if((substring(AllFilesInRR[i], first = nchar(AllFilesInRR[i])-8, last = nchar(AllFilesInRR[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the            months we are interested in, append that line to SampleMonths
+  AllFilesInRR[i] 
   }
-  
-  else if(IndicatorType == "meanWinter"){
-    
-    # Calculating the mean winter temperature for each year
-    uniq_mw = c("12", "01", "02") # Define months for winter (First year 1957 have data from January, take mean of Jan+Feb for 1957)
-    
-    # Subsetting the dataset by selecting only the months we are interested in (all years)
-    SampleMonths = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
-      if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_mw){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
-      AllFilesInTM[i] 
-      }
-    }
-    
-    meanWinter_all_years = list()
-    meanWinter_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
-      if (i == 1){
-        meanWinter_year = SampleMonths[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
-        meanWinter_year = meanWinter_year[!grepl(paste("tm", uniq_y[i], 12, sep = "_"), meanWinter_year, fixed = TRUE)]
-        meanWinter_ys1 = stack(meanWinter_year)
-        meanWinter_y = list()
-        meanWinter_y = foreach(j = 1:nlayers(meanWinter_ys1), .packages = c("doParallel", "raster")) %dopar% {
-          mw1 = raster(meanWinter_ys1, layer = j)
-          mw1[mw1 > 0] = (mw1[mw1 > 0] - 2731) / 10
-          meanWinter_y[[j]] = mw1
-        }
-        meanWinter_all_years[[i]] = stackApply(stack(meanWinter_y), c(1), fun = mean)
-      }
-      else if(i > 1){
-        meanWinter_year = SampleMonths[grepl(paste("tm", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
-        meanWinter_year = list.append(meanWinter_year, SampleMonths[grepl(paste("tm", uniq_y[i], uniq_mw[2], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("tm", uniq_y[i], uniq_mw[3], sep = "_"), SampleMonths, fixed = TRUE)])
-        meanWinter_ys2 = stack(meanWinter_year)
-        meanWinter_y2 = list()
-        meanWinter_y2 = foreach(k = 1:nlayers(meanWinter_ys2), .packages = c("doParallel", "raster")) %dopar% {
-          mw2 = raster(meanWinter_ys2, layer = k)
-          mw2[mw2 > 0] = (mw2[mw2 > 0] - 2731) / 10
-          meanWinter_y2[[k]] = mw2
-        }
-        meanWinter_all_years[[i]] = stackApply(stack(meanWinter_y2), c(1), fun = mean)
-      }
-    }
-      
-    # Stacking the years to one raster stack
-    meanWinter_all_years = stack(meanWinter_all_years) 
-
-    names(meanWinter_all_years) = uniq_y # Name by years
-    
-    # Rasterstack directory; change
-    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/",
-                        paste(paste("tm", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
-    
-    # Write raster
-    writeRaster(meanWinter_all_years, RasterLocation, format="raster", overwrite = TRUE)
-    
-  }
-  stopImplicitCluster()
 }
+
+# Summing the days with precipitation for each year
+daysPrecip_all_years = list()
+daysPrecip_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
+  
+  daysPrecip_year = stack(SampleMonths[grepl(paste("rr", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
+  daysPrecip = list()
+  daysPrecip = foreach(j = 1:nlayers(daysPrecip_year), .packages = c("doParallel", "raster")) %dopar% {
+    r = raster(daysPrecip_year, layer = j)
+    r[r > 0] = 1 
+    daysPrecip[[j]] = r
+  }
+  
+  daysPrecip_all_years[[i]] = stackApply(stack(daysPrecip), c(1), fun = sum)
+}
+
+# Stacking the years to one raster stack
+daysPrecip_all_years = stack(daysPrecip_all_years) 
+
+names(daysPrecip_all_years) = uniq_y # Name by years
+
+# Rasterstack directory; change
+RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", paste(paste("rr_days_", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+
+# Write raster
+writeRaster(daysPrecip_all_years, RasterLocation, format="raster", overwrite = TRUE)
+
+stopImplicitCluster()
 
 ```
 
-### Snow cover - Days with snow cover
+### 1.3 Temperatur - Sommer 
+Gjennomsnittlig sommertemperatur, $^\circ$C (Juni - Aug.).
 ```{r, echo = TRUE, eval = FALSE}
 
-SnowIndicators = function(SimpleOrComplex){
+# Set up for parallel run 
+UseCores = 12 
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
+
+# List files in R:/ directory (daily data; tm = temperature)
+setwd("/home/NINA.NO/markus.israelsen/Mounts/")
+AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
+
+# Define years
+uniq_y <- c(1957:2020) 
+
+# Define months
+uniq_m <- c("06", "07", "08") # July - August
+
+SampleMonths = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+  if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+  AllFilesInTM[i] 
+  }
+}
+
+meanSummer_all_years = list()
+
+meanSummer_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster")) %dopar% {
+  meanSummer_years = stack(SampleMonths[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)])
   
-  # Set up for parallel run 
+  meanSummer_year = list()
+  meanSummer_year = foreach(j = 1:nlayers(meanSummer_years), .packages = c("doParallel", "raster")) %dopar% {
+    ms = raster(meanSummer_years, layer = j)
+    ms[ms > 0] = (ms[ms > 0] - 2731) / 10 # convert from 1/10 kelvin to degrees centigrade
+    meanSummer_year[[j]] = ms
+  }
+  meanSummer_all_years[[i]] = stackApply(stack(meanSummer_year), c(1), fun = mean) 
+}
+
+# Stacking the years to one raster stack
+meanSummer_all_years = stack(meanSummer_all_years) 
+
+names(meanSummer_all_years) = uniq_y # Name by years
+
+# Rasterstack directory; change
+RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/",
+                    paste(paste("tm_summer_", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+
+# Write raster
+writeRaster(meanSummer_all_years, RasterLocation, format="raster", overwrite = TRUE)
+
+stopImplicitCluster()
+
+```
+
+### 1.4 Temperatur - Vinter
+Gjennomsnittlig vintertemperatur, $^\circ$C (Des. - Feb.).
+```{r, echo = TRUE, eval = FALSE}
+
+# Set up for parallel run 
+UseCores = 12 
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
+
+# List files in R:/ directory (daily data; tm = temperature)
+setwd("/home/NINA.NO/markus.israelsen/Mounts/")
+AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
+
+# Define years
+uniq_y <- c(1957:2020) 
+
+# Calculating the mean winter temperature for each year
+uniq_mw = c("12", "01", "02") # Define months for winter
+
+# Subsetting the dataset by selecting only the months we are interested in (all years)
+SampleMonths = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+  if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_mw){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+  AllFilesInTM[i] 
+  }
+}
+
+meanWinter_all_years = list()
+
+meanWinter_all_years = foreach(i = 2:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
+  
+  meanWinter_years = SampleMonths[grep(paste("tm", uniq_y[i]-1, 12, sep = "_"), SampleMonths)]
+  meanWinter_years = list.append(meanWinter_years, SampleMonths[grep(paste("tm", uniq_y[i], uniq_mw[2], sep = "_"), SampleMonths)], SampleMonths[grep(paste("tm", uniq_y[i], uniq_mw[3], sep = "_"), SampleMonths)])
+  meanWinter_years = stack(meanWinter_years)
+  
+  meanWinter_year = list()
+  meanWinter_year = foreach(j = 1:nlayers(meanWinter_years), .packages = c("doParallel", "raster")) %dopar% {
+    mw = raster(meanWinter_years, layer = j)
+    mw[mw > 0] = (mw[mw > 0] - 2731) / 10 # convert from 1/10 kelvin to degrees centigrade
+    meanWinter_year[[j]] = mw
+  }
+  meanWinter_all_years[[i-1]] = stackApply(stack(meanWinter_year), c(1), fun = mean)
+}
+
+  
+# Stacking the years to one raster stack
+meanWinter_all_years = stack(meanWinter_all_years) 
+
+layerNames = c()
+for(i in 1:length(uniq_y)){
+  layerNames = append(layerNames, 
+                      paste(substring(uniq_y[i], first = nchar(uniq_y[i])-1, last = nchar(uniq_y[i])), substring(uniq_y[i+1], first = nchar(uniq_y[i+1])-1, last = nchar(uniq_y[i+1])), sep = "-"))
+}
+layerNames = layerNames[1:(length(uniq_y)-1)]
+names(meanWinter_all_years) = layerNames # Name by years
+
+# Rasterstack directory; change
+RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/",
+                    paste(paste("tm_winter_", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+
+# Write raster
+writeRaster(meanWinter_all_years, RasterLocation, format="raster", overwrite = TRUE)
+
+stopImplicitCluster()
+
+```
+
+### 1.5 Snødekke
+Antall dager med snødekke i perioden Oktober - Juni.
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Set up for parallel run 
+UseCores = 12 
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
+
+# List files in R:/ directory (daily data; rr = precipitation)
+setwd("/home/NINA.NO/markus.israelsen/Mounts/")
+AllFilesInSD = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd",full.names = TRUE, pattern = ".bil$")
+
+# Define years
+uniq_y = c(1957:2020) 
+
+# Define months
+uniq_m = c("10", "11", "12", "01", "02", "03", "04", "05", "06") # Oct - June (Data starts in Sept 1957, should therefore start at i = 2 with mean of Oct 1957+Jan 58+Feb 58+Mar 58+Apr 58+May 58+June 58)
+
+# Subsetting the dataset by selecting only the months we are interested in (all years)
+SampleMonths = foreach(i = 1:length(AllFilesInSD), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+  if((substring(AllFilesInSD[i], first = nchar(AllFilesInSD[i])-8, last = nchar(AllFilesInSD[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+    AllFilesInSD[i] 
+  }
+}
+
+
+# Calculating the number of days with snow cover for each year
+daysSnowCover_all_years = list()
+
+daysSnowCover_all_years = foreach(i = 2:length(uniq_y), .packages = c("doParallel","raster", "rlist")) %dopar% {
+# if (i == 1){
+#     daysSnowCover_year = SampleMonths[grepl(paste("sd", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
+#     daysSnowCover_year = list.append(daysSnowCover_year, SampleMonths[grepl(paste("sd", uniq_y[i+1], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i+1], uniq_m[5], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i+1], uniq_m[6], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i+1], uniq_m[7], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i+1], uniq_m[8], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i+1], uniq_m[9], sep = "_"), SampleMonths, fixed = TRUE)])
+#     daysSnowCover_year = stack(daysSnowCover_year)
+#     daysSnowCover = list()
+#     daysSnowCover = foreach(j = 1:nlayers(daysSnowCover_year), .packages = c("doParallel","raster")) %dopar% {
+#       r = raster(daysSnowCover_year, layer = j)
+#       r[r > 0] = 1
+#       daysSnowCover[[j]] = r
+#     }
+#   daysSnowCover_all_years[[i]] = stackApply(stack(daysSnowCover), c(1), fun = sum)
+# }
+
+
+  daysSnowCover_year = SampleMonths[grepl(paste("sd", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE) 
+                                    | grepl(paste("sd", uniq_y[i]-1, 11, sep = "_"), SampleMonths, fixed = TRUE) 
+                                    | grepl(paste("sd", uniq_y[i]-1, 10, sep = "_"), SampleMonths, fixed = TRUE)]
+  daysSnowCover_year = list.append(daysSnowCover_year, SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[5], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[6], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[7], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[8], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[9], sep = "_"), SampleMonths, fixed = TRUE)])
+  daysSnowCover_year = stack(daysSnowCover_year)
+  daysSnowCover = list()
+  daysSnowCover = foreach(j = 1:nlayers(daysSnowCover_year), .packages = c("doParallel","raster")) %dopar% {
+    r = raster(daysSnowCover_year, layer = j)
+    r[r > 0] = 1
+    daysSnowCover[[j]] = r
+  }
+  daysSnowCover_all_years[[i-1]] = stackApply(stack(daysSnowCover), c(1), fun = sum)
+}
+
+
+# Stacking the years to one raster stack
+daysSnowCover_all_years = stack(daysSnowCover_all_years) 
+
+layerNames = c()
+for(i in 1:length(uniq_y)){
+  layerNames = append(layerNames, paste(substring(uniq_y[i], first = nchar(uniq_y[i])-1, last = nchar(uniq_y[i])), substring(uniq_y[i+1], first = nchar(uniq_y[i+1])-1, last = nchar(uniq_y[i+1])), sep="-"))
+}
+layerNames = layerNames[1:(length(uniq_y)-1)]
+names(daysSnowCover_all_years) = layerNames # Name by years
+
+# Rasterstack directory; 
+RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Days Snow Cover/", paste(paste("sd_s", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+
+# Write raster
+writeRaster(daysSnowCover_all_years, RasterLocation, format="raster", overwrite = TRUE)
+
+stopImplicitCluster()
+
+# if(SimpleOrComplex == "Complex"){
+#   
+#   # Temperature
+#   AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
+# 
+#   SampleMonthsTemp = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+#     if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_m){
+#       AllFilesInTM[i]
+#     }
+#   }
+# 
+#   SnowTempCover_all_years = list()
+# 
+#   SnowTempCover_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
+#     if (i == 1){
+#       SnowRaster = SampleMonths[grepl(paste("sd", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
+#       TempRaster = SampleMonthsTemp[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonthsTemp, fixed = TRUE)]
+#       SnowRaster = stack(SnowRaster)
+#       TempRaster = stack(TempRaster)
+# 
+#       SnowTempCover = list()
+# 
+#       SnowTempCover = foreach(j = 1:nlayers(SnowRaster), .packages = c("doParallel", "raster")) %dopar% {
+#         r = raster(SnowRaster, layer = j)
+# 
+#         k = raster(TempRaster, layer = j)
+# 
+#         TempRows = which(k[] > 2731)
+#         SnowRows = which(r[] > 0)
+# 
+#         if(length(TempRows) >= length(SnowRows)){
+#           TempSnowRows = which(SnowRows %in% TempRows)
+#           r[][SnowRows[TempSnowRows]] = -1337
+#           r[r != -1337] = 0
+#           r[r == -1337] = 1
+#         }
+#         else {
+#           TempSnowRows = which(TempRows %in% SnowRows)
+#           r[][TempRows[TempSnowRows]] = -1337
+#           r[r != -1337] = 0
+#           r[r == -1337] = 1
+#         }
+# 
+#         SnowTempCover[[j]] = r
+#       }
+#       SnowTempCover_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
+#     }
+# 
+#     else if(i > 1) {
+#       SnowRaster = SampleMonths[grepl(paste("sd", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
+#       SnowRaster = list.append(SnowRaster, SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[2], sep = "_"), SampleMonths, fixed = TRUE)], .data = SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[3], sep = "_"), SampleMonths, fixed = TRUE)])
+#       TempRaster = SampleMonthsTemp[grepl(paste("tm", uniq_y[i]-1, 12, sep = "_"), SampleMonthsTemp, fixed = TRUE)]
+#       TempRaster = list.append(TempRaster, SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[2], sep = "_"), SampleMonthsTemp, fixed = TRUE)], SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[3], sep = "_"), SampleMonthsTemp, fixed = TRUE)], SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[4], sep = "_"), SampleMonthsTemp, fixed = TRUE)])
+#       SnowRaster = stack(SnowRaster)
+#       TempRaster = stack(TempRaster)
+#   
+#       SnowTempCover = list()
+#   
+#       SnowTempCover = foreach(j = 1:nlayers(SnowRaster), .packages = c("doParallel", "raster")) %dopar% {
+#         r = raster(SnowRaster, layer = j)
+#     
+#         k = raster(TempRaster, layer = j)
+#     
+#         TempRows = which(k[] > 2731)
+#         SnowRows = which(r[] > 0)
+#     
+#         if(length(TempRows) >= length(SnowRows)){
+#           TempSnowRows = which(SnowRows %in% TempRows)
+#           r[][SnowRows[TempSnowRows]] = -1337 # random variable value
+#           r[r != -1337] = 0
+#           r[r == -1337] = 1
+#         }
+#         else {
+#           TempSnowRows = which(TempRows %in% SnowRows)
+#           r[][TempRows[TempSnowRows]] = -1337
+#           r[r != -1337] = 0
+#           r[r == -1337] = 1
+#         }
+#     
+#         SnowTempCover[[j]] = r
+#       }
+#       SnowTempCover_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
+#     }
+#   }
+# 
+#   SnowTempCover_all_years = stack(SnowTempCover_all_years)
+# 
+#   names(SnowTempCover_all_years) = uniq_y # Name by years
+# 
+#   # Rasterstack directory
+#   RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover Condition on Temperature/", paste(paste("sd_c", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
+# 
+#   # Write Raster
+#   writeRaster(SnowTempCover_all_years, RasterLocation, format = "raster", overwrite = TRUE)
+#   }
+
+```
+
+### 1.6 Vekstsesong
+Vekstsesongens lengde i antall dager (uten snødekke og døgntemp. > 5$^\circ$C).
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+#Set up for parallel run
+UseCores = 12
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
+
+# Snow cover
+AllFilesInSD = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd", full.names = TRUE, pattern = ".bil$")
+
+# Define years (had to run in 10 year intervals to get it to run without crashing, therefore 2008:2020 in the code here)
+uniq_y = c(1957:2020)
+
+SampleDataSnow = AllFilesInSD[grepl(paste("sd_", uniq_y[1], sep=""), AllFilesInSD, fixed = TRUE)]
+for(i in 2:length(uniq_y)){
+  SampleDataSnow = list.append(SampleDataSnow, AllFilesInSD[grepl(paste("sd_", uniq_y[i], sep=""), AllFilesInSD, fixed = TRUE)])
+}
+
+# Temperature
+AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm", full.names = TRUE, pattern = ".bil$")
+
+SampleDataTemp = AllFilesInTM[grepl(paste("tm_", uniq_y[1], sep = ""), AllFilesInTM, fixed = TRUE)]
+for(i in 2:length(uniq_y)){
+  SampleDataTemp = list.append(SampleDataTemp, AllFilesInTM[grepl(paste("tm_", uniq_y[i], sep = ""), AllFilesInTM, fixed = TRUE)])
+}
+
+rm(AllFilesInTM)
+
+GrowthSeason_all_years = list()
+
+GrowthSeason_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
+  
+  SnowRaster = list()
+  TempRaster = list()
+  
+  SnowRaster[[i]] = stack(SampleDataSnow[grep(paste("sd_", uniq_y[i], sep=""), SampleDataSnow)])
+  TempRaster[[i]] = stack(SampleDataTemp[grep(paste("tm_", uniq_y[i], sep=""), SampleDataTemp)])
+    
+  SnowTempCover = list()
+  
+  SnowTempCover = foreach(j = 1:nlayers(SnowRaster[[i]]), .packages = c("doParallel", "raster")) %dopar% {
+    r = raster(SnowRaster[[i]], layer = j)
+    
+    k = raster(TempRaster[[i]], layer = j)
+    
+    r_values = values(r)
+    
+    k_values = values(k)
+    k_values_rows = which(k_values >= 2781)
+    
+    test_val = r_values[k_values_rows]
+    test_val = which(test_val != 0)
+    if(length(test_val) > 0){
+      k_values_rows = k_values_rows[-test_val]  
+    }
+    
+    r_values[k_values_rows] = -1337
+    r_values[r_values != -1337] = 0
+    r_values[r_values == -1337] = 1
+    values(r) = r_values
+    
+    SnowTempCover[[j]] = r
+    
+    # TempRows = which(k[] >= 2781)
+    # SnowRows = which(r[] == 0)
+    # 
+    # if(length(TempRows) >= length(SnowRows)){
+    #   TempSnowRows = which(SnowRows %in% TempRows)
+    #   r[][SnowRows[TempSnowRows]] = -1337
+    #   r[r != -1337] = 0
+    #   r[r == -1337] = 1
+    # }
+    # 
+    # else {
+    #   TempSnowRows = which(TempRows %in% SnowRows)
+    #   r[][TempRows[TempSnowRows]] = -1337
+    #   r[r != -1337] = 0
+    #   r[r == -1337] = 1
+    # }
+    
+    SnowTempCover[[j]] = r
+  }
+  GrowthSeason_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
+}
+
+GrowthSeason_all_years = stack(GrowthSeason_all_years)
+
+names(GrowthSeason_all_years) = uniq_y # Name by years
+
+# Rasterstack directory
+RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/", paste(paste("sd_gw", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
+
+# Write Raster
+writeRaster(GrowthSeason_all_years, RasterLocation, format = "raster", overwrite = TRUE)
+
+stopImplicitCluster()
+
+```
+
+### 1.7 Vinterregn
+Total mengde nedbør (mm) for dager med temperatur > 2$^\circ$C i perioden Januar - Mars. 
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+  rm(list = ls())
+  # Set up for parallel run, more efficient 
   UseCores = 12 
   cl = makeCluster(UseCores)
   registerDoParallel(cl)
   
   # List files in R:/ directory (daily data; rr = precipitation)
-  AllFilesInSD = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd",full.names = TRUE, pattern = ".bil$")
+  WD = getwd() 
+  setwd("/home/NINA.NO/markus.israelsen/Mounts/")
+  AllFilesInRR = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/rr",full.names = TRUE, pattern = ".bil$")
+  AllFilesInRR = AllFilesInRR[-grep("arome", AllFilesInRR)] # remove the two obs that are written as "arome06_rr_2015_11_20.bil" (duplicated with the two that are written normally "rr_2015_11_20.bil")
   
   # Define years
   uniq_y = c(1957:2020) 
 
   # Define months
-  uniq_m = c("10", "11", "12", "01", "02", "03") # Dec - Mars (Data starts in Sept 1957, should therefore start at i = 2 with mean of Dec 1957+Jan 58+Feb 58+Mar 58)
+  uniq_m = c("01", "02", "03")
   
-  # Subsetting the dataset by selecting only the months we are interested in (all years)
-  SampleMonths = foreach(i = 1:length(AllFilesInSD), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
-    if((substring(AllFilesInSD[i], first = nchar(AllFilesInSD[i])-8, last = nchar(AllFilesInSD[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
-      AllFilesInSD[i] 
+  # Subsetting the precipitation dataset by selecting only the months we are interested in (all years)
+  SampleMonths = foreach(i = 1:length(AllFilesInRR), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+    if((substring(AllFilesInRR[i], first = nchar(AllFilesInRR[i])-8, last = nchar(AllFilesInRR[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+      AllFilesInRR[i] 
     }
   }
   
-  if(SimpleOrComplex == "Simple") {
+  # Get the temperature data
+  AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
   
-    # Calculating the number of days with snow cover for each year
-    daysSnowCover_all_years = list()
-    
-    daysSnowCover_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel","raster", "rlist")) %dopar% {
-    if (i == 1){
-        daysSnowCover_year = SampleMonths[grepl(paste("sd", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
-        daysSnowCover_year = stack(daysSnowCover_year)
-        daysSnowCover = list()
-        daysSnowCover = foreach(j = 1:nlayers(daysSnowCover_year), .packages = c("doParallel","raster")) %dopar% {
-          r = raster(daysSnowCover_year, layer = j)
-          r[r > 0] = 1
-          daysSnowCover[[j]] = r
-        }
-      daysSnowCover_all_years[[i]] = stackApply(stack(daysSnowCover), c(1), fun = sum)
-    }
-  
-   else if(i > 1){
-        daysSnowCover_year = SampleMonths[grepl(paste("sd", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
-        daysSnowCover_year = list.append(daysSnowCover_year, SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[2], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[3], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)])
-        daysSnowCover_year = stack(daysSnowCover_year)
-        daysSnowCover = list()
-        daysSnowCover = foreach(j = 1:nlayers(daysSnowCover_year), .packages = c("doParallel","raster")) %dopar% {
-          r = raster(daysSnowCover_year, layer = j)
-          r[r > 0] = 1
-          daysSnowCover[[j]] = r
-        }
-        daysSnowCover_all_years[[i]] = stackApply(stack(daysSnowCover), c(1), fun = sum)
-      }
-    }
-
-    # Stacking the years to one raster stack
-    daysSnowCover_all_years = stack(daysSnowCover_all_years) 
-
-    names(daysSnowCover_all_years) = uniq_y # Name by years
-    
-    # Rasterstack directory; change
-    RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/",
-                        paste(paste("sd_s", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
-    
-    # Write raster
-    writeRaster(daysSnowCover_all_years, RasterLocation, format="raster", overwrite = TRUE)
-    
-  }
-  
-  if(SimpleOrComplex == "Complex"){
-    
-    # Temperature
-    AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm",full.names = TRUE, pattern = ".bil$")
-
-    SampleMonthsTemp = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+  # Subsetting the temperature dataset by selecting only the months we are interested in (all years)
+  SampleMonthsTemp = foreach(i = 1:length(AllFilesInTM), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
       if((substring(AllFilesInTM[i], first = nchar(AllFilesInTM[i])-8, last = nchar(AllFilesInTM[i])-7)) %in% uniq_m){
         AllFilesInTM[i]
       }
     }
-
-    SnowTempCover_all_years = list()
-
-    SnowTempCover_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
-      if (i == 1){
-        SnowRaster = SampleMonths[grepl(paste("sd", uniq_y[i], sep = "_"), SampleMonths, fixed = TRUE)]
-        TempRaster = SampleMonthsTemp[grepl(paste("tm", uniq_y[i], sep = "_"), SampleMonthsTemp, fixed = TRUE)]
-        SnowRaster = stack(SnowRaster)
-        TempRaster = stack(TempRaster)
-
-        SnowTempCover = list()
-
-        SnowTempCover = foreach(j = 1:nlayers(SnowRaster), .packages = c("doParallel", "raster")) %dopar% {
-          r = raster(SnowRaster, layer = j)
-
-          k = raster(TempRaster, layer = j)
-
-          TempRows = which(k[] > 2731)
-          SnowRows = which(r[] > 0)
-
-          if(length(TempRows) >= length(SnowRows)){
-            TempSnowRows = which(SnowRows %in% TempRows)
-            r[][SnowRows[TempSnowRows]] = -1337
-            r[r != -1337] = 0
-            r[r == -1337] = 1
-          }
-          else {
-            TempSnowRows = which(TempRows %in% SnowRows)
-            r[][TempRows[TempSnowRows]] = -1337
-            r[r != -1337] = 0
-            r[r == -1337] = 1
-          }
-
-          SnowTempCover[[j]] = r
-        }
-        SnowTempCover_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
-      }
   
-      else if(i > 1) {
-        SnowRaster = SampleMonths[grepl(paste("sd", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
-        SnowRaster = list.append(SnowRaster, SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[2], sep = "_"), SampleMonths, fixed = TRUE)], .data = SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[3], sep = "_"), SampleMonths, fixed = TRUE)])
-        TempRaster = SampleMonthsTemp[grepl(paste("tm", uniq_y[i]-1, 12, sep = "_"), SampleMonthsTemp, fixed = TRUE)]
-        TempRaster = list.append(TempRaster, SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[2], sep = "_"), SampleMonthsTemp, fixed = TRUE)], SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[3], sep = "_"), SampleMonthsTemp, fixed = TRUE)], SampleMonthsTemp[grepl(paste("tm", uniq_y[i], uniq_m[4], sep = "_"), SampleMonthsTemp, fixed = TRUE)])
-        SnowRaster = stack(SnowRaster)
-        TempRaster = stack(TempRaster)
-    
-        SnowTempCover = list()
-    
-        SnowTempCover = foreach(j = 1:nlayers(SnowRaster), .packages = c("doParallel", "raster")) %dopar% {
-          r = raster(SnowRaster, layer = j)
-      
-          k = raster(TempRaster, layer = j)
-      
-          TempRows = which(k[] > 2731)
-          SnowRows = which(r[] > 0)
-      
-          if(length(TempRows) >= length(SnowRows)){
-            TempSnowRows = which(SnowRows %in% TempRows)
-            r[][SnowRows[TempSnowRows]] = -1337 # random variable value
-            r[r != -1337] = 0
-            r[r == -1337] = 1
-          }
-          else {
-            TempSnowRows = which(TempRows %in% SnowRows)
-            r[][TempRows[TempSnowRows]] = -1337
-            r[r != -1337] = 0
-            r[r == -1337] = 1
-          }
-      
-          SnowTempCover[[j]] = r
-        }
-        SnowTempCover_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
-      }
-    }
-
-    SnowTempCover_all_years = stack(SnowTempCover_all_years)
-
-    names(SnowTempCover_all_years) = uniq_y # Name by years
-
-    # Rasterstack directory
-    RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover Condition on Temperature/", paste(paste("sd_c", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
-
-    # Write Raster
-    writeRaster(SnowTempCover_all_years, RasterLocation, format = "raster", overwrite = TRUE)
-    }
-  stopImplicitCluster()
-}
-
-```
-
-### Growth season - Length of the growth season
-```{r, echo = TRUE, eval = FALSE}
-
-GrowthSeasonIndicator = function() {
-  # Set up for parallel run 
-  UseCores = 12 
-  cl = makeCluster(UseCores)
-  registerDoParallel(cl)
-
-  # Snow cover
-  AllFilesInSD = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd", full.names = TRUE, pattern = ".bil$")
-
-  # Define years (had to run in 10 year intervals to get it to run without crashing, therefore 2008:2020 in the code here)
-  uniq_y = c(2008:2020)
+  rm(AllFilesInTM) # Remove the full temperature dataset from memory as it is quite big and is not needed anymore
   
-  # Working with a sample of the dataset (The year 2018 and 2019)
-  SampleDataSnow = AllFilesInSD[grepl(paste("sd_", uniq_y[1], sep=""), AllFilesInSD, fixed = TRUE)]
-  for(i in 2:length(uniq_y)){
-    SampleDataSnow = list.append(SampleDataSnow, AllFilesInSD[grepl(paste("sd_", uniq_y[i], sep=""), AllFilesInSD, fixed = TRUE)])
+  # 
+  RainTempCover_all_years = list()
+
+  RainTempCover_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
+    
+    RainRaster = list()
+    TempRaster = list()
+    
+    RainRaster[[i]] = stack(SampleMonths[grep(paste("rr_",uniq_y[i], sep=""), SampleMonths)])
+    TempRaster[[i]] = stack(SampleMonthsTemp[grep(paste("tm_",uniq_y[i],sep=""), SampleMonthsTemp)])
+    
+    RainTempCover = list()
+    RainTempCover = foreach(j = 1:nlayers(RainRaster[[i]]), .packages = c("doParallel", "raster")) %dopar% {
+      r = raster(RainRaster[[i]], layer = j)
+      r_values = values(r)
+      
+      k = raster(TempRaster[[i]], layer = j)
+      k_values = values(k)
+      k_values_rows = which(k_values <= 2751.5)
+      
+      r_values[k_values_rows] = 0
+      values(r) = r_values
+      
+      RainTempCover[[j]] = r 
+    }
+    RainTempCover_all_years[[i]] = stackApply(stack(RainTempCover), c(1), fun = sum) # Sum the amount of precipitation per year (Jan. - March)
   }
 
-  # Temperature
-  AllFilesInTM <- list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/tm", full.names = TRUE, pattern = ".bil$")
-
-  # Working with a sample of the dataset
-  SampleDataMeanTemp = AllFilesInTM[grepl(paste("tm_", uniq_y[1], sep = ""), AllFilesInTM, fixed = TRUE)]
-  for(i in 2:length(uniq_y)){
-    SampleDataMeanTemp = list.append(SampleDataMeanTemp, AllFilesInTM[grepl(paste("tm_", uniq_y[i], sep = ""), AllFilesInTM, fixed = TRUE)])  
-  }
+  WinterRain_all_years = stack(RainTempCover_all_years)
+  raster::values(WinterRain_all_years) = raster::values(WinterRain_all_years)/10 # Convert the amount of precipitation from 1/10mm to mm
   
-  rm(AllFilesInTM)
-
-  GrowthSeason_all_years = list()
-
-  SnowRaster = stack(SampleDataSnow)
-  TempRaster = stack(SampleDataMeanTemp)
-
-  GrowthSeason_all_years = foreach(i = 1:length(uniq_y), .packages = c("doParallel", "raster", "rlist")) %dopar% {
-    
-    SnowTempCover = list()
-    
-    SnowTempCover = foreach(j = 1:length(AllFilesInSD[grepl(paste("sd_",uniq_y[i], sep=""), AllFilesInSD, fixed = TRUE)]), .packages = c("doParallel", "raster")) %dopar% {
-      r = raster(SnowRaster, layer = j)
-      
-      k = raster(TempRaster, layer = j)
-      
-      TempRows = which(k[] >= 2781)
-      SnowRows = which(r[] == 0)
-      
-      if(length(TempRows) >= length(SnowRows)){
-        TempSnowRows = which(SnowRows %in% TempRows)
-        r[][SnowRows[TempSnowRows]] = -1337
-        r[r != -1337] = 0
-        r[r == -1337] = 1
-      }
-      
-      else {
-        TempSnowRows = which(TempRows %in% SnowRows)
-        r[][TempRows[TempSnowRows]] = -1337
-        r[r != -1337] = 0
-        r[r == -1337] = 1
-      }
-      
-      SnowTempCover[[j]] = r
-    }
-    GrowthSeason_all_years[[i]] = stackApply(stack(SnowTempCover), c(1), fun = sum)
-  }
-
-  GrowthSeason_all_years = stack(GrowthSeason_all_years)
-
-  names(GrowthSeason_all_years) = uniq_y # Name by years
+  names(WinterRain_all_years) = uniq_y # Name by years
 
   # Rasterstack directory
-  RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/", paste(paste("sd_gw", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
+  RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", paste(paste("sd_gw", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
 
   # Write Raster
-  writeRaster(GrowthSeason_all_years, RasterLocation, format = "raster", overwrite = TRUE)
+  writeRaster(WinterRain_all_years, RasterLocation, format = "raster", overwrite = TRUE)
+  
+  stopImplicitCluster()
+
+
+```
+
+
+## 2. Google Earth Engine (GEE)
+Beregn antall "fjellpixler" og legg til layer til infrastruktur raster (Må kjøres i GEE).
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+var infra = ee.Image("users/tsimonjakobsson/ecocond_2020-2021/NY_INFRA_IND"),
+    norway_wgs84 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/Norway_wgs84"),
+    regnorway_wgs84 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/regNorway_wgs84"),
+    ecosystem_map = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m"),
+    infra_wgs84 = ee.Image("users/markusfisraelsen/Infra_wgs84"),
+    infra_epsg = ee.Image("users/markusfisraelsen/Infra_ESPG25833"),
+    ecoViz = {"min":101,"max":952,"palette":["#00911d","#bcbcbc","#f2e341","#eb56ff","#c2efff","#75b3ff","#2163ff","#3252a8","#ff0000"]};
+    
+
+// From Zander
+function reduceImgResolution(image, reducer, projection){
+  return image.reduceResolution({
+    reducer: reducer, 
+    bestEffort: false,  // for best accuracy, this should be left as false
+    maxPixels: 420
+  }).reproject(projection)
 }
 
 
+// To show the different infrastructure index values as a colour gradient
+var infraViz = {min: 0, max: 15.38416862487793, palette: ['00bbbb', '0000bb']};
+
+// Map infrastructure
+var infra_viz = infra_epsg.visualize(infraViz);
+//Map.addLayer(infra_viz,{}, 'infra_all');
+
+// Map ecosystem
+var ecosystem_viz = ecosystem_map.visualize(ecoViz);
+//Map.addLayer(ecosystem_viz,{}, 'ecosystem_viz');
+
+// Get the projection for infrastructure and ecosystem
+var infra_projection = infra_viz.projection();
+var ecosystem_projection = ecosystem_map.projection();
+
+
+// Filter to get regions
+var region1 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 1));
+var region2 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 2));
+var region3 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 3));
+var region4 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 4));
+var region5 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 5));
+
+var region1_geo = region1.geometry();
+var region2_geo = region2.geometry();
+var region3_geo = region3.geometry();
+var region4_geo = region4.geometry();
+var region5_geo = region5.geometry();
+
+// Clip infra for each region
+var infra_region1 = infra_epsg.clip(region1_geo);
+var infra_region2 = infra_epsg.clip(region2_geo);
+var infra_region3 = infra_epsg.clip(region3_geo);
+var infra_region4 = infra_epsg.clip(region4_geo);
+var infra_region5 = infra_epsg.clip(region5_geo);
+//Map.addLayer(infra_region1.visualize(infraViz));
+
+// Print the native scale of the infra layer
+var infra_scale = infra_region1.projection().nominalScale();
+//print('Infra scale in meters', infra_scale);
+
+// Clip ecosystem for each region
+var eco_region1 = ecosystem_map.clip(region1_geo);
+var eco_region2 = ecosystem_map.clip(region2_geo);
+var eco_region3 = ecosystem_map.clip(region3_geo);
+var eco_region4 = ecosystem_map.clip(region4_geo);
+var eco_region5 = ecosystem_map.clip(region5_geo);
+//Map.addLayer(eco_region1.visualize(ecoViz));
+
+// Print the native scale of the ecosystem layer
+var eco_scale = eco_region1.projection().nominalScale();
+//print('Eco scale in meters', eco_scale);
+
+// Mask out the mountain ecosystem
+var mount_eco_region1 = eco_region1.eq(201).or(eco_region1.eq(202)).selfMask();
+var mount_mask_region1 = ecosystem_map.updateMask(mount_eco_region1);
+
+var mount_eco_region2 = eco_region2.eq(201).or(eco_region2.eq(202)).selfMask();
+var mount_mask_region2 = ecosystem_map.updateMask(mount_eco_region2);
+
+var mount_eco_region3 = eco_region3.eq(201).or(eco_region3.eq(202)).selfMask();
+var mount_mask_region3 = ecosystem_map.updateMask(mount_eco_region3);
+
+var mount_eco_region4 = eco_region4.eq(201).or(eco_region4.eq(202)).selfMask();
+var mount_mask_region4 = ecosystem_map.updateMask(mount_eco_region4);
+
+var mount_eco_region5 = eco_region5.eq(201).or(eco_region5.eq(202)).selfMask();
+var mount_mask_region5 = ecosystem_map.updateMask(mount_eco_region5);
+//Map.addLayer(mount_mask_region2.visualize({bands: "b1", palette: ["005500", "00ff00"]}));
+
+// Get the count of mountain pixels for each region
+var mountCount_region1 = reduceImgResolution(mount_mask_region1, ee.Reducer.count(), infra_projection);
+mountCount_region1 = mountCount_region1.unmask(0);
+
+var mountCount_region2 = reduceImgResolution(mount_mask_region2, ee.Reducer.count(), infra_projection);
+mountCount_region2 = mountCount_region2.unmask(0);
+
+var mountCount_region3 = reduceImgResolution(mount_mask_region3, ee.Reducer.count(), infra_projection);
+mountCount_region3 = mountCount_region3.unmask(0);
+
+var mountCount_region4 = reduceImgResolution(mount_mask_region4, ee.Reducer.count(), infra_projection);
+mountCount_region4 = mountCount_region4.unmask(0);
+
+var mountCount_region5 = reduceImgResolution(mount_mask_region5, ee.Reducer.count(), infra_projection);
+mountCount_region5 = mountCount_region5.unmask(0);
+
+// Append the mountain pixel count to the infra index raster
+var mount_float_region1 = mountCount_region1.float(); // Convert the mountain count layer to float to be identical to the infra raster 
+var mount_infra_region1 = infra_region1.rename('natureIndex')
+  .addBands(mount_float_region1.rename('mountCount'));
+
+var mount_float_region2 = mountCount_region2.float();
+var mount_infra_region2 = infra_region2.rename('natureIndex')
+  .addBands(mount_float_region2.rename('mountCount'));
+  
+var mount_float_region3 = mountCount_region3.float();
+var mount_infra_region3 = infra_region3.rename('natureIndex')
+  .addBands(mount_float_region3.rename('mountCount'));
+
+var mount_float_region4 = mountCount_region4.float();
+var mount_infra_region4 = infra_region4.rename('natureIndex')
+  .addBands(mount_float_region4.rename('mountCount'));
+
+var mount_float_region5 = mountCount_region5.float();
+var mount_infra_region5 = infra_region5.rename('natureIndex')
+  .addBands(mount_float_region5.rename('mountCount'));
+
+//print(infra_projection);
+
+// Exporting the image for each region
+Export.image.toDrive({
+  image: mount_infra_region1,
+  description: "mount_infra_region1",
+  region: mount_infra_region1.geometry(),
+  scale: 100,
+  crs: infra_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: mount_infra_region2,
+  description: "mount_infra_region2",
+  region: mount_infra_region2.geometry(),
+  scale: 100,
+  crs: infra_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: mount_infra_region3,
+  description: "mount_infra_region3",
+  region: mount_infra_region3.geometry(),
+  scale: 100,
+  crs: infra_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: mount_infra_region4,
+  description: "mount_infra_region4",
+  region: mount_infra_region4.geometry(),
+  scale: 100,
+  crs: infra_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: mount_infra_region5,
+  description: "mount_infra_region5",
+  region: mount_infra_region5.geometry(),
+  scale: 100,
+  crs: infra_projection,
+  maxPixels: 1e10
+});
 ```
 
-### Run indicator function
-```{r, echo = TRUE, eval = FALSE}
 
-### Precipitation indicators function ###
-# IndicatorType should be entered as either "sumPrecip" for sum precipitation or "daysPrecip" for number of days with precipitation in the period May - Oct
-start = Sys.time()
-PrecipIndicators(IndicatorType = "sumPrecip") # Amount of precipitation (mm) in the period May - Oct
-finish = Sys.time()
-finish - start
+## 3. Konvertere klimavariablene fra Raster (.grd) til bildefiler (.tif)
+Alle klimavariabler fra steg 1 ble konvertert fra ".grd" filtyper til ".tif i QGIS ved å exportere hver klimavariabel som en GeoTIFF fil. "Høyreklikk" på raster-laget -> "Export" -> "Save as..", velg "Format" og "GeoTIFF" fra drop-down menyen. Velg CRS "CRS(+proj=utm +zone=33 +ellps=GRS80 +units=m + no_defs)" for å kunne laste opp fila til Google Earth Engine og eksportere den ut derfra.
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
-start = Sys.time()
-PrecipIndicators(IndicatorType = "daysPrecip") # Number of days with precipitation in the period May - Oct
-finish = Sys.time()
-finish - start 
-
-### Temperature indicators function ###
-# IndicatorType should be entered as either "meanSummer" for mean summer temperature (June, July, August) or "meanWinter" for mean winter temperature (December, January, February)
-start = Sys.time()
-TempIndicators(IndicatorType = "meanSummer") # Mean temperature in the period June - August
-finish = Sys.time()
-finish - start 
-
-start = Sys.time()
-TempIndicators(IndicatorType = "meanWinter") # Mean temperature in the period December - February
-finish = Sys.time()
-finish - start 
-
-### Snow cover indicator function (Simple) ###
-# "Simple" means that the function only calculates the sum of the number of days with snow cover
-start = Sys.time()
-SnowIndicators("Simple")
-finish = Sys.time()
-finish - start
-
-# "Complex" means that the function calculates the sum of the number of days with snow cover conditioned on days with temperature > 0 degrees celsius
-start = Sys.time()
-SnowIndicators("Complex")
-finish = Sys.time()
-finish - start
-
-### Growth season indicator function ###
-start = Sys.time()
-GrowthSeasonIndicator()
-end = Sys.time()
-end - start
+test = stack("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/rr_days_1957_2020.grd")
+newCRS = crs(mountCount_region2_full)
+crs(test) = newCRS
+writeRaster(test, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/testDays.grd", format = "GTiff")
+writeRaster(sPrecipForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
 
 ```
 
 
-## 2 - Google Earth Engine -> Begrens området til fjellet og beregn antall "fjellpixler"
+## 4. Begrense klimavariablene til fjellområder i Norge (Må kjøres i GEE).
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+var infra_epsg = ee.Image("users/markusfisraelsen/Infra_ESPG25833"),
+    ecosystem_map = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m"),
+    regnorway_wgs84 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/regNorway_wgs84"),
+    daysPrecip = ee.Image("users/markusfisraelsen/daysPrecip"),
+    Mount_sumPrecip = ee.Image("users/markusfisraelsen/Mount_sumPrecip");
 
-## 3 - Slå sammen behandlede klimadata og rasterne av fjellområdet
 
-## 4 - Beregn avvik fra normalperioden 1960 - 1990
+// To show the different infrastructure index values as a colour gradient
+var infraViz = {min: 0, max: 15.38416862487793, palette: ['00bbbb', '0000bb']};
+
+// Map infrastructure
+var infra_viz = infra_epsg.visualize(infraViz);
+//Map.addLayer(infra_viz,{}, 'infra_all');
+
+// Get the projection for infrastructure, ecosystem and days precipitation
+var infra_projection = infra_viz.projection();
+var ecosystem_projection = ecosystem_map.projection();
+var daysPrecip_projection = daysPrecip.projection(); // This projection is used for all climate variables
+
+// Filter to get regions
+var region1 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 1));
+var region2 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 2));
+var region3 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 3));
+var region4 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 4));
+var region5 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 5));
+
+var region1_geo = region1.geometry();
+var region2_geo = region2.geometry();
+var region3_geo = region3.geometry();
+var region4_geo = region4.geometry();
+var region5_geo = region5.geometry();
+
+/*
+// Clip daysPrecip for each region
+var daysPrecip_region1 = daysPrecip.clip(region1_geo);
+var daysPrecip_region2 = daysPrecip.clip(region2_geo);
+var daysPrecip_region3 = daysPrecip.clip(region3_geo);
+var daysPrecip_region4 = daysPrecip.clip(region4_geo);
+var daysPrecip_region5 = daysPrecip.clip(region5_geo);
+
+// Clip daysSnowCover for each region
+var daysSnowCover_region1 = daysSnowCover.clip(region1_geo);
+var daysSnowCover_region2 = daysSnowCover.clip(region2_geo);
+var daysSnowCover_region3 = daysSnowCover.clip(region3_geo);
+var daysSnowCover_region4 = daysSnowCover.clip(region4_geo);
+var daysSnowCover_region5 = daysSnowCover.clip(region5_geo);
+
+// Clip daysSnowCoverTemp for each region
+var daysSnowTemp_region1 = daysSnowTemp.clip(region1_geo);
+var daysSnowTemp_region2 = daysSnowTemp.clip(region2_geo);
+var daysSnowTemp_region3 = daysSnowTemp.clip(region3_geo);
+var daysSnowTemp_region4 = daysSnowTemp.clip(region4_geo);
+var daysSnowTemp_region5 = daysSnowTemp.clip(region5_geo);
+
+// Clip growth season for each region
+var growthSeason_region1 = growthSeason.clip(region1_geo);
+var growthSeason_region2 = growthSeason.clip(region2_geo);
+var growthSeason_region3 = growthSeason.clip(region3_geo);
+var growthSeason_region4 = growthSeason.clip(region4_geo);
+var growthSeason_region5 = growthSeason.clip(region5_geo);
+
+
+// Clip mean summer temperature for each region
+var meanSummer_region1 = meanSummer.clip(region1_geo);
+var meanSummer_region2 = meanSummer.clip(region2_geo);
+var meanSummer_region3 = meanSummer.clip(region3_geo);
+var meanSummer_region4 = meanSummer.clip(region4_geo);
+var meanSummer_region5 = meanSummer.clip(region5_geo);
+
+// Clip mean winter temperature for each region
+var meanWinter_region1 = meanWinter.clip(region1_geo);
+var meanWinter_region2 = meanWinter.clip(region2_geo);
+var meanWinter_region3 = meanWinter.clip(region3_geo);
+var meanWinter_region4 = meanWinter.clip(region4_geo);
+var meanWinter_region5 = meanWinter.clip(region5_geo);
+*/
+print(Mount_sumPrecip.projection());
+print(daysPrecip_projection);
+
+// Clip sum precipitation for each region
+var sumPrecip_region1 = Mount_sumPrecip.clip(region1_geo);
+var sumPrecip_region2 = Mount_sumPrecip.clip(region2_geo);
+var sumPrecip_region3 = Mount_sumPrecip.clip(region3_geo);
+var sumPrecip_region4 = Mount_sumPrecip.clip(region4_geo);
+var sumPrecip_region5 = Mount_sumPrecip.clip(region5_geo);
+
+
+// Export the climate variables for each region (Every variable was exported as the one shown below)
+Export.image.toDrive({
+  image: sumPrecip_region1,
+  description: "Mount_sumPrecip_region1",
+  scale: 1000,
+  region: sumPrecip_region1.geometry(),
+  crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: sumPrecip_region2,
+  description: "Mount_sumPrecip_region2",
+  scale: 1000,
+  region: sumPrecip_region2.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+/*
+Export.image.toDrive({
+  image: sumPrecip_region3,
+  description: "Mount_sumPrecip_region3",
+  scale: 1000,
+  region: sumPrecip_region3.geometry(),
+  crs: Mount_sumPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: sumPrecip_region4,
+  description: "Mount_sumPrecip_region4",
+  scale: 1000,
+  region: sumPrecip_region4.geometry(),
+  crs: Mount_sumPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: sumPrecip_region5,
+  description: "Mount_sumPrecip_region5",
+  scale: 1000,
+  region: sumPrecip_region5.geometry(),
+  crs: Mount_sumPrecip_projection,
+  maxPixels: 1e10
+});
+
+*/
+
+```
+
+
+## 5. Slå sammen behandlede klimadata og rasterne av fjellområdet (Kjøres via Rstudio lokalt)
+Loading the mountain count raster for each region
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Mountain Count
+mountCount_region1_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region1.tif", band = 2)
+mountCount_region2_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region2.tif", band = 2)
+mountCount_region3_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region3.tif", band = 2)
+mountCount_region4_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region4.tif", band = 2)
+mountCount_region5_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region5.tif", band = 2)
+
+# Sum precipitation region 2 1957 - 2020
+sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
+sumPrecip_region2 = stack(sumPrecip_region2) 
+sumExtent_region2 = extent(sumPrecip_region2) 
+sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
+crs(sumShp_region2) = crs(sumPrecip_region2)
+
+# Sum precipitation region 2 1957 - 2020
+sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
+sumPrecip_region2 = stack(sumPrecip_region2) 
+sumExtent_region2 = extent(sumPrecip_region2) 
+sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
+crs(sumShp_region2) = crs(sumPrecip_region2)
+
+# Sum precipitation region 2 1957 - 2020
+sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
+sumPrecip_region2 = stack(sumPrecip_region2) 
+sumExtent_region2 = extent(sumPrecip_region2) 
+sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
+crs(sumShp_region2) = crs(sumPrecip_region2)
+
+# Sum precipitation region 2 1957 - 2020
+sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
+sumPrecip_region2 = stack(sumPrecip_region2) 
+sumExtent_region2 = extent(sumPrecip_region2) 
+sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
+crs(sumShp_region2) = crs(sumPrecip_region2)
+
+# Sum precipitation region 2 1957 - 2020
+sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
+sumPrecip_region2 = stack(sumPrecip_region2) 
+sumExtent_region2 = extent(sumPrecip_region2) 
+sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
+crs(sumShp_region2) = crs(sumPrecip_region2)
+
+# Clip mountain count to the days precip shapefile
+mountCount_region1 = crop(mountCount_region1_full, daysShp_region1)
+mountCount_region2 = crop(mountCount_region2_full, sumShp_region2)
+mountCount_region3 = crop(mountCount_region3_full, daysShp_region3)
+mountCount_region4 = crop(mountCount_region4_full, daysShp_region4)
+mountCount_region5 = crop(mountCount_region5_full, daysShp_region5)
+
+```
+
+### 5.1 Beregne antall fjellpixler i hver "sumPrecip" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Reduce mountain count region 2 (100 x 100m) to sumPrecip region 2 (1000 x 1000m). 
+mountCount_region2_red = raster::aggregate(mountCount_region2, fact = 10, fun = sum)
+extent(mountCount_region2_red) = extent(sumPrecip_region2)
+MCount_region2_red = resample(mountCount_region2_red, sumPrecip_region2, method = "ngb") # Had to resample because mountain count had one column too few
+sumPrecipMountCount_region2 = addLayer(sumPrecip_region2, MCount_region2_red) 
+names(sumPrecipMountCount_region2) = c("1957":"2020", "mountCount") 
+
+# Set raster export directory
+RasterDir_sumPrecip_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("sumPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# Export the rasters
+writeRaster(sumPrecipMountCount_region2, RasterDir_sumPrecip_r2, format = "raster", overwrite = TRUE)
+
+
+
+# 
+# # Sum precipitation region 1
+# sumPrecip_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region1.tif$")
+# sumPrecip_region1 = stack(sumPrecip_region1) 
+# 
+# # Sum precipitation region 2
+# sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
+# sumPrecip_region2 = stack(sumPrecip_region2) 
+# 
+# # Sum precipitation region 3
+# sumPrecip_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum precipitation/", full.names = TRUE, pattern = "region3.tif$")
+# sumPrecip_region3 = stack(sumPrecip_region3) 
+# 
+# # Sum precipitation region 4
+# sumPrecip_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum precipitation/", full.names = TRUE, pattern = "region4.tif$")
+# sumPrecip_region4 = stack(sumPrecip_region4) 
+# 
+# # Sum precipitation region 5
+# sumPrecip_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum precipitation/", full.names = TRUE, pattern = "region5.tif$")
+# sumPrecip_region5 = stack(sumPrecip_region5) 
+# 
+# 
+# # Add forest count to Sum precipitation region 1
+# sPrecipForCount_region1 = addLayer(sumPrecip_region1, forCount_region1_red) 
+# names(sPrecipForCount_region1) = c("1957":"2020", "forCount") 
+# 
+# # Add forest count to Sum precipitation region 2 
+# sPrecipForCount_region2 = addLayer(sumPrecip_region2, fCount_region2_red) 
+# names(sPrecipForCount_region2) = c("1957":"2020", "forCount") 
+# 
+# # Add forest count to Sum precipitation region 3
+# sPrecipForCount_region3 = addLayer(sumPrecip_region3, fCount_region3_red) 
+# names(sPrecipForCount_region3) = c("1957":"2020", "forCount") 
+# 
+# # Add forest count to Sum precipitation region 4
+# sPrecipForCount_region4 = addLayer(sumPrecip_region4, forCount_region4_red) 
+# names(sPrecipForCount_region4) = c("1957":"2020", "forCount") 
+# 
+# # Add forest count to day snow cover region 5
+# sPrecipForCount_region5 = addLayer(sumPrecip_region5, forCount_region5_red) 
+# names(sPrecipForCount_region5) = c("1957":"2020", "forCount") 
+# 
+# # Export the raster
+# RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+# 
+# RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+# 
+# RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+# 
+# RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+# 
+# RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+# 
+# # Write Raster
+# writeRaster(sPrecipForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+# writeRaster(sPrecipForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+# writeRaster(sPrecipForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+# writeRaster(sPrecipForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+# writeRaster(sPrecipForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+
+```
+
+### 5.2 Beregne antall fjellpixler i hver "daysPrecip" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Days precipitation region 1 1957 - 2020
+daysPrecip_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region1.tif$")
+daysPrecip_region1 = stack(daysPrecip_region1) 
+daysExtent_region1 = extent(daysPrecip_region1) # Get the extent of days precip region 1
+daysShp_region1 = as(daysExtent_region1, "SpatialPolygons") # create a shapefile of the extent of days precip region1
+crs(daysShp_region1) = crs(daysPrecip_region1) # set the crs
+
+# Days precipitation region 2 1957 - 2020
+daysPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region2.tif$")
+daysPrecip_region2 = stack(daysPrecip_region2) 
+daysExtent_region2 = extent(daysPrecip_region2) 
+daysShp_region2 = as(daysExtent_region2, "SpatialPolygons") 
+crs(daysShp_region2) = crs(daysPrecip_region2) 
+
+# Days precipitation region 3 1957 - 2020
+daysPrecip_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region3.tif$")
+daysPrecip_region3 = stack(daysPrecip_region3) 
+daysExtent_region3 = extent(daysPrecip_region3) 
+daysShp_region3 = as(daysExtent_region3, "SpatialPolygons") 
+crs(daysShp_region3) = crs(daysPrecip_region3) 
+
+# Days precipitation region 4 1957 - 2020
+daysPrecip_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region4.tif$")
+daysPrecip_region4 = stack(daysPrecip_region4) 
+daysExtent_region4 = extent(daysPrecip_region4) 
+daysShp_region4 = as(daysExtent_region4, "SpatialPolygons") 
+crs(daysShp_region4) = crs(daysPrecip_region4) 
+
+# Days precipitation region 5 1957 - 2020
+daysPrecip_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region5.tif$")
+daysPrecip_region5 = stack(daysPrecip_region5) 
+daysExtent_region5 = extent(daysPrecip_region5)
+daysShp_region5 = as(daysExtent_region5, "SpatialPolygons")
+crs(daysShp_region5) = crs(daysPrecip_region5) 
+
+# Clip mountain count to the days precip shapefile
+mountCount_region1 = crop(mountCount_region1_full, daysShp_region1)
+mountCount_region2 = crop(mountCount_region2_full, daysShp_region2)
+mountCount_region3 = crop(mountCount_region3_full, daysShp_region3)
+mountCount_region4 = crop(mountCount_region4_full, daysShp_region4)
+mountCount_region5 = crop(mountCount_region5_full, daysShp_region5)
+
+# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
+mountCount_region1_red = raster::aggregate(mountCount_region1, fact = 10, fun = sum) # Reduce mountain count by a factor of 10, and sum the pixels (seems to be correct)
+extent(mountCount_region1_red) = extent(daysPrecip_region1) # Set the extent of mountain count to that of days precip region 1
+dPrecipMountCount_region1 = addLayer(daysPrecip_region1, mountCount_region1_red) # add mountain count to days precip
+names(dPrecipMountCount_region1) = c("1957":"2020", "mountCount") # rename the layers
+
+# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
+mountCount_region2_red = raster::aggregate(mountCount_region2, fact = 10, fun = sum)
+extent(mountCount_region2_red) = extent(daysPrecip_region2)
+fCount_region2_red = resample(mountCount_region2_red, daysPrecip_region2, method = "ngb") # Had to resample because forest count had one column too few
+dPrecipMountCount_region2 = addLayer(daysPrecip_region2, fCount_region2_red) 
+names(dPrecipMountCount_region2) = c("1957":"2020", "mountCount") 
+
+# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
+mountCount_region3_red = raster::aggregate(mountCount_region3, fact = 10, fun = sum) 
+extent(mountCount_region3_red) = extent(daysPrecip_region3) 
+fCount_region3_red = resample(mountCount_region3_red, daysPrecip_region3, method = "ngb") # Had to resample because forest count had one column too few
+dPrecipMountCount_region3 = addLayer(daysPrecip_region3, fCount_region3_red) 
+names(dPrecipMountCount_region3) = c("1957":"2020", "mountCount") 
+
+# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
+mountCount_region4_red = raster::aggregate(mountCount_region4, fact = 10, fun = sum) 
+extent(mountCount_region4_red) = extent(daysPrecip_region4) 
+dPrecipMountCount_region4 = addLayer(daysPrecip_region4, mountCount_region4_red) 
+names(dPrecipMountCount_region4) = c("1957":"2020", "mountCount") 
+
+# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
+mountCount_region5_red = raster::aggregate(mountCount_region5, fact = 10, fun = sum) 
+extent(mountCount_region5_red) = extent(daysPrecip_region5) 
+dPrecipMountCount_region5 = addLayer(daysPrecip_region5, mountCount_region5_red) 
+names(dPrecipMountCount_region5) = c("1957":"2020", "mountCount") 
+
+# Export the raster
+RasterLocation_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# # Write Raster
+# writeRaster(dPrecipMountCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(dPrecipMountCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(dPrecipMountCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(dPrecipMountCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(dPrecipMountCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+```
+
+### 5.3 Beregne antall fjellpixler i hver "daysSnowCover" rasterpixel for hver region og slå de to lagene sammen til en raster 
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Days snow cover region 1
+daysSnowCover_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region1.tif$")
+daysSnowCover_region1 = stack(daysSnowCover_region1) 
+
+# Days snow cover region 2
+daysSnowCover_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region2.tif$")
+daysSnowCover_region2 = stack(daysSnowCover_region2) 
+
+# Days snow cover region 3
+daysSnowCover_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region3.tif$")
+daysSnowCover_region3 = stack(daysSnowCover_region3) 
+
+# Days snow cover region 4
+daysSnowCover_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region4.tif$")
+daysSnowCover_region4 = stack(daysSnowCover_region4) 
+
+# Days snow cover region 5
+daysSnowCover_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region5.tif$")
+daysSnowCover_region5 = stack(daysSnowCover_region5) 
+
+
+# Add forest count to days snow cover region 1
+dSnowCoverForCount_region1 = addLayer(daysSnowCover_region1, forCount_region1_red) # add forest count to days precip
+names(dSnowCoverForCount_region1) = c("1957":"2020", "forCount") # rename the layers
+
+# Add forest count to days snow cover region 2 
+dSnowCoverForCount_region2 = addLayer(daysSnowCover_region2, fCount_region2_red) 
+names(dSnowCoverForCount_region2) = c("1957":"2020", "forCount") 
+
+# Add forest count to days snow cover region 3
+dSnowCoverForCount_region3 = addLayer(daysSnowCover_region3, fCount_region3_red) 
+names(dSnowCoverForCount_region3) = c("1957":"2020", "forCount") 
+
+# Add forest count to days snow cover region 4
+dSnowCoverForCount_region4 = addLayer(daysSnowCover_region4, forCount_region4_red) 
+names(dSnowCoverForCount_region4) = c("1957":"2020", "forCount") 
+
+# Add forest count to day snow cover region 5
+dSnowCoverForCount_region5 = addLayer(daysSnowCover_region5, forCount_region5_red) 
+names(dSnowCoverForCount_region5) = c("1957":"2020", "forCount") 
+
+# Export the raster
+RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# Write Raster
+writeRaster(dSnowCoverForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+
+```
+
+### 5.4 Beregne antall fjellpixler i hver "growthSeason" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Growth season region 1
+growthSeason_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region1.tif$")
+growthSeason_region1 = stack(growthSeason_region1) 
+
+# Growth season region 2
+growthSeason_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region2.tif$")
+growthSeason_region2 = stack(growthSeason_region2) 
+
+# Growth season region 3
+growthSeason_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region3.tif$")
+growthSeason_region3 = stack(growthSeason_region3) 
+
+# Growth season region 4
+growthSeason_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region4.tif$")
+growthSeason_region4 = stack(growthSeason_region4) 
+
+# Growth season region 5
+growthSeason_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region5.tif$")
+growthSeason_region5 = stack(growthSeason_region5) 
+
+
+# Add forest count to Growth season region 1
+gSeasonForCount_region1 = addLayer(growthSeason_region1, forCount_region1_red) 
+names(gSeasonForCount_region1) = c("1958":"2020", "forCount") 
+
+# Add forest count to Growth season region 2 
+gSeasonForCount_region2 = addLayer(growthSeason_region2, fCount_region2_red) 
+names(gSeasonForCount_region2) = c("1958":"2020", "forCount") 
+
+# Add forest count to Growth season region 3
+gSeasonForCount_region3 = addLayer(growthSeason_region3, fCount_region3_red) 
+names(gSeasonForCount_region3) = c("1958":"2020", "forCount") 
+
+# Add forest count to Growth season region 4
+gSeasonForCount_region4 = addLayer(growthSeason_region4, forCount_region4_red) 
+names(gSeasonForCount_region4) = c("1958":"2020", "forCount") 
+
+# Add forest count to day snow cover region 5
+gSeasonForCount_region5 = addLayer(growthSeason_region5, forCount_region5_red) 
+names(gSeasonForCount_region5) = c("1958":"2020", "forCount") 
+
+# Export the raster
+RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region1", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region2", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region3", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region4", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region5", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# Write Raster
+writeRaster(gSeasonForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+
+```
+
+### 5.5 Beregne antall fjellpixler i hver "meanSummer" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Mean summer temperature region 1
+meanSummer_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region1.tif$")
+meanSummer_region1 = stack(meanSummer_region1) 
+
+# Mean summer temperature region 2
+meanSummer_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region2.tif$")
+meanSummer_region2 = stack(meanSummer_region2) 
+
+# Mean summer temperature region 3
+meanSummer_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region3.tif$")
+meanSummer_region3 = stack(meanSummer_region3) 
+
+# Mean summer temperature region 4
+meanSummer_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region4.tif$")
+meanSummer_region4 = stack(meanSummer_region4) 
+
+# Mean summer temperature region 5
+meanSummer_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region5.tif$")
+meanSummer_region5 = stack(meanSummer_region5) 
+
+
+# Add forest count to Mean summer temperature region 1
+mSummerForCount_region1 = addLayer(meanSummer_region1, forCount_region1_red) # add forest count to days precip
+names(mSummerForCount_region1) = c("1957":"2020", "forCount") # rename the layers
+
+# Add forest count to Mean summer temperature region 2 
+mSummerForCount_region2 = addLayer(meanSummer_region2, fCount_region2_red) 
+names(mSummerForCount_region2) = c("1957":"2020", "forCount") 
+
+# Add forest count to Mean summer temperature region 3
+mSummerForCount_region3 = addLayer(meanSummer_region3, fCount_region3_red) 
+names(mSummerForCount_region3) = c("1957":"2020", "forCount") 
+
+# Add forest count to Mean summer temperature region 4
+mSummerForCount_region4 = addLayer(meanSummer_region4, forCount_region4_red) 
+names(mSummerForCount_region4) = c("1957":"2020", "forCount") 
+
+# Add forest count to day snow cover region 5
+mSummerForCount_region5 = addLayer(meanSummer_region5, forCount_region5_red) 
+names(mSummerForCount_region5) = c("1957":"2020", "forCount") 
+
+# Export the raster
+RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# Write Raster
+writeRaster(mSummerForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(mSummerForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(mSummerForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(mSummerForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(mSummerForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+
+```
+
+### 5.6 Beregne antall fjellpixler i hver "meanWinter" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Mean Winter temperature region 1
+meanWinter_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/", full.names = TRUE, pattern = "region1.tif$")
+meanWinter_region1 = stack(meanWinter_region1) 
+
+# Mean Winter temperature region 2
+meanWinter_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/", full.names = TRUE, pattern = "region2.tif$")
+meanWinter_region2 = stack(meanWinter_region2) 
+
+# Mean Winter temperature region 3
+meanWinter_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/", full.names = TRUE, pattern = "region3.tif$")
+meanWinter_region3 = stack(meanWinter_region3) 
+
+# Mean Winter temperature region 4
+meanWinter_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/", full.names = TRUE, pattern = "region4.tif$")
+meanWinter_region4 = stack(meanWinter_region4) 
+
+# Mean Winter temperature region 5
+meanWinter_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/", full.names = TRUE, pattern = "region5.tif$")
+meanWinter_region5 = stack(meanWinter_region5) 
+
+
+# Add forest count to Mean Winter temperature region 1
+mWinterForCount_region1 = addLayer(meanWinter_region1, forCount_region1_red) # add forest count to days precip
+names(mWinterForCount_region1) = c("1957":"2020", "forCount") # rename the layers
+
+# Add forest count to Mean Winter temperature region 2 
+mWinterForCount_region2 = addLayer(meanWinter_region2, fCount_region2_red) 
+names(mWinterForCount_region2) = c("1957":"2020", "forCount") 
+
+# Add forest count to Mean Winter temperature region 3
+mWinterForCount_region3 = addLayer(meanWinter_region3, fCount_region3_red) 
+names(mWinterForCount_region3) = c("1957":"2020", "forCount") 
+
+# Add forest count to Mean Winter temperature region 4
+mWinterForCount_region4 = addLayer(meanWinter_region4, forCount_region4_red) 
+names(mWinterForCount_region4) = c("1957":"2020", "forCount") 
+
+# Add forest count to day snow cover region 5
+mWinterForCount_region5 = addLayer(meanWinter_region5, forCount_region5_red) 
+names(mWinterForCount_region5) = c("1957":"2020", "forCount") 
+
+# Export the raster
+RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/meanWinterForestCount/", paste(paste("mWinterForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/meanWinterForestCount/", paste(paste("mWinterForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/meanWinterForestCount/", paste(paste("mWinterForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/meanWinterForestCount/", paste(paste("mWinterForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Winter Temperature/meanWinterForestCount/", paste(paste("mWinterForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# Write Raster
+writeRaster(mWinterForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(mWinterForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(mWinterForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(mWinterForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(mWinterForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+
+```
+
+
+## 6. Beregn avvik fra normalperioden 1961 - 1990
+```{r, echo = TRUE, eval = FALSE, message = FALSE, warning = FALSE}
+#######################################################################################
+### Script for summarising monthly avg/sum anomalies for climate variable data
+### Data prepared by Markus Fjellstad Israelsen (separate scripts)
+###
+### By: Simon Jakobsson, 4 April 2021
+### For: IBECA national assessment forest ecosystem
+###
+### Steps:
+### 1) Basics
+### 2) Loop to summarise deviation from climate normal per region and variable; SAVE
+### 3) Plot summary output; SAVE
+### 4) Plot regression output (not used)
+###
+### *Note that 'write.csv' commands are inactivated in the current version to 
+### avoid overwriting
+###
+########################################################################################
+
+### 1. Basics
+
+# Clean workspace and load libraries
+rm(list=ls())
+library(raster)
+library(Hmisc)
+library(tidyverse)
+
+# Basic check and prep based on raw data
+setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
+
+folders_climate <- list.files()
+
+variables_climate <- data.frame(folders_climate)
+variables_climate$folders_climate <- sub(" and Forest Pixel Count", "", variables_climate$folders_climate)
+
+# Variable names
+variables_climate$variables <- c("Antall dager med nedbør", 
+                                 "Antall dager med snødekke", 
+                                 "Antall dager med snødekke og > 0\u00B0C",
+                                 "Lengde vekstsesong",
+                                 "Gjennomsnittlig sommertemperatur (\u00B0C)",
+                                 "Gjennomsnittlig vintertemperatur (\u00B0C)",
+                                 "Sum nedbør (mm)")
+
+#Region 1 = nord Norge, Region 2 = midt Norge, Region 3 = Øst norge, Region 4 = vest Norge, Region 5 = sør-Norge
+regions <- data.frame(c(1:5))
+regions$navn <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Vestlandet", "Sørlandet")
+
+### 2. Loop to summarise deviation from climate normal per region and variable
+
+# Start time (takes around 2.5-3 hours)
+start <- Sys.time()
+
+# Loop for each climate variable (j)
+for (j in 1:nrow(variables_climate)){
+
+  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
+  setwd(paste(getwd(), "/", folders_climate[j], sep=""))
+  
+  files_climate <- list.files(pattern = "*.grd$")
+  var_pre <- substr(files_climate[1], 1, 7) # Extract variable name
+  
+  # Data frames for Norway
+  temp_all_reg <- data.frame()
+  temp_all_reg_slope <- data.frame()
+  x_all2_slope <- data.frame()
+  
+  # Loop for each region (k)
+  for (k in 1:nrow(regions)){
+
+    x_all_slope <- data.frame()
+    
+    # Load data
+    setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
+    setwd(paste(getwd(), "/", folders_climate[j], sep=""))
+    dat <- stack(paste(files_climate[k]))
+
+    # Climate normal 1961-1990 #
+    
+    if(var_pre == "gSeason") { # Growing season data starts one year later
+      
+      normal <-        overlay(dat[[4]], dat[[5]],dat[[6]],dat[[7]], dat[[8]], dat[[9]],dat[[10]],
+                             dat[[11]],dat[[12]], dat[[13]], dat[[14]],dat[[15]],
+                             dat[[16]],dat[[17]], dat[[18]], dat[[19]],dat[[20]],
+                             dat[[21]],dat[[22]], dat[[23]], dat[[24]],dat[[25]],
+                             dat[[26]],dat[[27]], dat[[28]], dat[[29]],dat[[30]],
+                             dat[[31]], dat[[32]], dat[[33]],fun=mean)
+    } else {    
+      normal <-       overlay(dat[[5]],dat[[6]],dat[[7]], dat[[8]], dat[[9]],dat[[10]],
+                            dat[[11]],dat[[12]], dat[[13]], dat[[14]],dat[[15]],
+                            dat[[16]],dat[[17]], dat[[18]], dat[[19]],dat[[20]],
+                            dat[[21]],dat[[22]], dat[[23]], dat[[24]],dat[[25]],
+                            dat[[26]],dat[[27]], dat[[28]], dat[[29]],dat[[30]],
+                            dat[[31]], dat[[32]], dat[[33]], dat[[34]],fun=mean)
+    }
+    
+    x_all <- data.frame()
+    temp_all_yrs <- data.frame()
+    
+    # Number of years (-1)    
+    nyears <- nlayers(dat)-1
+
+    # Loop for each year: calculate difference between year estimates and climate normal
+    for(i in 1:nyears){
+      
+      year <- ifelse(var_pre == "gSeason", 1957+i, 1956+i) # Start year
+      reg <- regions$navn[k]
+      
+      # Calculates anomalies for each year # 
+      diff1 <- overlay(dat[[i]],normal, fun=function(r1, r2){return(r1-r2)}) # Function that calculates diff
+      
+      temp1 <- data.frame(normal=values(normal), forest=values(dat[['forCount']]), 
+                         clim=values(dat[[i]]), diff = values(diff1), year = year, reg=k)
+      temp1 <- temp1[complete.cases(temp1),]
+      temp1 <- temp1[temp1$normal!=0&temp1$diff!=0,]
+      
+      n_rows <- nrow(temp1)
+
+      # Calculate stats: weighted mean, "weighted SD", "weighted SE", lower and upper [mean+/-SD]
+      # NOTE: these numbers are not very straight forward, and currently not used in reporting. 
+      # Would have been better using the bootstrap approach, or a more advanced modelling, but
+      # as this is not top priority it has not been elaborated.
+      
+      wm1 <- wtd.mean(temp1$diff, w=temp1$forest) 
+      wsd <- sqrt(wtd.var(temp1$diff, w=temp1$forest))
+      wse <- wsd/sqrt(n_rows)
+      low1 <- wm1-wsd
+      upp1 <- wm1+wsd
+      
+      # Bind summary stats
+      x_all <- rbind(x_all,data.frame(reg, year, low1, wm1, upp1, wsd, wse, n_rows)) # Summarise stats in table
+      
+      # Bind complete data frame
+      temp_all_yrs <- rbind(temp_all_yrs, temp1)
+      
+      # Stack rasters
+      diffstack <- if(i==1){
+        diff1
+      } else {
+        stack(diffstack, diff1)
+      }
+      rm(diff1)
+    }
+    
+    # [Outside year loop[]
+    names(diffstack) <- c(names(dat)[1:nyears])
+    
+    # Linear regression on years 1990 - 2020
+    startyr <- ifelse(var_pre == "gSeason", 33, 34) # Start year regression
+    time <- startyr:nlayers(diffstack)
+    fun <- function(x) { if (is.na(x[1])){ NA } else {lm(x ~ time)$coefficients[2] }} 
+    x2 <- calc(diffstack[[startyr:nlayers(diffstack)]], fun)
+    
+    # Summary stats for slopes
+    temp2 <- data.frame(diff=values(x2), forest=values(dat[['forCount']]))
+    temp2 <- temp2[complete.cases(temp2),]
+    temp2 <- temp2[temp2$diff!=0&temp2$forest!=0,]
+
+    n_rows <- nrow(temp2)
+      
+    # Calculated stats (see notes above)
+    wm1 <- wtd.mean(temp2$diff, w=temp2$forest) 
+    wsd <- sqrt(wtd.var(temp2$diff, w=temp2$forest))
+    wse <- wsd/sqrt(n_rows)
+    low1 <- wm1-wsd
+    upp1 <- wm1+wsd
+    
+    x_all_slope <- rbind(x_all_slope,data.frame(reg, low1, wm1, upp1, wsd, wse, n_rows)) # Summarise stats in table
+    
+    temp_all_reg_slope <- rbind(temp_all_reg_slope, temp2)
+    temp_all_reg <- rbind(temp_all_reg, temp_all_yrs)
+  
+    
+  
+    x_all <- x_all[x_all$year>1960,]
+    
+    setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
+    
+    # Write regression tables
+    #write.csv(x_all, paste("regr", variables_climate$variables[j],"_",regions$navn[k], ".csv", sep=""))
+   
+    # Write region slopes
+    #write.csv(x_all_slope, paste("regr_slope", variables_climate$variables[j],"_",regions$navn[k], ".csv", sep=""))
+  }
+  
+  # Repeat process for entire Norway (all data)
+  uniq1 <- unlist(unique(temp_all_reg$year))
+  str(temp_all_reg)
+  x_all2 <- data.frame()
+  
+  for(n in 1:length(uniq1)){
+    
+    year2 <- uniq1[n]
+    sub <- subset(temp_all_reg, year==uniq1[n])
+    reg2 <- "Norge"
+    n_rows_2 <- nrow(sub)
+    wm2 <- wtd.mean(sub$diff, w=sub$forest) 
+    wv2 <- wtd.var(sub$diff, w=sub$forest) 
+    wsd2 <- sqrt(wv2)
+    wse2 <- wsd2/sqrt(nrow(sub))
+    low2 <- wm2-wsd2
+    upp2 <- wm2+wsd2
+    
+    x_all2 <- rbind(x_all2,data.frame(reg2, year2, low2, wm2, upp2, wsd2, wse2, n_rows)) # Summarise stats in table
+  }
+  
+
+
+    reg2 <- "Norge"
+    n_rows_2 <- nrow(temp_all_reg_slope)
+    wm2 <- wtd.mean(temp_all_reg_slope$diff) 
+    wsd2 <- sqrt(wtd.var(temp_all_reg_slope$diff, w=temp_all_reg_slope$forest))
+    wse2 <- wsd2/sqrt(n_rows_2)
+    low2 <- wm2-wsd2
+    upp2 <- wm2+wsd2
+    
+    x_all2_slope <- rbind(x_all2_slope,data.frame(reg2, low2, wm2, upp2, wsd2, wse2, n_rows_2)) # Summarise stats in table
+
+  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
+  # Write regression table Norway
+  #write.csv(x_all2, paste("regr", variables_climate$variables[j],"_","Norge",".csv", sep=""))
+  # Write slope table Norway
+  #write.csv(x_all2_slope, paste("regr_slope", variables_climate$variables[j],"_","Norge",".csv", sep=""))
+  }
+
+stop <- Sys.time()
+
+stop-start # Time difference of 2.685 hours (tirsdag 24.02, kveld)
+
+
+### 3. Plot summary output
+
+# First check and fix some basic data for plotting
+rm(list=ls())
+library(raster)
+library(Hmisc)
+library(tidyverse)
+
+setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
+
+folders_climate <- list.files()
+
+variables_climate <- data.frame(folders_climate)
+variables_climate$folders_climate <- sub(" and Forest Pixel Count", "", variables_climate$folders_climate)
+
+variables_climate$order <- c(1,3,2,6,4,5,7) # order as in tablefiles
+variables_climate <- variables_climate[order(variables_climate$order),]
+
+#Region 1 = nord Norge, Region 2 = midt Norge, Region 3 = Øst norge, Region 4 = vest Norge, Region 5 = sør-Norge
+regions <- data.frame(ord = c(2,1,4,6,5,3))
+regions$navn <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Vestlandet", "Sørlandet", "Norge")
+regions <- regions[order(regions$ord),]
+
+#################
+
+# Files to read
+setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
+tablefiles <- list.files(pattern=".csv")
+tablefiles <- tablefiles[grep("*_slope*",tablefiles,invert=TRUE)]
+
+# Set colour codes
+colours <- c(rep(c("#7A9A01", "#93328E", "dark grey", "#FFB25B", "#2DCCD3","#004F71"), length(tablefiles)/6))
+regions$colours <- colours[1:6]
+regions$ord2 <- c(5,6,1,2,3,4)
+
+# Set max/min data for plots
+val_dat <- data.frame(var = tablefiles,
+                      max = c(rep(60,6),rep(50,6),rep(50,6),rep(5,6),rep(10,6),rep(50,6),rep(600,6)),
+                      min = c(rep(-60,6),rep(-50,6),rep(-80,6),rep(-5,6),rep(-10,6),rep(-50,6),rep(-600,6)))
+
+# Loop for each variable to save png files
+for(j in 1:7){
+
+  # Attempt to change working directory, but somehoe the png files end up in the 'Tables/regr' folder anyway...
+  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Klima/combined/regr")
+
+  png(paste(variables_climate$folders_climate[j], ".png", sep=""), res=300, units="in", height=6, width=8)
+  par(mar=c(4,6,4,1))
+  
+  for(i in ((j-1)*6+1):(j*6)) {
+    setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
+
+    x_all <- read.csv(paste(tablefiles[i]), header=T)
+    x_all <- x_all[x_all$year>1960,]
+    file_x <- gsub("(\u00B0C)", "", tablefiles[i])
+    file_x <- gsub(" > ", "", file_x)
+    
+    #str_split(tablefiles[i], "_", simplify = TRUE)[1]
+    
+    if (i==1|i==7|i==13|i==19|i==25|i==31|i==37){
+      plot(x_all$wm1~x_all$year, frame=FALSE, ylim=c(val_dat$min[i], val_dat$max[i]),
+           type="n",
+           ylab=paste(paste(gsub("regr","",str_split(tablefiles[i], "_", simplify = TRUE)[1])),
+                      "- avvik fra normalperioden (1961-1990)", sep="\n"), xlab="")
+
+      abline(h=0, col="black", lty=1, lwd=1)
+      
+      lines(x_all$year, x_all$wm1, col=colours[i], lwd=1.5, lty=1) 
+      
+    } else {
+      
+      lines(x_all$year, x_all$wm1, col=colours[i], lwd=1.5, lty=1) 
+      
+    }
+    
+  }
+  
+  legend("top", legend = regions$navn[order(regions$ord2)], , col = regions$colours[order(regions$ord2)],  
+         lwd=1.5, lty=1, 
+         bty="n", inset=0, title="", horiz = TRUE,
+         cex=0.7)
+  dev.off()
+ 
+}
+
+
+
+### 4. Plot regression output 
+
+rm(list=ls())
+library(raster)
+library(Hmisc)
+library(tidyverse)
+
+setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
+
+folders_climate <- list.files()
+
+variables_climate <- data.frame(folders_climate)
+variables_climate$folders_climate <- sub(" and Forest Pixel Count", "", variables_climate$folders_climate)
+
+variables_climate$order <- c(1,3,2,6,4,5,7)
+variables_climate <- variables_climate[order(variables_climate$order),]
+
+regions <- data.frame(ord = c(2,1,4,6,5,3))
+regions$navn <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Vestlandet", "Sørlandet", "Norge")
+regions <- regions[order(regions$ord),]
+
+
+#################
+
+
+setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
+tablefiles <- list.files(pattern=".csv")
+
+tablefiles <- tablefiles[grep("*_slope*",tablefiles,invert=FALSE)]
+
+colours <- c(rep(c("#7A9A01", "#93328E", "dark grey", "#FFB25B", "#2DCCD3","#004F71"), length(tablefiles)/6))
+regions$colours <- colours[1:6]
+regions$ord2 <- c(5,6,1,2,3,4)
+
+varnames <- gsub("regr_slope", "", tablefiles)
+
+
+x_all <- data.frame()
+
+for(i in 1:length(tablefiles)) {
+  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
+  x_temp <- read.csv(paste(tablefiles[i]), header=T)
+  x_temp <- x_temp[,-1]
+  variable <- str_split(varnames[i], "_", simplify = TRUE)[1]
+  names(x_temp) <- c("reg", "low", "med", "upp", "sd", "se", "nrows")
+  x_all <- rbind(x_all, cbind(variable, x_temp))
+}
+
+x_all$low2 <- x_all$med-1.96*x_all$sd
+x_all$upp2 <- x_all$med+1.96*x_all$sd
+
+x_all$med[37:42] <- x_all$med[37:42]/10
+x_all$low2[37:42] <- x_all$low2[37:42]/10
+x_all$upp2[37:42] <- x_all$upp2[37:42]/10
+
+x_all$med[19:30] <- x_all$med[19:30]*10
+x_all$low2[19:30] <- x_all$low2[19:30]*10
+x_all$upp2[19:30] <- x_all$upp2[19:30]*10
+
+x_all$change <- ifelse(x_all$low2>0&x_all$upp2>0, "positive", "")
+x_all$change <- ifelse(x_all$low2<0&x_all$upp2<0, "negative", x_all$change)
+
+x_all$lwdP <- ifelse(x_all$change=="", 1, 2)
+x_all$ltyP <- ifelse(x_all$change=="", 3, 1)
+
+
+regions <- regions[order(regions$ord2),]
+
+x_all$variable2 <- as.numeric(x_all$variable)*1.5
+x_all$variable <- gsub("vekstsesong", "vekstsesong (dager)", x_all$variable)
+
+uniq1 <- unlist(unique(x_all$variable))
+uniq2 <- unlist(unique(regions$navn))
+
+regOrder = c(regions$navn)
+x_all <- x_all[order(match(x_all$reg,regOrder)),]
+
+### Wrong rotation plot (not saved, just a try)
+
+par(mar=c(20.5,3.5,0.5,0.5))
+plot(x_all$med~x_all$variable2, frame=FALSE, 
+     type="n",
+     #ylab="Regresjonskoefficient ('slope') 1990-2020",
+     ylab="",
+     xlab="",
+     xlim=c(1,11),
+     ylim=c(-1.3,2.5), 
+     yaxt='n',
+     xaxt='n')
+
+lines(x=c(1,11), y=c(0,0), col="black", lwd=1, lty=3)
+
+move <- 0.11
+for(j in 1:length(uniq1)){
+  
+  sub <- subset(x_all, variable==uniq1[j])
+
+  for(i in 1:length(uniq2)) {
+
+      arrows(sub$variable2[i]+move*(i-3.5),sub$med[i],sub$variable2[i]+move*(i-3.5),sub$upp2[i], angle=90, 
+             length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
+      arrows(sub$variable2[i]+move*(i-3.5),sub$med[i],sub$variable2[i]+move*(i-3.5),sub$low2[i], angle=90, 
+             length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
+      points(sub$variable2[i]+move*(i-3.5),sub$med[i], pch=21, bg=regions$colours[i], cex=1)
+
+      ys <- rep(seq(from=-1, to=2, by=0.5),2)
+      ys <- ys[order(ys)]
+      reps <- length(ys)/2
+      
+      lines(x=c(sub$variable2[1]-0.4,sub$variable2[1]-0.4),y=c(-1,2),lwd=0.5)
+      
+      for(n in 1:reps){
+        
+      lines(x=c(sub$variable2[1]-0.4,sub$variable2[1]-0.45),y=c(ys[(n*2-1):(n*2)]),lwd=0.5)
+      
+      if(n==3){
+        NULL
+      } else {
+        
+      if(j==4|j==5){
+      text(x=sub$variable2[1]-0.6,y=ys[(n*2)], labels=ys[(n*2)]/10, srt=90, cex=0.7)
+      } else if(j==7){
+        text(x=sub$variable2[1]-0.6,y=ys[(n*2)], labels=ys[(n*2)]*10, srt=90, cex=0.7)
+      } else {
+        text(x=sub$variable2[1]-0.6,y=ys[(n*2)], labels=ys[(n*2)], srt=90, cex=0.7)
+      }
+      
+      }
+      
+      }
+      
+    }
+}
+      
+axis(side=1, at=c(c(unique(x_all$variable2)-0.4), 12), labels=c(paste(unique(x_all$variable)), ""), 
+     cex.axis=1.3, las=2) 
+
+axis(side=2, at=c(0.5), labels="Lineær regresjonskoeffisient 1990-2020\n(endring pr. år)", 
+     cex.axis=1.3, las=0, tick=FALSE) 
+
+### Correct rotation plot (not saved, just a try)
+
+par(mar=c(0.5,20.5,4.5,8.5))
+plot(x_all$variable2~x_all$med, frame=FALSE, 
+     type="n",
+     #ylab="Regresjonskoefficient ('slope') 1990-2020",
+     ylab="",
+     xlab="",
+     ylim=c(1,11),
+     xlim=c(-1.3,2.5), 
+     yaxt='n',
+     xaxt='n')
+
+lines(y=c(1,11), x=c(0,0), col="black", lwd=1, lty=3)
+
+move <- 0.11
+for(j in 1:length(uniq1)){
+  
+  sub <- subset(x_all, variable==uniq1[j])
+  
+  for(i in 1:length(uniq2)) {
+    
+    arrows(sub$med[i],sub$variable2[i]+move*(i-3.5),sub$upp2[i], sub$variable2[i]+move*(i-3.5), angle=90, 
+           length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
+    arrows(sub$med[i],sub$variable2[i]+move*(i-3.5),sub$low2[i], sub$variable2[i]+move*(i-3.5), angle=90,
+           length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
+    points(sub$med[i], sub$variable2[i]+move*(i-3.5), pch=21, bg=regions$colours[i], cex=1)
+    
+    ys <- rep(seq(from=-1, to=2, by=0.5),2)
+    ys <- ys[order(ys)]
+    reps <- length(ys)/2
+    
+    lines(y=c(sub$variable2[1]-0.4,sub$variable2[1]-0.4),x=c(-1,2),lwd=0.5)
+    
+    for(n in 1:reps){
+      
+      lines(y=c(sub$variable2[1]-0.4,sub$variable2[1]-0.45),x=c(ys[(n*2-1):(n*2)]),lwd=0.5)
+      
+      if(n==3){
+        NULL
+      } else {
+        
+        if(j==4|j==5){
+          text(y=sub$variable2[1]-0.6,x=ys[(n*2)], labels=ys[(n*2)]/10, srt=0, cex=0.7)
+        } else if(j==7){
+          text(y=sub$variable2[1]-0.6,x=ys[(n*2)], labels=ys[(n*2)]*10, srt=0, cex=0.7)
+        } else {
+          text(y=sub$variable2[1]-0.6,x=ys[(n*2)], labels=ys[(n*2)], srt=0, cex=0.7)
+        }
+        
+      }
+      
+    }
+    
+  }
+}
+
+axis(side=2, at=c(c(unique(x_all$variable2)-0.4), 12), labels=c(paste(unique(x_all$variable)), ""), 
+     cex.axis=1.3, las=2) 
+
+axis(side=3, at=c(0.5), labels="Lineær regresjonskoeffisient 1990-2020\n(endring pr. år)", 
+     cex.axis=1.3, las=0, tick=FALSE) 
+
+legend("right", legend = regions$navn[order(-regions$ord2)], 
+       pch=16, 
+       cex=1.2,
+       inset=-0.1, 
+       bg=c(regions$colours[order(-regions$ord2)]), # not working for pch = 21?!
+       col=c(regions$colours[order(-regions$ord2)]),
+       bty="n", xpd=TRUE)
+
+```
+
+
