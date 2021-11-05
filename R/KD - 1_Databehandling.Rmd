@@ -805,7 +805,6 @@ Export.image.toDrive({
 
 
 ## 3. Konvertere klimavariablene fra Raster (.grd) til bildefiler (.tif)
-Alle klimavariabler fra steg 1 ble konvertert fra ".grd" filtyper til ".tif i QGIS ved å exportere hver klimavariabel som en GeoTIFF fil. "Høyreklikk" på raster-laget -> "Export" -> "Save as..", velg "Format" og "GeoTIFF" fra drop-down menyen. Velg CRS "CRS(+proj=utm +zone=33 +ellps=GRS80 +units=m + no_defs)" for å kunne laste opp fila til Google Earth Engine og eksportere den ut derfra.
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 # Sum nedbør
 rDir_snCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/" 
@@ -1418,15 +1417,15 @@ names(daysPrecipMountCount_region5) = c("1957":"2020", "mountCount")
 
 
 # Export the raster
-RasDir_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Dager med nedbør/", paste(paste("daysPrecipMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", paste(paste("daysPrecipMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasDir_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", paste(paste("daysPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasDir_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", paste(paste("daysPrecipMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasDir_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", paste(paste("daysPrecipMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasDir_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", paste(paste("daysPrecipMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
 # Write Raster
 writeRaster(daysPrecipMountCount_region1, RasDir_r1, format = "raster", overwrite = TRUE)
@@ -1440,64 +1439,59 @@ writeRaster(daysPrecipMountCount_region5, RasDir_r5, format = "raster", overwrit
 ### 5.3 Beregne antall fjellpixler i hver "meanSummer" rasterpixel for hver region og slå de to lagene sammen til en raster
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
-# Mean summer temperature region 1
-meanSummer_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region1.tif$")
-meanSummer_region1 = stack(meanSummer_region1) 
+# Mean summer region 1 1957 - 2020
+meanSummerMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", full.names = TRUE, pattern = "region1.tif$")
+meanSummerMountCount_region1 = stack(meanSummerMountCount_region1)
+extent(mountCount_region1_red) = extent(meanSummerMountCount_region1)
+meanSummerMountCount_region1 = addLayer(meanSummerMountCount_region1, mountCount_region1_red) # use the reduced mountain count created above (5.1)
+names(meanSummerMountCount_region1) = c("1957":"2020", "mountCount") 
 
-# Mean summer temperature region 2
-meanSummer_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region2.tif$")
-meanSummer_region2 = stack(meanSummer_region2) 
+# Mean summer region 2 1957 - 2020
+meanSummerMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", full.names = TRUE, pattern = "region2.tif$")
+meanSummerMountCount_region2 = stack(meanSummerMountCount_region2)
+extent(mountCount_region2_red) = extent(meanSummerMountCount_region2)
+meanSummerMountCount_region2 = addLayer(meanSummerMountCount_region2, MCount_region2_red) # use the reduced mountain count created above (5.1)
+names(meanSummerMountCount_region2) = c("1957":"2020", "mountCount") 
 
-# Mean summer temperature region 3
-meanSummer_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region3.tif$")
-meanSummer_region3 = stack(meanSummer_region3) 
+# Mean summer region 3 1957 - 2020
+meanSummerMountCount_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", full.names = TRUE, pattern = "region3.tif$")
+meanSummerMountCount_region3 = stack(meanSummerMountCount_region3)
+extent(mountCount_region3_red) = extent(meanSummerMountCount_region3)
+meanSummerMountCount_region3 = addLayer(meanSummerMountCount_region3, MCount_region3_red) # use the reduced mountain count created above (5.1)
+names(meanSummerMountCount_region3) = c("1957":"2020", "mountCount") 
 
-# Mean summer temperature region 4
-meanSummer_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region4.tif$")
-meanSummer_region4 = stack(meanSummer_region4) 
+# Mean summer region 4 1957 - 2020
+meanSummerMountCount_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", full.names = TRUE, pattern = "region4.tif$")
+meanSummerMountCount_region4 = stack(meanSummerMountCount_region4)
+extent(mountCount_region4_red) = extent(meanSummerMountCount_region4)
+meanSummerMountCount_region4 = addLayer(meanSummerMountCount_region4, mountCount_region4_red) # use the reduced mountain count created above (5.1)
+names(meanSummerMountCount_region4) = c("1957":"2020", "mountCount") 
 
-# Mean summer temperature region 5
-meanSummer_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/", full.names = TRUE, pattern = "region5.tif$")
-meanSummer_region5 = stack(meanSummer_region5) 
+# Mean summer region 5 1957 - 2020
+meanSummerMountCount_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", full.names = TRUE, pattern = "region5.tif$")
+meanSummerMountCount_region5 = stack(meanSummerMountCount_region5)
+extent(mountCount_region5_red) = extent(meanSummerMountCount_region5)
+meanSummerMountCount_region5 = addLayer(meanSummerMountCount_region5, mountCount_region5_red) # use the reduced mountain count created above (5.1)
+names(meanSummerMountCount_region5) = c("1957":"2020", "mountCount") 
 
-
-# Add forest count to Mean summer temperature region 1
-mSummerForCount_region1 = addLayer(meanSummer_region1, forCount_region1_red) # add forest count to days precip
-names(mSummerForCount_region1) = c("1957":"2020", "forCount") # rename the layers
-
-# Add forest count to Mean summer temperature region 2 
-mSummerForCount_region2 = addLayer(meanSummer_region2, fCount_region2_red) 
-names(mSummerForCount_region2) = c("1957":"2020", "forCount") 
-
-# Add forest count to Mean summer temperature region 3
-mSummerForCount_region3 = addLayer(meanSummer_region3, fCount_region3_red) 
-names(mSummerForCount_region3) = c("1957":"2020", "forCount") 
-
-# Add forest count to Mean summer temperature region 4
-mSummerForCount_region4 = addLayer(meanSummer_region4, forCount_region4_red) 
-names(mSummerForCount_region4) = c("1957":"2020", "forCount") 
-
-# Add forest count to day snow cover region 5
-mSummerForCount_region5 = addLayer(meanSummer_region5, forCount_region5_red) 
-names(mSummerForCount_region5) = c("1957":"2020", "forCount") 
 
 # Export the raster
-RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", paste(paste("meanSummerMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", paste(paste("meanSummerMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", paste(paste("meanSummerMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", paste(paste("meanSummerMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Mean Summer Temperature/meanSummerForestCount/", paste(paste("mSummerForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/", paste(paste("meanSummerMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
 # Write Raster
-writeRaster(mSummerForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
-writeRaster(mSummerForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
-writeRaster(mSummerForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
-writeRaster(mSummerForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
-writeRaster(mSummerForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+writeRaster(meanSummerMountCount_region1, RasDir_r1, format = "raster", overwrite = TRUE)
+writeRaster(meanSummerMountCount_region2, RasDir_r2, format = "raster", overwrite = TRUE)
+writeRaster(meanSummerMountCount_region3, RasDir_r3, format = "raster", overwrite = TRUE)
+writeRaster(meanSummerMountCount_region4, RasDir_r4, format = "raster", overwrite = TRUE)
+writeRaster(meanSummerMountCount_region5, RasDir_r5, format = "raster", overwrite = TRUE)
 
 
 ```
