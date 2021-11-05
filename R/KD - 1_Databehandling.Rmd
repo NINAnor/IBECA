@@ -332,7 +332,7 @@ layerNames = layerNames[1:(length(uniq_y)-1)]
 names(daysSnowCover_all_years) = layerNames # Name by years
 
 # Rasterstack directory; 
-RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Days Snow Cover/", paste(paste("sd_s", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", paste(paste("sd_s", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
 
 # Write raster
 writeRaster(daysSnowCover_all_years, RasterLocation, format="raster", overwrite = TRUE)
@@ -613,7 +613,7 @@ Total mengde nedbør (mm) for dager med temperatur > 2$^\circ$C i perioden Janua
   names(WinterRain_all_years) = uniq_y # Name by years
 
   # Rasterstack directory
-  RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", paste(paste("sd_gw", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
+  RasterLocation = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", paste(paste("sd_vr", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"), ".grd", sep = ""), sep = "")
 
   # Write Raster
   writeRaster(WinterRain_all_years, RasterLocation, format = "raster", overwrite = TRUE)
@@ -807,12 +807,48 @@ Export.image.toDrive({
 ## 3. Konvertere klimavariablene fra Raster (.grd) til bildefiler (.tif)
 Alle klimavariabler fra steg 1 ble konvertert fra ".grd" filtyper til ".tif i QGIS ved å exportere hver klimavariabel som en GeoTIFF fil. "Høyreklikk" på raster-laget -> "Export" -> "Save as..", velg "Format" og "GeoTIFF" fra drop-down menyen. Velg CRS "CRS(+proj=utm +zone=33 +ellps=GRS80 +units=m + no_defs)" for å kunne laste opp fila til Google Earth Engine og eksportere den ut derfra.
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+# Sum nedbør
+rDir_snCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/" 
+snCon = stack(paste(rDir_snCon, "rr_sum_1957_2020.grd", sep=""))
+crs(snCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(snCon, paste(rDir_snCon, "rr_sum_utm_1957_2020.grd", sep = ""), format = "GTiff")
 
-test = stack("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/rr_days_1957_2020.grd")
-newCRS = crs(mountCount_region2_full)
-crs(test) = newCRS
-writeRaster(test, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/testDays.grd", format = "GTiff")
-writeRaster(sPrecipForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+# Dager med nedbør
+rDir_dnCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/" 
+dnCon = stack(paste(rDir_dnCon, "rr_days_1957_2020.grd", sep=""))
+crs(dnCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(dnCon, paste(rDir_dnCon, "rr_days_utm_1957_2020.grd", sep = ""), format = "GTiff")
+
+# Temperatur - sommer
+rDir_tsCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/" 
+tsCon = stack(paste(rDir_tsCon, "tm_summer_1957_2020.grd", sep=""))
+crs(tsCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(tsCon, paste(rDir_tsCon, "tm_summer_utm_1957_2020.grd", sep = ""), format = "GTiff")
+
+# Temperatur - vinter
+rDir_tvCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/" 
+tvCon = stack(paste(rDir_tvCon, "tm_winter_1957_2020.grd", sep=""))
+crs(tvCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(tvCon, paste(rDir_tvCon, "tm_winter_utm_1957_2020.grd", sep = ""), format = "GTiff")
+
+# Snødekke
+rDir_scCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/" 
+scCon = stack(paste(rDir_scCon, "sd_s_1957_2020.grd", sep=""))
+crs(scCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(scCon, paste(rDir_scCon, "sd_s_utm_1957_2020.grd", sep = ""), format = "GTiff")
+
+# Vekstsesong
+rDir_vCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/" 
+vCon = stack(paste(rDir_vCon, "sd_gw_1957_2020.grd", sep=""))
+crs(vCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(vCon, paste(rDir_vCon, "sd_gw_utm_1957_2020.grd", sep = ""), format = "GTiff")
+
+# Vinterregn
+rDir_vrCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/" 
+vrCon = stack(paste(rDir_vrCon, "sd_vr_1957_2020.grd", sep=""))
+crs(vrCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(vrCon, paste(rDir_vrCon, "sd_vr_utm_1957_2020.grd", sep = ""), format = "GTiff")
+
 
 ```
 
@@ -822,8 +858,14 @@ writeRaster(sPrecipForCount_region1, RasterLocation_r1, format = "raster", overw
 var infra_epsg = ee.Image("users/markusfisraelsen/Infra_ESPG25833"),
     ecosystem_map = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m"),
     regnorway_wgs84 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/regNorway_wgs84"),
-    daysPrecip = ee.Image("users/markusfisraelsen/daysPrecip"),
+    Mount_daysPrecip = ee.Image("users/markusfisraelsen/Mount_daysPrecip"),
+    Mount_daysSnowCover = ee.Image("users/markusfisraelsen/Mount_daysSnowCover"),
+    Mount_growthSeason = ee.Image("users/markusfisraelsen/Mount_growthSeason"),
+    Mount_meanSummer = ee.Image("users/markusfisraelsen/Mount_meanSummer"),
+    Mount_meanWinter = ee.Image("users/markusfisraelsen/Mount_meanWinter"),
+    Mount_winterRain = ee.Image("users/markusfisraelsen/Mount_winterRain"),
     Mount_sumPrecip = ee.Image("users/markusfisraelsen/Mount_sumPrecip");
+
 
 
 // To show the different infrastructure index values as a colour gradient
@@ -836,7 +878,7 @@ var infra_viz = infra_epsg.visualize(infraViz);
 // Get the projection for infrastructure, ecosystem and days precipitation
 var infra_projection = infra_viz.projection();
 var ecosystem_projection = ecosystem_map.projection();
-var daysPrecip_projection = daysPrecip.projection(); // This projection is used for all climate variables
+var daysPrecip_projection = Mount_daysPrecip.projection(); // This projection is used for all climate variables
 
 // Filter to get regions
 var region1 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 1));
@@ -851,52 +893,6 @@ var region3_geo = region3.geometry();
 var region4_geo = region4.geometry();
 var region5_geo = region5.geometry();
 
-/*
-// Clip daysPrecip for each region
-var daysPrecip_region1 = daysPrecip.clip(region1_geo);
-var daysPrecip_region2 = daysPrecip.clip(region2_geo);
-var daysPrecip_region3 = daysPrecip.clip(region3_geo);
-var daysPrecip_region4 = daysPrecip.clip(region4_geo);
-var daysPrecip_region5 = daysPrecip.clip(region5_geo);
-
-// Clip daysSnowCover for each region
-var daysSnowCover_region1 = daysSnowCover.clip(region1_geo);
-var daysSnowCover_region2 = daysSnowCover.clip(region2_geo);
-var daysSnowCover_region3 = daysSnowCover.clip(region3_geo);
-var daysSnowCover_region4 = daysSnowCover.clip(region4_geo);
-var daysSnowCover_region5 = daysSnowCover.clip(region5_geo);
-
-// Clip daysSnowCoverTemp for each region
-var daysSnowTemp_region1 = daysSnowTemp.clip(region1_geo);
-var daysSnowTemp_region2 = daysSnowTemp.clip(region2_geo);
-var daysSnowTemp_region3 = daysSnowTemp.clip(region3_geo);
-var daysSnowTemp_region4 = daysSnowTemp.clip(region4_geo);
-var daysSnowTemp_region5 = daysSnowTemp.clip(region5_geo);
-
-// Clip growth season for each region
-var growthSeason_region1 = growthSeason.clip(region1_geo);
-var growthSeason_region2 = growthSeason.clip(region2_geo);
-var growthSeason_region3 = growthSeason.clip(region3_geo);
-var growthSeason_region4 = growthSeason.clip(region4_geo);
-var growthSeason_region5 = growthSeason.clip(region5_geo);
-
-
-// Clip mean summer temperature for each region
-var meanSummer_region1 = meanSummer.clip(region1_geo);
-var meanSummer_region2 = meanSummer.clip(region2_geo);
-var meanSummer_region3 = meanSummer.clip(region3_geo);
-var meanSummer_region4 = meanSummer.clip(region4_geo);
-var meanSummer_region5 = meanSummer.clip(region5_geo);
-
-// Clip mean winter temperature for each region
-var meanWinter_region1 = meanWinter.clip(region1_geo);
-var meanWinter_region2 = meanWinter.clip(region2_geo);
-var meanWinter_region3 = meanWinter.clip(region3_geo);
-var meanWinter_region4 = meanWinter.clip(region4_geo);
-var meanWinter_region5 = meanWinter.clip(region5_geo);
-*/
-print(Mount_sumPrecip.projection());
-print(daysPrecip_projection);
 
 // Clip sum precipitation for each region
 var sumPrecip_region1 = Mount_sumPrecip.clip(region1_geo);
@@ -905,14 +901,59 @@ var sumPrecip_region3 = Mount_sumPrecip.clip(region3_geo);
 var sumPrecip_region4 = Mount_sumPrecip.clip(region4_geo);
 var sumPrecip_region5 = Mount_sumPrecip.clip(region5_geo);
 
+// Clip daysPrecip for each region
+var daysPrecip_region1 = Mount_daysPrecip.clip(region1_geo);
+var daysPrecip_region2 = Mount_daysPrecip.clip(region2_geo);
+var daysPrecip_region3 = Mount_daysPrecip.clip(region3_geo);
+var daysPrecip_region4 = Mount_daysPrecip.clip(region4_geo);
+var daysPrecip_region5 = Mount_daysPrecip.clip(region5_geo);
 
-// Export the climate variables for each region (Every variable was exported as the one shown below)
+// Clip mean summer temperature for each region
+var meanSummer_region1 = Mount_meanSummer.clip(region1_geo);
+var meanSummer_region2 = Mount_meanSummer.clip(region2_geo);
+var meanSummer_region3 = Mount_meanSummer.clip(region3_geo);
+var meanSummer_region4 = Mount_meanSummer.clip(region4_geo);
+var meanSummer_region5 = Mount_meanSummer.clip(region5_geo);
+
+// Clip mean winter temperature for each region
+var meanWinter_region1 = Mount_meanWinter.clip(region1_geo);
+var meanWinter_region2 = Mount_meanWinter.clip(region2_geo);
+var meanWinter_region3 = Mount_meanWinter.clip(region3_geo);
+var meanWinter_region4 = Mount_meanWinter.clip(region4_geo);
+var meanWinter_region5 = Mount_meanWinter.clip(region5_geo);
+
+// Clip daysSnowCover for each region
+var daysSnowCover_region1 = Mount_daysSnowCover.clip(region1_geo);
+var daysSnowCover_region2 = Mount_daysSnowCover.clip(region2_geo);
+var daysSnowCover_region3 = Mount_daysSnowCover.clip(region3_geo);
+var daysSnowCover_region4 = Mount_daysSnowCover.clip(region4_geo);
+var daysSnowCover_region5 = Mount_daysSnowCover.clip(region5_geo);
+
+// Clip growthSeason for each region
+var growthSeason_region1 = Mount_growthSeason.clip(region1_geo);
+var growthSeason_region2 = Mount_growthSeason.clip(region2_geo);
+var growthSeason_region3 = Mount_growthSeason.clip(region3_geo);
+var growthSeason_region4 = Mount_growthSeason.clip(region4_geo);
+var growthSeason_region5 = Mount_growthSeason.clip(region5_geo);
+
+// Clip winterRain for each region
+var winterRain_region1 = Mount_winterRain.clip(region1_geo);
+var winterRain_region2 = Mount_winterRain.clip(region2_geo);
+var winterRain_region3 = Mount_winterRain.clip(region3_geo);
+var winterRain_region4 = Mount_winterRain.clip(region4_geo);
+var winterRain_region5 = Mount_winterRain.clip(region5_geo);
+
+print(Mount_sumPrecip.projection());
+print(daysPrecip_projection);
+
+
+// Export the sumPrecip climate variables for each region
 Export.image.toDrive({
   image: sumPrecip_region1,
   description: "Mount_sumPrecip_region1",
   scale: 1000,
   region: sumPrecip_region1.geometry(),
-  crs: daysPrecip_projection,
+  //crs: daysPrecip_projection,
   maxPixels: 1e10
 });
 
@@ -924,13 +965,13 @@ Export.image.toDrive({
   //crs: daysPrecip_projection,
   maxPixels: 1e10
 });
-/*
+
 Export.image.toDrive({
   image: sumPrecip_region3,
   description: "Mount_sumPrecip_region3",
   scale: 1000,
   region: sumPrecip_region3.geometry(),
-  crs: Mount_sumPrecip_projection,
+  //crs: daysPrecip_projection,
   maxPixels: 1e10
 });
 
@@ -939,7 +980,7 @@ Export.image.toDrive({
   description: "Mount_sumPrecip_region4",
   scale: 1000,
   region: sumPrecip_region4.geometry(),
-  crs: Mount_sumPrecip_projection,
+  //crs: daysPrecip_projection,
   maxPixels: 1e10
 });
 
@@ -948,11 +989,285 @@ Export.image.toDrive({
   description: "Mount_sumPrecip_region5",
   scale: 1000,
   region: sumPrecip_region5.geometry(),
-  crs: Mount_sumPrecip_projection,
+  //crs: daysPrecip_projection,
   maxPixels: 1e10
 });
 
-*/
+// Export the daysPrecip climate variables for each region
+Export.image.toDrive({
+  image: daysPrecip_region1,
+  description: "Mount_daysPrecip_region1",
+  scale: 1000,
+  region: daysPrecip_region1.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysPrecip_region2,
+  description: "Mount_daysPrecip_region2",
+  scale: 1000,
+  region: daysPrecip_region2.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysPrecip_region3,
+  description: "Mount_daysPrecip_region3",
+  scale: 1000,
+  region: daysPrecip_region3.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysPrecip_region4,
+  description: "Mount_daysPrecip_region4",
+  scale: 1000,
+  region: daysPrecip_region4.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysPrecip_region5,
+  description: "Mount_daysPrecip_region5",
+  scale: 1000,
+  region: daysPrecip_region5.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+// Export the meanSummer climate variables for each region
+Export.image.toDrive({
+  image: meanSummer_region1,
+  description: "Mount_meanSummer_region1",
+  scale: 1000,
+  region: meanSummer_region1.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanSummer_region2,
+  description: "Mount_meanSummer_region2",
+  scale: 1000,
+  region: meanSummer_region2.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanSummer_region3,
+  description: "Mount_meanSummer_region3",
+  scale: 1000,
+  region: meanSummer_region3.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanSummer_region4,
+  description: "Mount_meanSummer_region4",
+  scale: 1000,
+  region: meanSummer_region4.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanSummer_region5,
+  description: "Mount_meanSummer_region5",
+  scale: 1000,
+  region: meanSummer_region5.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+// Export the meanWinter climate variables for each region
+Export.image.toDrive({
+  image: meanWinter_region1,
+  description: "Mount_meanWinter_region1",
+  scale: 1000,
+  region: meanWinter_region1.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanWinter_region2,
+  description: "Mount_meanWinter_region2",
+  scale: 1000,
+  region: meanWinter_region2.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanWinter_region3,
+  description: "Mount_meanWinter_region3",
+  scale: 1000,
+  region: meanWinter_region3.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanWinter_region4,
+  description: "Mount_meanWinter_region4",
+  scale: 1000,
+  region: meanWinter_region4.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: meanWinter_region5,
+  description: "Mount_meanWinter_region5",
+  scale: 1000,
+  region: meanWinter_region5.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+// Export the snowCover climate variables for each region
+Export.image.toDrive({
+  image: daysSnowCover_region1,
+  description: "Mount_daysSnowCover_region1",
+  scale: 1000,
+  region: daysSnowCover_region1.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysSnowCover_region2,
+  description: "Mount_daysSnowCover_region2",
+  scale: 1000,
+  region: daysSnowCover_region2.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysSnowCover_region3,
+  description: "Mount_daysSnowCover_region3",
+  scale: 1000,
+  region: daysSnowCover_region3.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysSnowCover_region4,
+  description: "Mount_daysSnowCover_region4",
+  scale: 1000,
+  region: daysSnowCover_region4.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: daysSnowCover_region5,
+  description: "Mount_daysSnowCover_region5",
+  scale: 1000,
+  region: daysSnowCover_region5.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+// Export the growthSeason climate variables for each region
+Export.image.toDrive({
+  image: growthSeason_region1,
+  description: "Mount_growthSeason_region1",
+  scale: 1000,
+  region: growthSeason_region1.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: growthSeason_region2,
+  description: "Mount_growthSeason_region2",
+  scale: 1000,
+  region: growthSeason_region2.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: growthSeason_region3,
+  description: "Mount_growthSeason_region3",
+  scale: 1000,
+  region: growthSeason_region3.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: growthSeason_region4,
+  description: "Mount_growthSeason_region4",
+  scale: 1000,
+  region: growthSeason_region4.geometry(),
+  //crs: Mount_growthSeason_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: growthSeason_region5,
+  description: "Mount_growthSeason_region5",
+  scale: 1000,
+  region: growthSeason_region5.geometry(),
+  //crs: Mount_growthSeason_projection,
+  maxPixels: 1e10
+});
+
+// Export the winterRain climate variables for each region
+Export.image.toDrive({
+  image: winterRain_region1,
+  description: "Mount_winterRain_region1",
+  scale: 1000,
+  region: winterRain_region1.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: winterRain_region2,
+  description: "Mount_winterRain_region2",
+  scale: 1000,
+  region: winterRain_region2.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: winterRain_region3,
+  description: "Mount_winterRain_region3",
+  scale: 1000,
+  region: winterRain_region3.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: winterRain_region4,
+  description: "Mount_winterRain_region4",
+  scale: 1000,
+  region: winterRain_region4.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
+
+Export.image.toDrive({
+  image: winterRain_region5,
+  description: "Mount_winterRain_region5",
+  scale: 1000,
+  region: winterRain_region5.geometry(),
+  //crs: daysPrecip_projection,
+  maxPixels: 1e10
+});
 
 ```
 
@@ -962,11 +1277,18 @@ Loading the mountain count raster for each region
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Mountain Count
-mountCount_region1_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region1.tif", band = 2)
-mountCount_region2_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region2.tif", band = 2)
-mountCount_region3_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region3.tif", band = 2)
-mountCount_region4_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region4.tif", band = 2)
-mountCount_region5_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/GEE/mountInfra/mount_infra_region5.tif", band = 2)
+mountCount_region1_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/mountInfra/mount_infra_region1.tif", band = 2)
+mountCount_region2_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/mountInfra/mount_infra_region2.tif", band = 2)
+mountCount_region3_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/mountInfra/mount_infra_region3.tif", band = 2)
+mountCount_region4_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/mountInfra/mount_infra_region4.tif", band = 2)
+mountCount_region5_full = raster("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/mountInfra/mount_infra_region5.tif", band = 2)
+
+# Sum precipitation region 1 1957 - 2020
+sumPrecip_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region1.tif$")
+sumPrecip_region1 = stack(sumPrecip_region1) 
+sumExtent_region1 = extent(sumPrecip_region1) 
+sumShp_region1 = as(sumExtent_region1, "SpatialPolygons") 
+crs(sumShp_region1) = crs(sumPrecip_region1)
 
 # Sum precipitation region 2 1957 - 2020
 sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
@@ -975,45 +1297,44 @@ sumExtent_region2 = extent(sumPrecip_region2)
 sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
 crs(sumShp_region2) = crs(sumPrecip_region2)
 
-# Sum precipitation region 2 1957 - 2020
-sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
-sumPrecip_region2 = stack(sumPrecip_region2) 
-sumExtent_region2 = extent(sumPrecip_region2) 
-sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
-crs(sumShp_region2) = crs(sumPrecip_region2)
+# Sum precipitation region 3 1957 - 2020
+sumPrecip_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region3.tif$")
+sumPrecip_region3 = stack(sumPrecip_region3) 
+sumExtent_region3 = extent(sumPrecip_region3) 
+sumShp_region3 = as(sumExtent_region3, "SpatialPolygons") 
+crs(sumShp_region3) = crs(sumPrecip_region3)
 
-# Sum precipitation region 2 1957 - 2020
-sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
-sumPrecip_region2 = stack(sumPrecip_region2) 
-sumExtent_region2 = extent(sumPrecip_region2) 
-sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
-crs(sumShp_region2) = crs(sumPrecip_region2)
+# Sum precipitation region 4 1957 - 2020
+sumPrecip_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region4.tif$")
+sumPrecip_region4 = stack(sumPrecip_region4) 
+sumExtent_region4 = extent(sumPrecip_region4) 
+sumShp_region4 = as(sumExtent_region4, "SpatialPolygons") 
+crs(sumShp_region4) = crs(sumPrecip_region4)
 
-# Sum precipitation region 2 1957 - 2020
-sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
-sumPrecip_region2 = stack(sumPrecip_region2) 
-sumExtent_region2 = extent(sumPrecip_region2) 
-sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
-crs(sumShp_region2) = crs(sumPrecip_region2)
+# Sum precipitation region 5 1957 - 2020
+sumPrecip_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region5.tif$")
+sumPrecip_region5 = stack(sumPrecip_region5) 
+sumExtent_region5 = extent(sumPrecip_region5) 
+sumShp_region5 = as(sumExtent_region5, "SpatialPolygons") 
+crs(sumShp_region5) = crs(sumPrecip_region5)
 
-# Sum precipitation region 2 1957 - 2020
-sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
-sumPrecip_region2 = stack(sumPrecip_region2) 
-sumExtent_region2 = extent(sumPrecip_region2) 
-sumShp_region2 = as(sumExtent_region2, "SpatialPolygons") 
-crs(sumShp_region2) = crs(sumPrecip_region2)
-
-# Clip mountain count to the days precip shapefile
-mountCount_region1 = crop(mountCount_region1_full, daysShp_region1)
+# Clip mountain count to the sum precip shapefile
+mountCount_region1 = crop(mountCount_region1_full, sumShp_region1)
 mountCount_region2 = crop(mountCount_region2_full, sumShp_region2)
-mountCount_region3 = crop(mountCount_region3_full, daysShp_region3)
-mountCount_region4 = crop(mountCount_region4_full, daysShp_region4)
-mountCount_region5 = crop(mountCount_region5_full, daysShp_region5)
+mountCount_region3 = crop(mountCount_region3_full, sumShp_region3)
+mountCount_region4 = crop(mountCount_region4_full, sumShp_region4)
+mountCount_region5 = crop(mountCount_region5_full, sumShp_region5)
 
 ```
 
 ### 5.1 Beregne antall fjellpixler i hver "sumPrecip" rasterpixel for hver region og slå de to lagene sammen til en raster
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Reduce mountain count region 1 (100 x 100m) to sumPrecip region 1 (1000 x 1000m). 
+mountCount_region1_red = raster::aggregate(mountCount_region1, fact = 10, fun = sum)
+extent(mountCount_region1_red) = extent(sumPrecip_region1)
+sumPrecipMountCount_region1 = addLayer(sumPrecip_region1, mountCount_region1_red) 
+names(sumPrecipMountCount_region1) = c("1957":"2020", "mountCount") 
 
 # Reduce mountain count region 2 (100 x 100m) to sumPrecip region 2 (1000 x 1000m). 
 mountCount_region2_red = raster::aggregate(mountCount_region2, fact = 10, fun = sum)
@@ -1022,74 +1343,38 @@ MCount_region2_red = resample(mountCount_region2_red, sumPrecip_region2, method 
 sumPrecipMountCount_region2 = addLayer(sumPrecip_region2, MCount_region2_red) 
 names(sumPrecipMountCount_region2) = c("1957":"2020", "mountCount") 
 
+# Reduce mountain count region 3 (100 x 100m) to sumPrecip region 3 (1000 x 1000m). 
+mountCount_region3_red = raster::aggregate(mountCount_region3, fact = 10, fun = sum)
+extent(mountCount_region3_red) = extent(sumPrecip_region3)
+MCount_region3_red = resample(mountCount_region3_red, sumPrecip_region3, method = "ngb") # Had to resample because mountain count had one column too few
+sumPrecipMountCount_region3 = addLayer(sumPrecip_region3, MCount_region3_red) 
+names(sumPrecipMountCount_region3) = c("1957":"2020", "mountCount") 
+
+# Reduce mountain count region 4 (100 x 100m) to sumPrecip region 4 (1000 x 1000m). 
+mountCount_region4_red = raster::aggregate(mountCount_region4, fact = 10, fun = sum)
+extent(mountCount_region4_red) = extent(sumPrecip_region4)
+sumPrecipMountCount_region4 = addLayer(sumPrecip_region4, mountCount_region4_red) 
+names(sumPrecipMountCount_region4) = c("1957":"2020", "mountCount") 
+
+# Reduce mountain count region 5 (100 x 100m) to sumPrecip region 5 (1000 x 1000m). 
+mountCount_region5_red = raster::aggregate(mountCount_region5, fact = 10, fun = sum)
+extent(mountCount_region5_red) = extent(sumPrecip_region5)
+sumPrecipMountCount_region5 = addLayer(sumPrecip_region5, mountCount_region5_red) 
+names(sumPrecipMountCount_region5) = c("1957":"2020", "mountCount") 
+
 # Set raster export directory
-RasterDir_sumPrecip_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("sumPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RDir_sumPrecip_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("sumPrecipMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RDir_sumPrecip_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("sumPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RDir_sumPrecip_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("sumPrecipMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RDir_sumPrecip_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("sumPrecipMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RDir_sumPrecip_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", paste(paste("sumPrecipMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
 # Export the rasters
-writeRaster(sumPrecipMountCount_region2, RasterDir_sumPrecip_r2, format = "raster", overwrite = TRUE)
-
-
-
-# 
-# # Sum precipitation region 1
-# sumPrecip_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region1.tif$")
-# sumPrecip_region1 = stack(sumPrecip_region1) 
-# 
-# # Sum precipitation region 2
-# sumPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/", full.names = TRUE, pattern = "region2.tif$")
-# sumPrecip_region2 = stack(sumPrecip_region2) 
-# 
-# # Sum precipitation region 3
-# sumPrecip_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum precipitation/", full.names = TRUE, pattern = "region3.tif$")
-# sumPrecip_region3 = stack(sumPrecip_region3) 
-# 
-# # Sum precipitation region 4
-# sumPrecip_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum precipitation/", full.names = TRUE, pattern = "region4.tif$")
-# sumPrecip_region4 = stack(sumPrecip_region4) 
-# 
-# # Sum precipitation region 5
-# sumPrecip_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum precipitation/", full.names = TRUE, pattern = "region5.tif$")
-# sumPrecip_region5 = stack(sumPrecip_region5) 
-# 
-# 
-# # Add forest count to Sum precipitation region 1
-# sPrecipForCount_region1 = addLayer(sumPrecip_region1, forCount_region1_red) 
-# names(sPrecipForCount_region1) = c("1957":"2020", "forCount") 
-# 
-# # Add forest count to Sum precipitation region 2 
-# sPrecipForCount_region2 = addLayer(sumPrecip_region2, fCount_region2_red) 
-# names(sPrecipForCount_region2) = c("1957":"2020", "forCount") 
-# 
-# # Add forest count to Sum precipitation region 3
-# sPrecipForCount_region3 = addLayer(sumPrecip_region3, fCount_region3_red) 
-# names(sPrecipForCount_region3) = c("1957":"2020", "forCount") 
-# 
-# # Add forest count to Sum precipitation region 4
-# sPrecipForCount_region4 = addLayer(sumPrecip_region4, forCount_region4_red) 
-# names(sPrecipForCount_region4) = c("1957":"2020", "forCount") 
-# 
-# # Add forest count to day snow cover region 5
-# sPrecipForCount_region5 = addLayer(sumPrecip_region5, forCount_region5_red) 
-# names(sPrecipForCount_region5) = c("1957":"2020", "forCount") 
-# 
-# # Export the raster
-# RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-# 
-# RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-# 
-# RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-# 
-# RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-# 
-# RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Sum Precipitation/sumPrecipForestCount/", paste(paste("sPrecipForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-# 
-# # Write Raster
-# writeRaster(sPrecipForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
-# writeRaster(sPrecipForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
-# writeRaster(sPrecipForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
-# writeRaster(sPrecipForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
-# writeRaster(sPrecipForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
-
+writeRaster(sumPrecipMountCount_region1, RDir_sumPrecip_r1, format = "raster", overwrite = TRUE)
+writeRaster(sumPrecipMountCount_region2, RDir_sumPrecip_r2, format = "raster", overwrite = TRUE)
+writeRaster(sumPrecipMountCount_region3, RDir_sumPrecip_r3, format = "raster", overwrite = TRUE)
+writeRaster(sumPrecipMountCount_region4, RDir_sumPrecip_r4, format = "raster", overwrite = TRUE)
+writeRaster(sumPrecipMountCount_region5, RDir_sumPrecip_r5, format = "raster", overwrite = TRUE)
 
 ```
 
@@ -1097,230 +1382,62 @@ writeRaster(sumPrecipMountCount_region2, RasterDir_sumPrecip_r2, format = "raste
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Days precipitation region 1 1957 - 2020
-daysPrecip_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region1.tif$")
-daysPrecip_region1 = stack(daysPrecip_region1) 
-daysExtent_region1 = extent(daysPrecip_region1) # Get the extent of days precip region 1
-daysShp_region1 = as(daysExtent_region1, "SpatialPolygons") # create a shapefile of the extent of days precip region1
-crs(daysShp_region1) = crs(daysPrecip_region1) # set the crs
+daysPrecipMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", full.names = TRUE, pattern = "region1.tif$")
+daysPrecipMountCount_region1 = stack(daysPrecipMountCount_region1)
+extent(mountCount_region1_red) = extent(daysPrecipMountCount_region1)
+daysPrecipMountCount_region1 = addLayer(daysPrecipMountCount_region1, mountCount_region1_red) # use the reduced mountain count created above (5.1)
+names(daysPrecipMountCount_region1) = c("1957":"2020", "mountCount") 
 
 # Days precipitation region 2 1957 - 2020
-daysPrecip_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region2.tif$")
-daysPrecip_region2 = stack(daysPrecip_region2) 
-daysExtent_region2 = extent(daysPrecip_region2) 
-daysShp_region2 = as(daysExtent_region2, "SpatialPolygons") 
-crs(daysShp_region2) = crs(daysPrecip_region2) 
+daysPrecipMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", full.names = TRUE, pattern = "region2.tif$")
+daysPrecipMountCount_region2 = stack(daysPrecipMountCount_region2)
+extent(mountCount_region2_red) = extent(daysPrecipMountCount_region2)
+daysPrecipMountCount_region2 = addLayer(daysPrecipMountCount_region2, MCount_region2_red) # use the reduced mountain count created above (5.1)
+names(daysPrecipMountCount_region2) = c("1957":"2020", "mountCount") 
 
 # Days precipitation region 3 1957 - 2020
-daysPrecip_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region3.tif$")
-daysPrecip_region3 = stack(daysPrecip_region3) 
-daysExtent_region3 = extent(daysPrecip_region3) 
-daysShp_region3 = as(daysExtent_region3, "SpatialPolygons") 
-crs(daysShp_region3) = crs(daysPrecip_region3) 
+daysPrecipMountCount_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", full.names = TRUE, pattern = "region3.tif$")
+daysPrecipMountCount_region3 = stack(daysPrecipMountCount_region3)
+extent(mountCount_region3_red) = extent(daysPrecipMountCount_region3)
+daysPrecipMountCount_region3 = addLayer(daysPrecipMountCount_region3, MCount_region3_red) # use the reduced mountain count created above (5.1)
+names(daysPrecipMountCount_region3) = c("1957":"2020", "mountCount") 
 
 # Days precipitation region 4 1957 - 2020
-daysPrecip_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region4.tif$")
-daysPrecip_region4 = stack(daysPrecip_region4) 
-daysExtent_region4 = extent(daysPrecip_region4) 
-daysShp_region4 = as(daysExtent_region4, "SpatialPolygons") 
-crs(daysShp_region4) = crs(daysPrecip_region4) 
+daysPrecipMountCount_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", full.names = TRUE, pattern = "region4.tif$")
+daysPrecipMountCount_region4 = stack(daysPrecipMountCount_region4)
+extent(mountCount_region4_red) = extent(daysPrecipMountCount_region4)
+daysPrecipMountCount_region4 = addLayer(daysPrecipMountCount_region4, mountCount_region4_red) # use the reduced mountain count created above (5.1)
+names(daysPrecipMountCount_region4) = c("1957":"2020", "mountCount") 
 
 # Days precipitation region 5 1957 - 2020
-daysPrecip_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Precipitation/", full.names = TRUE, pattern = "region5.tif$")
-daysPrecip_region5 = stack(daysPrecip_region5) 
-daysExtent_region5 = extent(daysPrecip_region5)
-daysShp_region5 = as(daysExtent_region5, "SpatialPolygons")
-crs(daysShp_region5) = crs(daysPrecip_region5) 
+daysPrecipMountCount_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/", full.names = TRUE, pattern = "region5.tif$")
+daysPrecipMountCount_region5 = stack(daysPrecipMountCount_region5)
+extent(mountCount_region5_red) = extent(daysPrecipMountCount_region5)
+daysPrecipMountCount_region5 = addLayer(daysPrecipMountCount_region5, mountCount_region5_red) # use the reduced mountain count created above (5.1)
+names(daysPrecipMountCount_region5) = c("1957":"2020", "mountCount") 
 
-# Clip mountain count to the days precip shapefile
-mountCount_region1 = crop(mountCount_region1_full, daysShp_region1)
-mountCount_region2 = crop(mountCount_region2_full, daysShp_region2)
-mountCount_region3 = crop(mountCount_region3_full, daysShp_region3)
-mountCount_region4 = crop(mountCount_region4_full, daysShp_region4)
-mountCount_region5 = crop(mountCount_region5_full, daysShp_region5)
-
-# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
-mountCount_region1_red = raster::aggregate(mountCount_region1, fact = 10, fun = sum) # Reduce mountain count by a factor of 10, and sum the pixels (seems to be correct)
-extent(mountCount_region1_red) = extent(daysPrecip_region1) # Set the extent of mountain count to that of days precip region 1
-dPrecipMountCount_region1 = addLayer(daysPrecip_region1, mountCount_region1_red) # add mountain count to days precip
-names(dPrecipMountCount_region1) = c("1957":"2020", "mountCount") # rename the layers
-
-# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
-mountCount_region2_red = raster::aggregate(mountCount_region2, fact = 10, fun = sum)
-extent(mountCount_region2_red) = extent(daysPrecip_region2)
-fCount_region2_red = resample(mountCount_region2_red, daysPrecip_region2, method = "ngb") # Had to resample because forest count had one column too few
-dPrecipMountCount_region2 = addLayer(daysPrecip_region2, fCount_region2_red) 
-names(dPrecipMountCount_region2) = c("1957":"2020", "mountCount") 
-
-# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
-mountCount_region3_red = raster::aggregate(mountCount_region3, fact = 10, fun = sum) 
-extent(mountCount_region3_red) = extent(daysPrecip_region3) 
-fCount_region3_red = resample(mountCount_region3_red, daysPrecip_region3, method = "ngb") # Had to resample because forest count had one column too few
-dPrecipMountCount_region3 = addLayer(daysPrecip_region3, fCount_region3_red) 
-names(dPrecipMountCount_region3) = c("1957":"2020", "mountCount") 
-
-# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
-mountCount_region4_red = raster::aggregate(mountCount_region4, fact = 10, fun = sum) 
-extent(mountCount_region4_red) = extent(daysPrecip_region4) 
-dPrecipMountCount_region4 = addLayer(daysPrecip_region4, mountCount_region4_red) 
-names(dPrecipMountCount_region4) = c("1957":"2020", "mountCount") 
-
-# Reduce mountain count (100 x 100m) to daysPrecip (1000 x 1000m). 
-mountCount_region5_red = raster::aggregate(mountCount_region5, fact = 10, fun = sum) 
-extent(mountCount_region5_red) = extent(daysPrecip_region5) 
-dPrecipMountCount_region5 = addLayer(daysPrecip_region5, mountCount_region5_red) 
-names(dPrecipMountCount_region5) = c("1957":"2020", "mountCount") 
 
 # Export the raster
-RasterLocation_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Dager med nedbør/", paste(paste("daysPrecipMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
-RasterLocation_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("dPrecipMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-# # Write Raster
-# writeRaster(dPrecipMountCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
-writeRaster(dPrecipMountCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
-writeRaster(dPrecipMountCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
-writeRaster(dPrecipMountCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
-writeRaster(dPrecipMountCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
-
-```
-
-### 5.3 Beregne antall fjellpixler i hver "daysSnowCover" rasterpixel for hver region og slå de to lagene sammen til en raster 
-```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
-
-# Days snow cover region 1
-daysSnowCover_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region1.tif$")
-daysSnowCover_region1 = stack(daysSnowCover_region1) 
-
-# Days snow cover region 2
-daysSnowCover_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region2.tif$")
-daysSnowCover_region2 = stack(daysSnowCover_region2) 
-
-# Days snow cover region 3
-daysSnowCover_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region3.tif$")
-daysSnowCover_region3 = stack(daysSnowCover_region3) 
-
-# Days snow cover region 4
-daysSnowCover_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region4.tif$")
-daysSnowCover_region4 = stack(daysSnowCover_region4) 
-
-# Days snow cover region 5
-daysSnowCover_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region5.tif$")
-daysSnowCover_region5 = stack(daysSnowCover_region5) 
-
-
-# Add forest count to days snow cover region 1
-dSnowCoverForCount_region1 = addLayer(daysSnowCover_region1, forCount_region1_red) # add forest count to days precip
-names(dSnowCoverForCount_region1) = c("1957":"2020", "forCount") # rename the layers
-
-# Add forest count to days snow cover region 2 
-dSnowCoverForCount_region2 = addLayer(daysSnowCover_region2, fCount_region2_red) 
-names(dSnowCoverForCount_region2) = c("1957":"2020", "forCount") 
-
-# Add forest count to days snow cover region 3
-dSnowCoverForCount_region3 = addLayer(daysSnowCover_region3, fCount_region3_red) 
-names(dSnowCoverForCount_region3) = c("1957":"2020", "forCount") 
-
-# Add forest count to days snow cover region 4
-dSnowCoverForCount_region4 = addLayer(daysSnowCover_region4, forCount_region4_red) 
-names(dSnowCoverForCount_region4) = c("1957":"2020", "forCount") 
-
-# Add forest count to day snow cover region 5
-dSnowCoverForCount_region5 = addLayer(daysSnowCover_region5, forCount_region5_red) 
-names(dSnowCoverForCount_region5) = c("1957":"2020", "forCount") 
-
-# Export the raster
-RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+RasDir_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/3 - mountCount to Climate/", paste(paste("daysPrecipMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
 
 # Write Raster
-writeRaster(dSnowCoverForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
-writeRaster(dSnowCoverForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
-writeRaster(dSnowCoverForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
-writeRaster(dSnowCoverForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
-writeRaster(dSnowCoverForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
-
-
-```
-
-### 5.4 Beregne antall fjellpixler i hver "growthSeason" rasterpixel for hver region og slå de to lagene sammen til en raster
-```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
-
-# Growth season region 1
-growthSeason_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region1.tif$")
-growthSeason_region1 = stack(growthSeason_region1) 
-
-# Growth season region 2
-growthSeason_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region2.tif$")
-growthSeason_region2 = stack(growthSeason_region2) 
-
-# Growth season region 3
-growthSeason_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region3.tif$")
-growthSeason_region3 = stack(growthSeason_region3) 
-
-# Growth season region 4
-growthSeason_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region4.tif$")
-growthSeason_region4 = stack(growthSeason_region4) 
-
-# Growth season region 5
-growthSeason_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region5.tif$")
-growthSeason_region5 = stack(growthSeason_region5) 
-
-
-# Add forest count to Growth season region 1
-gSeasonForCount_region1 = addLayer(growthSeason_region1, forCount_region1_red) 
-names(gSeasonForCount_region1) = c("1958":"2020", "forCount") 
-
-# Add forest count to Growth season region 2 
-gSeasonForCount_region2 = addLayer(growthSeason_region2, fCount_region2_red) 
-names(gSeasonForCount_region2) = c("1958":"2020", "forCount") 
-
-# Add forest count to Growth season region 3
-gSeasonForCount_region3 = addLayer(growthSeason_region3, fCount_region3_red) 
-names(gSeasonForCount_region3) = c("1958":"2020", "forCount") 
-
-# Add forest count to Growth season region 4
-gSeasonForCount_region4 = addLayer(growthSeason_region4, forCount_region4_red) 
-names(gSeasonForCount_region4) = c("1958":"2020", "forCount") 
-
-# Add forest count to day snow cover region 5
-gSeasonForCount_region5 = addLayer(growthSeason_region5, forCount_region5_red) 
-names(gSeasonForCount_region5) = c("1958":"2020", "forCount") 
-
-# Export the raster
-RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region1", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region2", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region3", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region4", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region5", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
-
-# Write Raster
-writeRaster(gSeasonForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
-writeRaster(gSeasonForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
-writeRaster(gSeasonForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
-writeRaster(gSeasonForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
-writeRaster(gSeasonForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
-
+writeRaster(daysPrecipMountCount_region1, RasDir_r1, format = "raster", overwrite = TRUE)
+writeRaster(daysPrecipMountCount_region2, RasDir_r2, format = "raster", overwrite = TRUE)
+writeRaster(daysPrecipMountCount_region3, RasDir_r3, format = "raster", overwrite = TRUE)
+writeRaster(daysPrecipMountCount_region4, RasDir_r4, format = "raster", overwrite = TRUE)
+writeRaster(daysPrecipMountCount_region5, RasDir_r5, format = "raster", overwrite = TRUE)
 
 ```
 
-### 5.5 Beregne antall fjellpixler i hver "meanSummer" rasterpixel for hver region og slå de to lagene sammen til en raster
+### 5.3 Beregne antall fjellpixler i hver "meanSummer" rasterpixel for hver region og slå de to lagene sammen til en raster
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Mean summer temperature region 1
@@ -1385,7 +1502,7 @@ writeRaster(mSummerForCount_region5, RasterLocation_r5, format = "raster", overw
 
 ```
 
-### 5.6 Beregne antall fjellpixler i hver "meanWinter" rasterpixel for hver region og slå de to lagene sammen til en raster
+### 5.4 Beregne antall fjellpixler i hver "meanWinter" rasterpixel for hver region og slå de to lagene sammen til en raster
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Mean Winter temperature region 1
@@ -1449,6 +1566,142 @@ writeRaster(mWinterForCount_region5, RasterLocation_r5, format = "raster", overw
 
 
 ```
+
+### 5.5 Beregne antall fjellpixler i hver "daysSnowCover" rasterpixel for hver region og slå de to lagene sammen til en raster 
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Days snow cover region 1
+daysSnowCover_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region1.tif$")
+daysSnowCover_region1 = stack(daysSnowCover_region1) 
+
+# Days snow cover region 2
+daysSnowCover_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region2.tif$")
+daysSnowCover_region2 = stack(daysSnowCover_region2) 
+
+# Days snow cover region 3
+daysSnowCover_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region3.tif$")
+daysSnowCover_region3 = stack(daysSnowCover_region3) 
+
+# Days snow cover region 4
+daysSnowCover_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region4.tif$")
+daysSnowCover_region4 = stack(daysSnowCover_region4) 
+
+# Days snow cover region 5
+daysSnowCover_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/", full.names = TRUE, pattern = "region5.tif$")
+daysSnowCover_region5 = stack(daysSnowCover_region5) 
+
+
+# Add forest count to days snow cover region 1
+dSnowCoverForCount_region1 = addLayer(daysSnowCover_region1, forCount_region1_red) # add forest count to days precip
+names(dSnowCoverForCount_region1) = c("1957":"2020", "forCount") # rename the layers
+
+# Add forest count to days snow cover region 2 
+dSnowCoverForCount_region2 = addLayer(daysSnowCover_region2, fCount_region2_red) 
+names(dSnowCoverForCount_region2) = c("1957":"2020", "forCount") 
+
+# Add forest count to days snow cover region 3
+dSnowCoverForCount_region3 = addLayer(daysSnowCover_region3, fCount_region3_red) 
+names(dSnowCoverForCount_region3) = c("1957":"2020", "forCount") 
+
+# Add forest count to days snow cover region 4
+dSnowCoverForCount_region4 = addLayer(daysSnowCover_region4, forCount_region4_red) 
+names(dSnowCoverForCount_region4) = c("1957":"2020", "forCount") 
+
+# Add forest count to day snow cover region 5
+dSnowCoverForCount_region5 = addLayer(daysSnowCover_region5, forCount_region5_red) 
+names(dSnowCoverForCount_region5) = c("1957":"2020", "forCount") 
+
+# Export the raster
+RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Days Snow Cover/daysSnowCoverForestCount/", paste(paste("dSnowCoverForCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# Write Raster
+writeRaster(dSnowCoverForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(dSnowCoverForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+
+```
+
+### 5.6 Beregne antall fjellpixler i hver "growthSeason" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Growth season region 1
+growthSeason_region1 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region1.tif$")
+growthSeason_region1 = stack(growthSeason_region1) 
+
+# Growth season region 2
+growthSeason_region2 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region2.tif$")
+growthSeason_region2 = stack(growthSeason_region2) 
+
+# Growth season region 3
+growthSeason_region3 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region3.tif$")
+growthSeason_region3 = stack(growthSeason_region3) 
+
+# Growth season region 4
+growthSeason_region4 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region4.tif$")
+growthSeason_region4 = stack(growthSeason_region4) 
+
+# Growth season region 5
+growthSeason_region5 = list.files("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/", full.names = TRUE, pattern = "region5.tif$")
+growthSeason_region5 = stack(growthSeason_region5) 
+
+
+# Add forest count to Growth season region 1
+gSeasonForCount_region1 = addLayer(growthSeason_region1, forCount_region1_red) 
+names(gSeasonForCount_region1) = c("1958":"2020", "forCount") 
+
+# Add forest count to Growth season region 2 
+gSeasonForCount_region2 = addLayer(growthSeason_region2, fCount_region2_red) 
+names(gSeasonForCount_region2) = c("1958":"2020", "forCount") 
+
+# Add forest count to Growth season region 3
+gSeasonForCount_region3 = addLayer(growthSeason_region3, fCount_region3_red) 
+names(gSeasonForCount_region3) = c("1958":"2020", "forCount") 
+
+# Add forest count to Growth season region 4
+gSeasonForCount_region4 = addLayer(growthSeason_region4, forCount_region4_red) 
+names(gSeasonForCount_region4) = c("1958":"2020", "forCount") 
+
+# Add forest count to day snow cover region 5
+gSeasonForCount_region5 = addLayer(growthSeason_region5, forCount_region5_red) 
+names(gSeasonForCount_region5) = c("1958":"2020", "forCount") 
+
+# Export the raster
+RasterLocation_r1 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region1", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region2", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region3", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region4", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Klima/All years 1957 - 2020/Growth Season/Growth season fixed 15_02_2021/growthSeason/gSeasonForCount/", paste(paste("gSeasonForCount_region5", 1958, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+# Write Raster
+writeRaster(gSeasonForCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(gSeasonForCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+
+```
+
+### 5.7 Beregne antall fjellpixler i hver "winterRain" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r}
+
+```
+
 
 
 ## 6. Beregn avvik fra normalperioden 1961 - 1990
