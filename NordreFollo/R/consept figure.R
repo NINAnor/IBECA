@@ -24,13 +24,13 @@ gantt <- ganttrify(project = dummyData,
           month_number = FALSE,
           font_family = "Roboto Condensed",
           x_axis_position = "bottom",
-          hide_wp = TRUE,
-          spots=spots
+          hide_wp = TRUE
+          #spots=spots
           )+
   coord_flip()+
   scale_y_discrete(position = "right",
                    expand = expansion(mult=c(.1,.2))) +
-  ylab("Scaled indicators")+
+  ylab("Ecosystem Condition Indicators")+
   xlab("Indicator validity")+
   theme(
     axis.title = element_text(size=30),
@@ -61,6 +61,8 @@ gantt <- ganttrify(project = dummyData,
 
 gantt
 
-tiff("NordreFollo/output/conseptFigure.tif")     
+tiff(width = 560, height = 480, units = "px", pointsize = 12,
+     compression = "lzw", "NordreFollo/output/conseptFigure_3nov.tif")     
 gantt
 dev.off()
+getwd()

@@ -1,0 +1,72 @@
+---
+title: "ROS beitetrykk Trøndelag"
+output: pdf_document
+
+knit: (function(input_file, encoding) {
+  out_dir <- 'pdf';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'ROSbeitetrykkTrondelag.pdf'))})
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Analyse av beitetrykk på ROS-arter i Trøndelag
+Data kommer fra landsskogstakseringa 10. - 12 takst, dvs 2010-2020.
+Dataene (kun summary statistics) er levert av Erling Solberg.
+12. tast har bare ett omdrev så n er liten.
+
+Tidsserien er litt for kort for å si noe om trender over tid, men det kan være mulig å si noe om nivået i dag. Da kan vi f.eks trekke inn Speed et al 2013 https://www.tandfonline.com/doi/abs/10.2980/20-3-3619
+som finner et rogn får negativ vekst med >20% beitetrykk. Rogn er nok den mest tolerante av ROS-artene, og selv med >20% beitetrykk så vil noen individer klare å vokse opp. Osp tåler mye mindre - https://www.tandfonline.com/doi/full/10.1080/02827581.2014.999823?src=recsys
+
+I våre data er det snakk om gjennomsnittlig beitetrykk på alle ROS, uavhengig av størrelse. De flesete individer vil allikevel være små. 
+
+```{r}
+dat <- data.frame(
+'år' = c("2010-2014", "2015-2019", "2020"),
+takst = c(10, 11, 12),
+n = c(899, 812, 143),
+beitetrykk_prosent = c(32.2043, 39.2052, 41.3643),
+standard_error = c(1.13968, 1.29938, 3.14025)
+)
+```
+
+```{r}
+(myPlot <- ggplot(data = dat)+
+  geom_line(aes(x=takst, y=beitetrykk_prosent),
+            lwd=1.2, colour="grey40")+
+  geom_errorbar(aes(      x=takst, 
+      y=beitetrykk_prosent,
+      ymin = beitetrykk_prosent-standard_error,
+      ymax = beitetrykk_prosent+standard_error),
+      width=0.2,
+      lwd=1.2)+
+  theme_classic()+
+  scale_x_continuous(breaks = dat$takst,
+                     labels = dat$'år')+
+  ylab("Percentage of shoots browsed")+
+  xlab("")+
+  geom_abline(intercept = 20, slope=0, lwd=1.2, lty="dashed")+
+  ylim(c(15, 45))+
+  ggtitle("Browsing pressure on ROS species in Trøndelag")+
+  theme(
+    plot.title = element_text(hjust = 0.5, size=16),
+    axis.text = element_text(size=16),
+    axis.title = element_text(size=16)  
+
+  )
+)
+```
+Den stippla linja i figuren (20% beitetrykk = tålegrensen for rogn) over er ikke en entydig referanseverdi for overbeite, men den setter verdiene litt i perspektiv, og konklusjonen er vel at beitetrukket er bra høyt i Trøndelag. 
+
+```{r, eval=F}
+
+tiff("figures/ROSbeitetrykkTrondelag.tif")
+myPlot
+dev.off()
+```
+
+

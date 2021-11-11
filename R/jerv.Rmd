@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ## Analyser av jervbestand
+Her henter jeg data om jervbestandend i Nogre fra Naturindeksdatabsen. Tidsserien er ikke komplett og det mangler bl.a. data fra 2020 som kanskje er tilgjengelig i rovbase. Men vi det har ikke skjedd noe dramatisk med polpulasjonen siden siset NI-vurdering.
 
 # Import - Importerer data fra NI
 Fyll inn ditt eget passord og brukernavn
@@ -41,8 +42,9 @@ jerv <- NIcalc::importDatasetApi(
   indic = "Jerv",
   year = c(1990,2000,2010,2014,2019))
 saveRDS(jerv, "../data/jervNIexport.rds")
-jerv <- readRDS("../data/jervNIexport.rds")
+
 ```
+
 
 
 ```{r}
@@ -81,8 +83,8 @@ jerv_assemeble <- readRDS("../data/jerv_assemble.rds")
 ```
 
 
-
-Her simulerer jeg indicatorverdier 10000 ganger per år.
+Indikatorveriene kommer både som tall og i form av sannsynlighetsfunskjoner. 
+Her simulerer jeg indikatorverdier 10000 ganger per år.
 ```{r}
 # bruker tradOb siden custumDist er NA. Dette er ikke en generisk løsning.
 obstype <- rep("tradObs", nrow(jerv_assemeble$indicatorValues$'2019'))
@@ -147,8 +149,12 @@ hist(jerv2019scaled)
 
 Her er det ingen grunn til å trunkere verdier over 1.
 
+Denne fordelingen har vi summert indikatorverdiene og referanseverdiene for alle åtte regionene. Dette blir litt feil. Vi ønsker at den nasjonele indikatorverdien skal være gjennomsnittet av de skalerte indikatorverdien i regionene. Jeg tror ikke vi skal veie regionene ut ifra fjellareal i dette tilfelle. 
 
-Jeg slår sammen de relevnte rovviltregionene til ØT regioner. Jeg inkluderer alle rovviltregioner sopm overlapper med den respektive ØTregionen.
+Jeg gjør det først slik at den nasjoneale verdien er summen av tilstandsverdeien og referanseverdiene i regionene. Deretter gjør jeg det på den andre måten, den den nasjonale verdiener gjennomsnittet av de skalerte regionale verdiene. Deretter sammenligner jeg de to svarene. 
+
+## Skaliering
+Her slår jeg sammen de relevante rovviltregionene til ØT regioner. Jeg inkluderer alle rovviltregioner som overlapper med den respektive ØTregionen. Her er det et forbedringspotensial ved å veie dataene fra de ulike rovviltregionene ulikt ettersom hvro stor overlapp de har med ØT-regionene.
 
 ```{r}
 table(jerv_assemeble$referenceValues$ICunitName,
@@ -165,6 +171,63 @@ sør <- c(1311,1313)
 
 
 
+```{r}
+regions <- c("Norge", "N", "C", "W", "S", "E")
+
+jervTbl <- data.frame(
+  reg = rep(regions, each=length(myYears)),
+  year = rep(myYears, length(regions)),
+  low = NA,
+  med = NA,
+  upp = NA
+)
+
+jervTbl_unscaled <- data.frame(
+  reg = rep(regions, each=length(myYears)),
+  year = rep(myYears, length(regions)),
+  low = NA,
+  med = NA,
+  upp = NA
+)
+
+for(i in regions){
+  
+   for(n in myYears){
+     
+     tempMat <- get(paste0("myMat", n))
+     tempMat <- as.data.frame(tempMat)
+     myMatrX <- as.data.frame(myMatr)
+     
+     if(i == "N") tempMat <- tempMat[row.names(tempMat) %in% nord,] 
+     if(i == "C") tempMat <- tempMat[row.names(tempMat) %in% midt,] 
+     if(i == "W") tempMat <- tempMat[row.names(tempMat) %in% vest,] 
+     if(i == "S") tempMat <- tempMat[row.names(tempMat) %in% sør,] 
+     if(i == "E") tempMat <- tempMat[row.names(tempMat) %in% nord,] 
+     
+     if(i == "N") myMatrX <- myMatrX[row.names(myMatrX) %in% nord,] 
+     if(i == "C") myMatrX <- myMatrX[row.names(myMatrX) %in% midt,] 
+     if(i == "W") myMatrX <- myMatrX[row.names(myMatrX) %in% vest,] 
+     if(i == "S") myMatrX <- myMatrX[row.names(myMatrX) %in% sør,] 
+     if(i == "E") myMatrX <- myMatrX[row.names(myMatrX) %in% nord,] 
+
+     
+     tempMatScaled <- colSums(tempMat)/colSums(myMatrX)
+     
+     jervTbl[jervTbl$reg==i & jervTbl$year==n, 3:5] <- quantile(tempMatScaled, c(0.025, .5, .975))
+     jervTbl_unscaled[jervTbl_unscaled$reg==i & jervTbl$year==n, 3:5] <- 
+       quantile(colSums(tempMat), c(0.025, .5, .975))
+
+     
+ }
+    
+}
+  
+
+
+```
+
+
+Så gjør jeg det samme, bare at den nasjonale verdien lages ved å bootstrappe de regionale verdiene. 
 ```{r}
 regions <- c("Norge", "N", "C", "W", "S", "E")
 
@@ -288,7 +351,7 @@ dev.off()
 
 
 
-Under er tabellen med skalerte verdier for hvert år og regoin (med = median, og det er det som er 'tilstanden')
+Under er tabellen med skalerte verdier for hvert år og region (med = median, og det er det som er 'tilstanden')
 
 ```{r}
 DT::datatable(
@@ -300,5 +363,6 @@ DT::datatable(
     pageLength = 10
   ))
 ```
+
 
 
