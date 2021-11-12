@@ -178,8 +178,9 @@ reg <- st_read("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FIN
 
 
 ```
+## Ekstrakter
 
-```{r}
+```{r extract}
 reg$INON2018 <- raster::extract(inon2018r, reg, fun = mean, na.rm=T)
 reg$INON2013 <- raster::extract(inon2013r, reg, fun = mean, na.rm=T)
 reg$INON2008 <- raster::extract(inon2008r, reg, fun = mean, na.rm=T)
@@ -204,20 +205,51 @@ reg$region[reg$region=="SÃ¸rlandet"] <- "Sørlandet"
                     low=NA,
                     upp=NA))
 ```
-Legg til Norge
+Legg til Norge. Her ønsker vi at verdien for Norge skal være gjennomsnittet av verdein for regionene, MEN i dette tilfelle er det nok et veid gjennomsnitt som er mest riktig, ndvs veid etter andelen av det totale fjellarealet. Rike fjellregioner teller mer. Og dette blir det samme som å ta gjenomsnittet over hele Norge, uavhengig av regioner. 
 
-```{r}
-norge <- aggregate(data=INON,
-          med~year,
-          FUN=mean)
-norgetbl <- data.frame(reg = rep("Norge", nrow(norge)),
-                    year = norge$year,
-                    med = norge$med,
+```{r hele Norge}
+heleNorge <- c(mean(inon2018r[], na.rm=T),
+  mean(inon2013r[], na.rm=T),
+  mean(inon2008r[], na.rm=T),
+  mean(inon1988r[], na.rm=T)
+)
+
+norgetbl <- data.frame(reg = rep("Norge", 4),
+                    year = c(2018, 2013, 2008, 1988),
+                    med = heleNorge,
                     low=NA,
                     upp=NA)
 INON <- rbind(INON, norgetbl)
 ```
 
+Jeg kan for nysgjerrighetens skjyld sammenligne disse tallene med resultatet om man bare hadde tatt gjennomsnitte av regionen. 
+
+```{r}
+
+
+norge <- aggregate(data=INON,
+          med~year,
+          FUN=mean)
+temp <- data.frame(reg = rep(c("summert metode",
+                               "gjennomsnitt av regioner"),
+                             each=4),
+                    year = rep(norge$year,2),
+                    med = c(heleNorge, norge$med))
+
+ggplot(data=temp)+
+  geom_bar(aes(y=med, x=year, fill=reg), 
+           stat = "identity", position='dodge')
+```
+
+Den metoden vi bruker nå gir en del høyere tall.
+
+```{r}
+ggplot(data=INON)+
+  geom_bar(aes(y=med, x=year, fill=reg), 
+           stat = "identity", position='dodge')
+```
+
+Grunnen til det ser vi over - verdiene for Nord-Norge er de høyeste, og det er også der det er mest fjell. 
 
 
 Getting the plotting function. 'Source' doesnt work due to special characters
@@ -228,14 +260,14 @@ eval(parse("indicator_plots.R", encoding="UTF-8"))
 
 
 ## Plotting
-```{r}
+```{r, eval=F}
 png("../output/indicatorPlots/inon.png", units="in", width=12, height=7, res=300)
 par(mfrow=c(1,1), mar=c(4.5,
                         5.5,
                         0,
                         2))
 indicator_plot(dataset = INON,
-               yAxisTitle = "Andel inngrepsfri natur i fjell",
+               yAxisTitle = "Andel inngrepsfri natur i fjellet",
                lowYlimit = 0,
                upperYlimit = 1,
                yStep = .2,
@@ -262,7 +294,8 @@ DT::datatable(
 ```
 
 
-## Eksporter data for senere plotting. Det blir ingen usikkerheter eller bootstrapping i dette tilfellet
+## Eksporter data for senere plotting. 
+Det blir ingen usikkerheter eller bootstrapping i dette tilfellet
 ```{r, eval=F}
 INONout <- select(INON, reg, year, med)
 
