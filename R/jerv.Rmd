@@ -61,7 +61,7 @@ Spesifiser hele landarealet til Norge, samt de tre regionene, som NIunits:
 myNIunits <- c(allArea = T, parts = T, counties = F)
 ```
 
-Inkludrer kun BSunits (kommuner) som har mer en 205 fjell:
+Inkludrer alle BSunits (kommuner):
 ```{r}
 myPartOfTotal <- 0
 ```

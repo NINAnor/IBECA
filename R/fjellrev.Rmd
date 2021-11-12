@@ -1,0 +1,193 @@
+---
+title: "Fjellrev"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'fjellrev.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(DT)
+library(NIcalc)
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import
+
+Data er allerede hentet ned fra NI-databasen av Simon.
+```{r, eval =FALSE}
+fjellrev <- read_csv("output/indicator_values/fjellrev.csv")
+```
+
+Men han har brukt arealvekting av basal units, og det tror jeg blir feil. Jeg vil helst gjøre det likt som for jerv.
+
+Fyll inn ditt eget passord og brukernavn
+```{r}
+myUser <- "anders.kolstad@nina.no"
+myPwd  <- "" # hemmelig passord
+```
+
+
+Importerer data fra NI-databasen og lagrer datasettet på server
+```{r import, eval=F}
+
+rev <- NIcalc::importDatasetApi(
+  username = myUser,
+  password = myPwd,
+  eco = "Fjell", 
+  indic = "Fjellrev",
+  year = c(1990,2000,2010,2014,2019))
+saveRDS(jerv, "../data/fjellrevNIexport.rds")
+
+```
+
+
+
+```{r}
+rev <- readRDS("../data/fjellrevNIexport.rds")
+```
+
+Spesifiser hele landarealet til Norge, samt de tre regionene, som NIunits:
+```{r}
+myNIunits <- c(allArea = T, parts = T, counties = F)
+```
+
+Inkludrer alle BSunits (kommuner):
+```{r}
+myPartOfTotal <- 0
+```
+
+
+Siden denne opperasjonen tar litt tid så lagrer jeg outputen på server og henter det tilbake etterpå, så slipper jeg å kjøre gjennom hver gang.
+```{r, eval=FALSE}
+rev_assemeble <- NIcalc::assembleNiObject(
+  inputData = rev,
+  predefNIunits = myNIunits, 
+  partOfTotal = myPartOfTotal, 
+  indexType = "thematic",
+  part = "ecosystem",
+  total = "terrestrial")  
+saveRDS(jerv_assemeble, "../data/rev_assemble.rds")
+
+```
+
+```{r}
+rev_assemeble <- readRDS("../data/rev_assemble.rds")
+```
+
+
+
+
+
+# STOP
+Under følger NI metode, men denne skal jeg ikk bruke da den skalerer på INunit nivå.
+```{r}
+revIndex <- calculateIndex(
+      x = rev_assemeble,
+      nsim = 10000,
+      fids=FALSE,
+      tgroups = FALSE,
+      keys = "ignore",
+      w = 0,
+      awbs = F,
+      awBSunit = "Fjell", # Check
+      truncAtRef = T)
+```
+
+```{r}
+Xsim <- 10000
+IND_samp <- data.frame(cbind(c(
+  revIndex$E$'1990'$index,
+  revIndex$E$'2000'$index,
+  revIndex$E$'2010'$index,
+  revIndex$E$'2014'$index,
+  revIndex$E$'2019'$index,
+  revIndex$W$'1990'$index,
+  revIndex$W$'2000'$index,
+  revIndex$W$'2010'$index,
+  revIndex$W$'2014'$index,
+  revIndex$W$'2019'$index,
+  revIndex$N$'1990'$index,
+  revIndex$N$'2000'$index,
+  revIndex$N$'2010'$index,
+  revIndex$N$'2014'$index,
+  revIndex$N$'2019'$index,
+  revIndex$S$'1990'$index,
+  revIndex$S$'2000'$index,
+  revIndex$S$'2010'$index,
+  revIndex$S$'2014'$index,
+  revIndex$S$'2019'$index,
+  revIndex$C$'1990'$index,
+  revIndex$C$'2000'$index,
+  revIndex$C$'2010'$index,
+  revIndex$C$'2014'$index,
+  revIndex$C$'2019'$index,
+  revIndex$wholeArea$'1990'$index,
+  revIndex$wholeArea$'2000'$index,
+  revIndex$wholeArea$'2010'$index,
+  revIndex$wholeArea$'2014'$index,
+  revIndex$wholeArea$'2019'$index),
+    c(rep("E", Xsim*5), rep("W", Xsim*5),rep("N", Xsim*5),
+      rep("S", Xsim*5),rep("C", Xsim*5), rep("Norge", Xsim*5)),
+    c(rep(1990,Xsim), rep(2000,Xsim), 
+      rep(2010, Xsim), rep(2014,Xsim), rep(2019, Xsim))))
+# Renaming 
+names(IND_samp) <- c("val", "reg", "year")
+
+# Make numeric
+IND_samp$val <- as.numeric(as.character(IND_samp$val))
+
+```
+
+
+
+
+# Plotting
+```{r}
+eval(parse("indicator_plots2.R", encoding="UTF-8"))
+```
+
+```{r, eval=F, include=FALSE}
+png("../output/indicatorPlots/fjellrev.png", units="in", width=12, height=7, res=300)
+
+# Plot windows par
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+
+indicator_plot2(dataset = IND_samp,
+      yAxisTitle = "Antall fjellrev skalert mot referanseverdi",
+      lowYlimit = 0,
+      upperYlimit = 1,
+      yStep = .2,
+      minyear = 1988,
+      maxyear = 2021,
+      colours = c("#FFB25B", 
+                  "#2DCCD3", 
+                  "#004F71", 
+                  "#7A9A01", 
+                  "#93328E", 
+                  "dark grey"),
+      legendPosition = "top",
+      legendInset = 0,
+      move = 0.1,
+      horizontal = T,
+      legendTextSize = 1.25)
+
+dev.off()
+
+
+```
+
