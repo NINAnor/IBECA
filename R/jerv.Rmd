@@ -88,21 +88,20 @@ jerv_assemeble <- readRDS("../data/jerv_assemble.rds")
 Indikatorveriene kommer både som tall og i form av sannsynlighetsfunskjoner. 
 Her simulerer jeg indikatorverdier 1000 ganger per år.
 ```{r}
-# bruker tradOb siden custumDist er NA. Dette er ikke en generisk løsning.
+# bruker tradOb siden custumDist er NA. Dette er ikke en generisk løsning. Se da heller 'fjellrev'.
 obstype <- rep("tradObs", nrow(jerv_assemeble$indicatorValues$'2019'))
 
 myYears <- as.character(c(1990,2000,2010,2014,2019))
 for(i in 1:length(myYears)){
 # print(i)
 
-
-  myMat <- NIcalc::sampleObsMat(
-          jerv_assemeble$indicatorValues[[i]]$ICunitId, 
-          jerv_assemeble$indicatorValues[[i]]$expectedValue,
-          jerv_assemeble$indicatorValues[[i]]$distributionFamilyName,
-          mu = jerv_assemeble$indicatorValues[[i]]$distParameter1,
-          sig = jerv_assemeble$indicatorValues[[i]]$distParameter2,
-          customDistribution = jerv_assemeble$indicatorValues[[i]]$customDistribution,
+myMat <- NIcalc::sampleObsMat(
+  ICunitId           = jerv_assemeble$indicatorValues[[i]]$ICunitId, 
+  value              = jerv_assemeble$indicatorValues[[i]]$expectedValue,
+  distrib            = jerv_assemeble$indicatorValues[[i]]$distributionFamilyName,
+  mu                 = jerv_assemeble$indicatorValues[[i]]$distParameter1,
+  sig                = jerv_assemeble$indicatorValues[[i]]$distParameter2,
+  customDistribution = jerv_assemeble$indicatorValues[[i]]$customDistribution,
           obsType = obstype,
           nsim = 1000
           
@@ -176,6 +175,7 @@ sør <- c(1311,1313)
 ```{r}
 regions <- c("Norge", "N", "C", "W", "S", "E")
 
+# Datasett i kortformat (uten bootstrapping) der de nasjonale verdien er produsert ved å dele de summerte indikatorverdiene på de summerte referanseverdiene
 jervTbl <- data.frame(
   reg = rep(regions, each=length(myYears)),
   year = rep(myYears, length(regions)),
@@ -184,6 +184,16 @@ jervTbl <- data.frame(
   upp = NA
 )
 
+# Datasett med bootstrappede verdir for regioner
+regions2 <- c("N", "C", "W", "S", "E")
+jervTbl2 <- data.frame(
+  reg = rep(regions2, each=length(myYears)*1000),
+  year = rep(myYears, each = 1000, times=length(regions2)),
+  val = NA
+)
+
+# Datasett (kortformat, uten bootstrapping) av uskallerte verdier 
+# Brukes kun til plotting
 jervTbl_unscaled <- data.frame(
   reg = rep(regions, each=length(myYears)),
   year = rep(myYears, length(regions)),
@@ -204,16 +214,21 @@ for(i in regions){
      if(i == "C") tempMat <- tempMat[row.names(tempMat) %in% midt,] 
      if(i == "W") tempMat <- tempMat[row.names(tempMat) %in% vest,] 
      if(i == "S") tempMat <- tempMat[row.names(tempMat) %in% sør,] 
-     if(i == "E") tempMat <- tempMat[row.names(tempMat) %in% nord,] 
+     if(i == "E") tempMat <- tempMat[row.names(tempMat) %in% øst,] 
      
      if(i == "N") myMatrX <- myMatrX[row.names(myMatrX) %in% nord,] 
      if(i == "C") myMatrX <- myMatrX[row.names(myMatrX) %in% midt,] 
      if(i == "W") myMatrX <- myMatrX[row.names(myMatrX) %in% vest,] 
      if(i == "S") myMatrX <- myMatrX[row.names(myMatrX) %in% sør,] 
-     if(i == "E") myMatrX <- myMatrX[row.names(myMatrX) %in% nord,] 
+     if(i == "E") myMatrX <- myMatrX[row.names(myMatrX) %in% øst,] 
 
      
      tempMatScaled <- colSums(tempMat)/colSums(myMatrX)
+     
+     # add 1000 observations to the dataframe
+     if(i != "Norge") {
+     jervTbl2[jervTbl2$reg==i & jervTbl2$year==n, "val"] <- tempMatScaled
+     }
      
      jervTbl[jervTbl$reg==i & jervTbl$year==n, 3:5] <- quantile(tempMatScaled, c(0.025, .5, .975))
      jervTbl_unscaled[jervTbl_unscaled$reg==i & jervTbl$year==n, 3:5] <- 
@@ -223,128 +238,60 @@ for(i in regions){
  }
     
 }
-  
+```
 
+I jervTbl er de nasjonale verdiene regnet ut ved å summere indikatorverdiene og referanseverdiene for hele landet. Dette datasettet er ikke bootstrappet. I jervTbl2 (bootstrappet data) er det ikke none nasjonele verdier enda. Nå skal jeg lage de ved å bootstrappe de regionale verdiene og veie etter total fjellareal. 
 
+# Veiing
+Regner ut nasjonale indikatorverdier som et veid (etter total fjelareal) gjennomsnitt av vedien i regionene. Veiingen gjøres ved å samle større antall verdier for de regionene som har mest fjell i seg.
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
 ```
 
 
-Så gjør jeg det samme, bare at den nasjonale verdien lages ved å bootstrappe de regionale verdiene. 
+
 ```{r}
 regions <- c("N", "C", "W", "S", "E")
 
-jervTbl2 <- data.frame(
-  reg = rep(regions, each=length(myYears)*1000),
-  year = rep(myYears, each = 1000, times=length(regions)),
-  val = NA
-)
-
-#table(jervTbl2$reg, jervTbl2$year)
-
-# The table with nasjonal values should be 
-# 5 regions X 200 samples X 5 years = 5000
-
 jervNorge <- data.frame(
   reg = rep("Norge", 5000),
-  sampleReg = rep(regions, each=1000),
   year = rep(myYears, each = 200, times=length(regions)),
   val = NA
 )
-#table(jervNorge$sampleReg, jervNorge$year)
-jervNorge2 <- jervNorge
 
-for(i in regions){
-  
-   for(n in myYears){
-     
-     # Get the right year
-     tempMat <- get(paste0("myMat", n))
-     tempMat <- as.data.frame(tempMat)
-     myMatrX <- as.data.frame(myMatr)
-     jervNorgeX <- jervNorge2[jervNorge2$year == n &
-                                jervNorge2$sampleReg == i,]
-
-     # geth the right rows (regions)
-     if(i == "N") tempMat <- tempMat[row.names(tempMat) %in% nord,] 
-     if(i == "C") tempMat <- tempMat[row.names(tempMat) %in% midt,] 
-     if(i == "W") tempMat <- tempMat[row.names(tempMat) %in% vest,] 
-     if(i == "S") tempMat <- tempMat[row.names(tempMat) %in% sør,] 
-     if(i == "E") tempMat <- tempMat[row.names(tempMat) %in% nord,] 
-     
-     if(i == "N") myMatrX <- myMatrX[row.names(myMatrX) %in% nord,] 
-     if(i == "C") myMatrX <- myMatrX[row.names(myMatrX) %in% midt,] 
-     if(i == "W") myMatrX <- myMatrX[row.names(myMatrX) %in% vest,] 
-     if(i == "S") myMatrX <- myMatrX[row.names(myMatrX) %in% sør,] 
-     if(i == "E") myMatrX <- myMatrX[row.names(myMatrX) %in% nord,] 
-
-     # Scale
-     tempMatScaled <- colSums(tempMat)/colSums(myMatrX)
-     
-     # add 1000 observations to the dataframe
-     jervTbl2[jervTbl2$reg==i & jervTbl2$year==n, "val"] <- tempMatScaled
-     
-     # sample 200 scale values for each region and year combo 
-     # and add to a seperate dataframe
-     jervNorgeX$val <- sample(tempMatScaled, size=200, replace=T)
-     
-     ifelse(is.na(jervNorge$val[1]), 
-            jervNorge <- jervNorgeX,
-            jervNorge <- rbind(jervNorge, jervNorgeX))
- }
+for(n in myYears){
+    temp <- jervTbl2[jervTbl2$year == n,]
     
+    temp2 <- c(
+      sample(temp$val[temp$reg == "N"], wgt$Fjellareal2[wgt$reg == "N"]*1000, replace =T),
+      sample(temp$val[temp$reg == "E"], wgt$Fjellareal2[wgt$reg == "E"]*1000, replace =T),
+      sample(temp$val[temp$reg == "W"], wgt$Fjellareal2[wgt$reg == "W"]*1000, replace =T),
+      sample(temp$val[temp$reg == "S"], wgt$Fjellareal2[wgt$reg == "S"]*1000, replace =T),
+      sample(temp$val[temp$reg == "C"], wgt$Fjellareal2[wgt$reg == "C"]*1000, replace =T)
+    )
+    
+    jervNorge$val[jervNorge$year == n] <- sample(temp2, 1000)
 }
-  
 ```
 
-The table with regional values should be 5 regions X 5 years X 1000 samples = 25 000
-```{r}
-dim(jervTbl2)
-```
-
-```{r}
-dim(jervNorge)
-```
 Bind together
 ```{r}
-jervTbl2 <- rbind(jervTbl2, select(jervNorge, -sampleReg))
+jervTbl2 <- rbind(jervTbl2, jervNorge)
 ```
 
-Compare the two methods
-```{r}
-sumMethod <- jervTbl[jervTbl$reg=="Norge",c("year", "med")]
-sumMethod$method <- "sum method"
-sumMethod
-```
-```{r}
-meanMethod <- aggregate(data=jervTbl2[jervTbl2$reg=="Norge",],
-          val~year,
-          FUN= mean)
-meanMethod$method <- "mean method"
-meanMethod          
-```
-
-```{r}
-names(sumMethod) <- names(meanMethod)
-comp <- rbind(sumMethod, meanMethod)
-ggplot(data=comp)+
-  geom_line(aes(x=year, y=val, linetype=method, group = method))+
-  geom_point(aes(x=year, y=val))
-```
-
-Metoden vi bruker (mean metoden) gir litt lavere skår.
-
+# Plotting
 ```{r}
 #source("indicator_plots2.R")
 eval(parse("indicator_plots.R", encoding="UTF-8"))
-
 eval(parse("indicator_plots2.R", encoding="UTF-8"))
-
-
 ```
 
 
 ```{r, eval=F, include=FALSE}
-png("../output/indicatorPlots/jerv.png", units="in", width=12, height=7, res=300)
+png("../output/indicatorPlots/jerv.png", 
+    units="in", width=12, height=7, res=300)
 
 # Plot windows par
 par(mfrow=c(1,1), mar=c(4.5,
@@ -394,6 +341,33 @@ indicator_plot(dataset = jervTbl_unscaled,
 dev.off()
 
 ```
+
+
+Sammenligner de to metodene for å regne ut nasjonale verdier.
+```{r}
+sumMethod <- jervTbl[jervTbl$reg=="Norge",c("year", "med")]
+sumMethod$method <- "sum method"
+sumMethod
+```
+```{r}
+meanMethod <- aggregate(data=jervTbl2[jervTbl2$reg=="Norge",],
+          val~year,
+          FUN= mean)
+meanMethod$method <- "mean method"
+meanMethod          
+```
+
+```{r}
+names(sumMethod) <- names(meanMethod)
+comp <- rbind(sumMethod, meanMethod)
+ggplot(data=comp)+
+  geom_line(aes(x=year, y=val, linetype=method, group = method))+
+  geom_point(aes(x=year, y=val))
+```
+
+Metoden vi bruker (mean metoden) gir litt lavere skår.
+
+
 
 
 # Oppsummering
