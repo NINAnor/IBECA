@@ -20,6 +20,9 @@ library(raster) # kunne kanskje byttet til stars
 library(dplyr)
 library(lwgeom)
 library(tmap)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -42,7 +45,9 @@ Vi trenger ikke fjellmasken da vi kan anta at alle isebreer ligger i fjellet.
 
 Her er det nye breatlasset med breareal fra 2018 og 2019 hentet fra Sentinell (ref Liss Marie Andreassen, NVE)
 ```{r import1}
-breatlas <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/breatlas_2018_2019/Breatlas_20182019_temp20210922_lma.shp')
+#breatlas <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/breatlas_2018_2019/Breatlas_20182019_temp20210922_lma.shp')
+
+breatlas <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/breatlas_2018_2019/Breatlas_20182019_temp20210922_lma.shp')
 ```
 
 CRS: UTM 33N ETRS89
@@ -82,7 +87,10 @@ UTM33 WGS84
 
 Her er utstrekningen til breer i perioden 1952 til 1985, basert på gamle kart.
 ```{r import3}
-n50 <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/n50/cryoclim_GAO_NO_1952_1985_UTM_33N.shp')%>%
+#n50 <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/n50/cryoclim_GAO_NO_1952_1985_UTM_33N.shp')%>%
+#  st_transform(crs = crs(breatlas))
+
+n50 <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/breatlas/n50/cryoclim_GAO_NO_1952_1985_UTM_33N.shp')%>%
   st_transform(crs = crs(breatlas))
 
 ```
@@ -126,8 +134,13 @@ Nå må vi dele kartlage inn etter regioner for så å sammenligne arealet i n50
 Henter shp med regionene
 
 ```{r import4}
-reg <- st_read("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
+#reg <- st_read("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
+#  st_transform(crs = crs(breatlas))
+
+reg <- st_read("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
   st_transform(crs = crs(breatlas))
+
+
 ```
 
 
@@ -145,6 +158,7 @@ Før vi henter brearealet inn i tabellen for regionene må jeg prøve å fikse e
 ```{r}
 table(st_is_valid(breatlas))
 ```
+
 ```{r}
 st_is_valid(breatlas, reason=T)[1:10]
 
@@ -206,10 +220,9 @@ plot(brealtas_reg$geometry[brealtas_reg$region=="Vestlandet"],
   plot(nor$geometry, add=T)
 ```
 
-Det deler polygonene ved grensen. Det er bra
+Det deler polygonene ved grensen. Det er bra.
 
-
-```{r pltting-area-per-region}
+```{r plotting-area-per-region}
 brealtas_reg$area_crop <- st_area(brealtas_reg)
 
 bretabell <- tapply(
@@ -222,9 +235,9 @@ barplot(
   ylab="Breareal (km2)"
 )
 ```
+Sørlandet har bare <1km2 med breareal i 2018-2019. 
 
 ### Samme for N50
-
 ```{r intersection2}
 n50x <- st_make_valid(n50)
 #n50_reg <- st_intersection(n50x, reg)
@@ -241,6 +254,7 @@ plot(n50_reg$geometry[n50_reg$region=="Vestlandet"],
      col = scales::alpha("green",0.5), border=NA, add=T)
   plot(nor$geometry, add=T)
 ```
+
 ```{r plotting-ref-and-ind}
 n50_reg$area_crop <- st_area(n50_reg)
 
@@ -264,6 +278,8 @@ barplot(
 )
 
 ```
+
+Det var litt mer breareal på Sørlandet i referanseperioden, men bare 4 km2. Tilstanden der blir med andre ord veldig dårlig. 
 
 I figuren over er brearealet i referanseperioden i lyegrått og brearealet i 2018-2019 i mørkegrått. Høyden på det lysegråe partiet viser med andre ord reduksjonen i breareal i denne perioden.
 
@@ -298,7 +314,7 @@ tm_shape(reg_clipped) +
 
 Det er 4 måter å kalkulere den nasjonale indikatorverdien på:
 
-1) ta gjennomsnitt av de skalerte regionale indikatorverdiene og la alle regoinene telle likt (regional skaleringsmetode)
+1) ta gjennomsnitt av de skalerte regionale indikatorverdiene og la alle regionene telle likt (regional skaleringsmetode)
 ```{r}
 (alt1 <- mean(reg_clipped$skalert_indikator))
 ```
@@ -326,10 +342,13 @@ sumSkalerteIndikatorer <- sum(reg_clipped$skalert_indikator_v)
 ```
 4) summere skalerte regionale indikatorverdier etter å ha gitt de ulike vekt grunnet fjellareal (fjellarealveid metode)
 
+
 For dette trenger jeg [fjellareal per region](fjellareal-per-region.html):
 ```{r}
 (fjellareal <- readRDS("../data/fjellareal.rds"))
 ```
+
+
 ```{r}
 reg_clipped$fjellareal <- fjellareal$Fjellareal[match(reg_clipped$region, fjellareal$Region)]
 reg_clipped$skalert_indikator_v2 <- reg_clipped$skalert_indikator*
@@ -346,11 +365,246 @@ Her er alternativene oppsummert:
 
 4. Indeksverdi `r round(alt4, 2)`. Aggregeringsmetoden sier oss hvordan den GJENNOMSNITTLIGE endringen i breareal har vært for Norge sett under ett (jf metoden i NI).
 
-
-Jeg tror alt. 2 er best, og mer riktig enn f.eks. alt. 4. Alt. 4 gir for eksempel Sørlandet en del vekt fordi det er en del fjell der. Men der er ingen breer der, hverken nå eller før. Aggregeringen bør bare skje over de arealene hvor indikatoren har dekning. På Sørlandet kan man si at indikatoren kunne hatt dekning om vi hadde noen grunn for å tro at brearealet økte, for da knune det ha økt inn i det eksisterende fjellarealet.
-
-Indikatorverdien for Norge er da 0.7, som sier oss at 30% av brearealet er borte siden referanseperioden. Dette er med forbehold om at GØT er gitt fra en lineær skalering, men det kan godt tenkes at f.eks NVI vil ha grunnlag for å mene noe annet.
+Her kan det diskuteres hva som egentlig er best, men vi har valgt å gå for alt 4 for å være konsistent med SEEA EA bl.a. Indikatorverdien for Norge er da 0.62. 
 
 ## Usikkerhet
-Jeg kan ikke se noen god måte å inkorporere usikkerhet inn i indikatorverdien. Det eneste jeg kan se for meg er en måte å lage en geografisk usikkerhet ved å først produsere indikatorverdier for mindre arealer (lage en raster med middels oppløning, f.eks. 10x10km2) og bootstrappe fra disse verdiene, men dette vil jeg ikke anbefale.
+NVE oppgir 3% usikkerhet ved metoden. Dette tolker jeg som at +- 3 er %99.9%CI for estimatet. Dvs ca 2 SD
+```{r}
+reg <- c("N", "C", "E", "W", "S")
+myTbl$reg <- c("C", "N", "S", "W", "E")
+
+breTbl <- data.frame(
+  reg = rep(reg, each=1000),
+  indikatorverdi = NA,
+  refVerdi = NA,
+  val = NA
+)
+breTbl2 <- breTbl
+
+for(i in reg){
+  #print(i)
+  temp <- breTbl2[breTbl2$reg==i,]
+  temp$indikatorverdi <- rnorm(1000, myTbl$indikator[myTbl$reg==i], 1.5)
+  temp$refVerdi <- rnorm(1000, myTbl$referanseverdi[myTbl$reg==i], 1.5)
+  breTbl$indikatorverdi[breTbl$reg==i] <- temp$indikatorverdi
+  breTbl$refVerdi[breTbl$reg==i] <- temp$refVerdi
+}
+
+breTbl$indikatorverdi[breTbl$indikatorverdi<0] <- 0
+breTbl$refVerdi[breTbl$refVerdi<0] <- 0
+
+breTbl$val <- breTbl$indikatorverdi/breTbl$refVerdi
+breTbl$unscaledVal <- breTbl$refVerdi-breTbl$indikatorverdi
+#breTbl <- dplyr::select(breTbl, -refVerdi)
+breTbl$year <- 2019
+```
+Her må jeg trunkere fordi sd-funksjonen kan gi verdier under null, samt at tiltand kan bli over 1 om brearealet har økt.
+
+```{r}
+breTbl$val[breTbl$val<0] <- 0
+breTbl$val[breTbl$val>1] <- 1
+```
+
+Så må jeg finne den nasjonale tilstanden. 
+
+```{r}
+breNorge <- data.frame(
+  reg = rep("Norge", 10000),
+  indikatorverdi = NA,
+  refVerdi = NA,
+  val = NA,
+  unscaledVal = NA,
+  year = 2019
+)
+
+# Legger inn vektene på nytt
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+
+
+temp <- breTbl
+    
+temp2 <- c(
+      sample(temp$val[temp$reg == "N"], wgt$Fjellareal2[wgt$reg == "N"]*1000, replace =T),
+      sample(temp$val[temp$reg == "E"], wgt$Fjellareal2[wgt$reg == "E"]*1000, replace =T),
+      sample(temp$val[temp$reg == "W"], wgt$Fjellareal2[wgt$reg == "W"]*1000, replace =T),
+      sample(temp$val[temp$reg == "S"], wgt$Fjellareal2[wgt$reg == "S"]*1000, replace =T),
+      sample(temp$val[temp$reg == "C"], wgt$Fjellareal2[wgt$reg == "C"]*1000, replace =T)
+    )
+
+for(i in 1:10000){
+ 
+  breNorge$unscaledVal[i] <- 
+    sum(
+      sample(temp$unscaledVal[temp$reg == "N"],1),
+      sample(temp$unscaledVal[temp$reg == "E"],1),
+      sample(temp$unscaledVal[temp$reg == "W"],1),
+      sample(temp$unscaledVal[temp$reg == "S"],1),
+      sample(temp$unscaledVal[temp$reg == "C"],1))
+}
+
+breNorge$val <- sample(temp2, 10000, replace=T)
+breTbl <- rbind(breTbl, breNorge)
+
+```
+
+```{r}
+eval(parse("indicator_plots2.R", encoding="UTF-8"))
+```
+
+```{r, message=F, eval=F}
+png("../output/indicatorPlots/breareal.png", 
+    units="in", width=5, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot2(dataset = dplyr::select(breTbl, reg, year, val),
+               yAxisTitle = "Breareal skalert mot referanseverdi",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 2018,
+               maxyear = 2022,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "right",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = F,
+               legendTextSize = 1.25)
+dev.off()
+
+png("../output/indicatorPlots/breareal_uskalert.png", 
+    units="in", width=5, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        2,
+                        2))
+indicator_plot2(dataset = dplyr::select(breTbl, reg, year, val = unscaledVal),
+               yAxisTitle = expression(paste("Tapt breareal (km "^"-2"*")")),
+               lowYlimit = 0,
+               upperYlimit = 1100,
+               yStep = 100,
+               minyear = 2018,
+               maxyear = 2022,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "right",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = F,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+# Oppsummering
+
+
+
+```{r, echo=F}
+
+finalTbl <- aggregate(data=breTbl,
+          val~year+reg,
+          FUN= function(x) round(
+            quantile(x, c(.025, .5, .975)), 2))
+
+finalTbl <- do.call(data.frame, finalTbl)
+names(finalTbl) <- c("year", "reg", "low", "med", "upp")
+
+DT::datatable(
+  finalTbl, 
+  extensions = "FixedColumns",
+  options = list(
+    scrollX = TRUE,
+    scrollY=T,
+    pageLength = 10
+  ))
+```
+
+
+```{r}
+finalTbl2 <- aggregate(data=breTbl,
+          indikatorverdi~year+reg,
+          FUN= function(x) round(
+            quantile(x, c(.025, .5, .975)), 2))
+
+finalTbl2 <- do.call(data.frame, finalTbl2)
+names(finalTbl2) <- c("year", "reg", "val_low", "val_med", "val_upp")
+
+finalTbl3 <- aggregate(data=breTbl,
+          refVerdi~year+reg,
+          FUN= function(x) round(
+            quantile(x, c(.025, .5, .975)), 2))
+
+finalTbl3 <- do.call(data.frame, finalTbl3)
+names(finalTbl3) <- c("year", "reg", "ref_low", "ref_med", "ref_upp")
+
+finalTbl4 <- cbind(finalTbl2, finalTbl3[,3:5])
+```
+
+```{r, eval=F}
+myReg <- c("E", "S", "W", "C", "N", "Norge")
+labs = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge","Norge")
+
+
+
+
+bar <- ggplot(finalTbl)+
+  geom_bar(aes(x=factor(reg, level = myReg), y=med), stat="identity", alpha=0.7)+
+  geom_errorbar(aes(x=factor(reg, level = myReg), y=med, ymin = low, ymax=upp),
+                width=0.5,
+                size=1.2)+
+  ylab("Breareal skalert mot referanseverdi")+
+  xlab("")+
+  scale_x_discrete(breaks = myReg,
+                   labels= labs)+
+  
+  theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )
+
+(barSTacked <- ggplot(finalTbl4)+
+  geom_bar(aes(x=factor(reg, level = myReg), y=val_med), 
+           stat="identity")+
+  geom_errorbar(aes(x=factor(reg, level = myReg), 
+                    y=val_med, ymin = val_low, ymax=val_upp),
+                width=0.5,
+                size=1.2)+
+    
+  geom_bar(aes(x=factor(reg, level = myReg), y=ref_med), 
+           stat="identity", alpha=0.7)+
+  geom_errorbar(aes(x=factor(reg, level = myReg), 
+                    y=ref_med, ymin = ref_low, ymax=ref_upp),
+                width=0.5,
+                size=1.2)+
+    
+  ylab(expression(paste("Breareal (km "^"-2"*")")))+
+  xlab("")+
+  scale_x_discrete(breaks = myReg,
+                   labels= labs)+
+  theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  ))
+
+figure <- ggarrange(bar, barSTacked,
+                    ncol = 2)
+
+
+png("../output/indicatorPlots/breareal_barplot.png", 
+    units="in", width=10, height=7, res=300)
+figure
+dev.off()
+```
+
+![](../output/indicatorPlots/breareal_barplot.png)
+
+![](../output/indicatorPlots/breareal.png)
+
+
+![](../output/indicatorPlots/breareal_uskalert.png)
 
