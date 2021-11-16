@@ -23,6 +23,7 @@ library(tmap)
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
+library(data.table)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -374,7 +375,7 @@ reg <- c("N", "C", "E", "W", "S")
 myTbl$reg <- c("C", "N", "S", "W", "E")
 
 breTbl <- data.frame(
-  reg = rep(reg, each=1000),
+  reg = rep(reg, each=10000),
   indikatorverdi = NA,
   refVerdi = NA,
   val = NA
@@ -384,26 +385,26 @@ breTbl2 <- breTbl
 for(i in reg){
   #print(i)
   temp <- breTbl2[breTbl2$reg==i,]
-  temp$indikatorverdi <- rnorm(1000, myTbl$indikator[myTbl$reg==i], 1.5)
-  temp$refVerdi <- rnorm(1000, myTbl$referanseverdi[myTbl$reg==i], 1.5)
+  temp$indikatorverdi <- rnorm(10000, myTbl$indikator[myTbl$reg==i], myTbl$indikator[myTbl$reg==i]*0.015)
+  temp$refVerdi <- rnorm(10000, myTbl$referanseverdi[myTbl$reg==i], myTbl$referanseverdi[myTbl$reg==i]*0.015)
   breTbl$indikatorverdi[breTbl$reg==i] <- temp$indikatorverdi
   breTbl$refVerdi[breTbl$reg==i] <- temp$refVerdi
 }
 
-breTbl$indikatorverdi[breTbl$indikatorverdi<0] <- 0
-breTbl$refVerdi[breTbl$refVerdi<0] <- 0
+# summary(breTbl$indikatorverdi) # no zeros
+# summary(breTbl$refVerdi) # no zeros
 
 breTbl$val <- breTbl$indikatorverdi/breTbl$refVerdi
 breTbl$unscaledVal <- breTbl$refVerdi-breTbl$indikatorverdi
 #breTbl <- dplyr::select(breTbl, -refVerdi)
 breTbl$year <- 2019
 ```
-Her må jeg trunkere fordi sd-funksjonen kan gi verdier under null, samt at tiltand kan bli over 1 om brearealet har økt.
 
+Må jeg trunkere?
 ```{r}
-breTbl$val[breTbl$val<0] <- 0
-breTbl$val[breTbl$val>1] <- 1
+summary(breTbl$val)
 ```
+Nei, alle verdier er mellom 0 og 1.
 
 Så må jeg finne den nasjonale tilstanden. 
 
@@ -442,9 +443,26 @@ for(i in 1:10000){
       sample(temp$unscaledVal[temp$reg == "W"],1),
       sample(temp$unscaledVal[temp$reg == "S"],1),
       sample(temp$unscaledVal[temp$reg == "C"],1))
+  
+  breNorge$refVerdi[i] <- 
+    sum(
+      sample(temp$refVerdi[temp$reg == "N"],1),
+      sample(temp$refVerdi[temp$reg == "E"],1),
+      sample(temp$refVerdi[temp$reg == "W"],1),
+      sample(temp$refVerdi[temp$reg == "S"],1),
+      sample(temp$refVerdi[temp$reg == "C"],1))
+  
+   breNorge$indikatorverdi[i] <- 
+    sum(
+      sample(temp$indikatorverdi[temp$reg == "N"],1),
+      sample(temp$indikatorverdi[temp$reg == "E"],1),
+      sample(temp$indikatorverdi[temp$reg == "W"],1),
+      sample(temp$indikatorverdi[temp$reg == "S"],1),
+      sample(temp$indikatorverdi[temp$reg == "C"],1))
 }
 
 breNorge$val <- sample(temp2, 10000, replace=T)
+
 breTbl <- rbind(breTbl, breNorge)
 
 ```
@@ -476,7 +494,9 @@ indicator_plot2(dataset = dplyr::select(breTbl, reg, year, val),
                horizontal = F,
                legendTextSize = 1.25)
 dev.off()
+```
 
+```{r}
 png("../output/indicatorPlots/breareal_uskalert.png", 
     units="in", width=5, height=7, res=300)
 
@@ -493,6 +513,43 @@ indicator_plot2(dataset = dplyr::select(breTbl, reg, year, val = unscaledVal),
                maxyear = 2022,
                colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
                legendPosition = "right",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = F,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+```{r}
+breTblTemp <- data.table::melt(breTbl,
+                   id.vars = c("year", "reg"),
+                   measure.vars = c("refVerdi", "indikatorverdi"),
+                   variable.name = "year",
+                   value.name = "val")
+breTblTemp <- breTblTemp[,-1]
+
+breTblTemp$year <- as.character(breTblTemp$year)
+breTblTemp$year[breTblTemp$year == "refVerdi"] <- "1969"
+breTblTemp$year[breTblTemp$year == "indikatorverdi"] <- "2019"
+breTblTemp$year <- as.numeric(breTblTemp$year)
+
+
+png("../output/indicatorPlots/breareal_uskalert_tidsserie.png", 
+    units="in", width=5, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        2,
+                        2))
+indicator_plot2(dataset = dplyr::select(breTblTemp, reg, year, val = val),
+               yAxisTitle = expression(paste("Breareal (km "^"-2"*")")),
+               lowYlimit = 0,
+               upperYlimit = 4500,
+               yStep = 1000,
+               minyear = 1955,
+               maxyear = 2022,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "topright",
                legendInset = 0,
                move = 0.1,
                horizontal = F,
@@ -607,4 +664,5 @@ dev.off()
 
 
 ![](../output/indicatorPlots/breareal_uskalert.png)
+![](../output/indicatorPlots/breareal_uskalert_tidsserie.png)
 
