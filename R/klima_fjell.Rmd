@@ -19,25 +19,21 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-## Beskrivelse
+# Beskrivelse
 Klimaendringer som påvirker fjelløkosystemet inkluderer oppvarming og endring i 
 nedbørsmengde og -mønster.
 
 
-## Påvirkningsindikatorer
+# Påvirkningsindikatorer
 Her vil du kunne lese om ulike påvirkningsindikatorer som sier oss noe om
 trender og status for den aktuelle påvirkningen. 
 
-```{r cars}
-summary(cars)
-```
+## Dager med nedbør
+![](../output/paavirkningsindikatorer/dagerMedNedbør_tidsserie.png)
+[Klikk her](nedbor.html) for dokumentasjon på utregningene. 
 
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-
-
+## Årsnedbør
+![](../output/paavirkningsindikatorer/årsnedbør_tidsserie.png)
+[Klikk her](nedbor.html) for dokumentasjon på utregningene.
 
 
