@@ -220,7 +220,7 @@ eval(parse("indicator_plots2.R", encoding="UTF-8"))
 # Plotter uskalerte verdier
 
 ```{r, message=F}
-png("../output/indicatorPlots/smågnagere_uskalert.png", 
+png("../output/indicatorPlots/smågnagere_uskalert_inkl1950.png", 
     units="in", width=12, height=7, res=300)
 
 par(mfrow=c(1,1), mar=c(4.5,
@@ -243,7 +243,31 @@ indicator_plot(dataset = Tbl_unscaled,
                legendTextSize = 1.25)
 dev.off()
 ```
+```{r, message=F}
 
+png("../output/indicatorPlots/smågnagere_uskalert.png", 
+    units="in", width=12, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot(dataset = Tbl_unscaled[Tbl_unscaled$year!=1950,],
+               yAxisTitle = "Smågnagerindeks (uskalert)",
+               lowYlimit = 0,
+               upperYlimit = 50,
+               yStep = 10,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+```
 # Skalerte verdier
 Nå regner jeg ut skalerte indikatorverdier.
 
@@ -488,6 +512,8 @@ IND_samp$reg[IND_samp$reg=="wholeArea"] <- "Norge"
 ```
 
 ```{r, eval=F}
+
+IND_samp <- IND_samp[IND_samp$year != 1950,]
 png("../output/indicatorPlots/smågnagere_fjell.png", 
     units="in", width=12, height=7, res=300)
 
@@ -501,7 +527,7 @@ indicator_plot2(dataset = IND_samp,
                lowYlimit = 0,
                upperYlimit = 1.2,
                yStep = .2,
-               minyear = 1945,
+               minyear = 1988,
                maxyear = 2021,
                colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
                legendPosition = "top",

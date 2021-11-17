@@ -15,18 +15,14 @@ knit: (function(input_file, encoding) {
 ---
 
 ```{r setup, include=FALSE}
+library(DiagrammeR)
+library(knitr)
 
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r, echo=F}
-library(knitr)
-```
 
 
-## Medarbeidere
-<br>
-kommer snart...
 
 
 <br><br><br>
@@ -36,19 +32,91 @@ kommer snart...
 [En analyse av fjellareal i de fem regionene. ](fjellareal-per-region.html)
 <br><br><br>
 
+## Behandling av klimadata
+<br>
+Klimadata hentes fra SeNorge datasettet. Noen av disse variblene brukes som tilstandsindikatorer, og noen brukes som påvirkningsindikatorer. Behandlingen av disse dataene er ganske omfattende, og de gjøres samtidig for alle de variablene vi ønsker å inkludere. Noe av prosessen skjer i Google Earth Engine. Vi har derfor å ikke inkludere denne infoamsjonen på de enekelte sidene til tilstandsvariablene, men samler heller all dokumentasjonen på [denne siden. ](klima-databehandling.html) 
+
+<br>
 
 ## Supplerende indikatorer
+
 <br>
 
 ### Fugler i fjellet
 Dette er en supplerende indikator som viser tilstanden/utviklingen til syv alpine fuglearter. Indikatoren er ikke med i hovedindikatorsettet siden datagrunnlaget overlapper i stor grad med naturindeksen for fjell. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fuglerifjellet.html) for å se tekniske detaljer analysene.
 
 
-<br><br><br>
+<br><br>
 
 
 ## Metadata og rutiner
-<br>
+
+Figuren under viser den grunnleggende arbeidsflyten rundt fremskaffelsen av tilstandsindikatorer:
+```{r, echo=F}
+grViz("digraph{
+
+     graph [compound = true, nodesep = .5, ranksep = .5,
+         color = crimson, rankdir = TB]
+
+  node [fontname = Helvetica, fontcolor = darkslategray,
+        shape = rectangle, fixedsize = true, width = 2,
+        color = darkslategray]
+        
+  Forslag[label = 'Forslag på indikator og\nreferanseverdier']
+  Datasett[label = 'Mulige datasett']
+  Indikatorer[label = 'Mulige indikatorer']
+  Ekspert[label='Indikatorekspert(er)']
+  Umulig[label = 'Umulig' shape=plaintext, fontcolor=red, fontsize=20]
+  Sjekkliste[label = 'Utfylling\nav sjekkliste']
+  Ekskludert[shape = plaintext, fontcolor=red, fontsize=20]
+  Mulig[shape = plaintext, fontcolor=darkgreen, fontsize=20]
+  OK[shape = plaintext, fontcolor=darkgreen, fontsize=20]
+  Rapport[label='Ferdig rapport']
+  Ekspert1[label=Ekspertpanel]
+  Ekspert2[label=Ekspertpanel]
+  Metadata[label = 'Dokumentasjon\n(metadata)']
+
+  
+  edge [color = black]
+  
+  subgraph cluster0 {
+       label = Scoping;
+       node [fixedsize = true, width = 2];
+      Datasett
+      Indikatorer
+      
+      edge[dir = both]
+      Datasett -> Indikatorer
+  }
+  
+  
+  subgraph cluster {
+       label = Analyse;
+       node [fixedsize = true, width = 2];
+      Utregninger
+      Metadata
+      
+      edge[dir = both]
+      Utregninger -> Metadata
+  }
+       
+       Datasett -> Forslag [ltail = cluster0, headport = w, tailport = e]
+       Ekspert -> Forslag
+       Forslag -> Umulig
+       Forslag -> Mulig
+       Mulig -> Sjekkliste
+       Ekspert1 -> Sjekkliste
+       Sjekkliste -> Ekskludert
+       Sjekkliste -> OK
+       OK -> Utregninger[lhead = cluster, tailclip=false]
+       Utregninger -> Rapportutkast
+       Rapportutkast -> Rapport
+       Ekspert2 -> Rapportutkast
+       Metadata -> 'GitHub-pages'
+}")
+
+```
+
 
 ### Sjekkliste for tilstandsindikatorer
 <br>
