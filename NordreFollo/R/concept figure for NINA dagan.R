@@ -11,6 +11,11 @@ brk <- seq(from=as.Date("2021-01-15"),
            to=as.Date("2021-03-15"),
            by="month")
 
+# Modifications for an extended figure
+datRev$activity[datRev$activity=="5"] <- "Naturtyper?"
+datRev$activity[datRev$activity=="6"] <- "Blågrønn faktor?"
+datRev$start_date[datRev$wp=="h"]     <- 3
+
 
 gantt <- ganttrify(project = datRev,
                    project_start_date = "2021-01",
@@ -35,7 +40,12 @@ gantt
 
 
 
-tiff("NordreFollo/output/conseptFigureNINAdagan.tif", 
-    width = 1600, height = 600)     
+#tiff("NordreFollo/output/conseptFigureNINAdagan.tif", 
+#    width = 1600, height = 600)     
+#gantt
+#dev.off()
+
+tiff("NordreFollo/output/conseptFigureCIENS.tif", 
+     width = 1600, height = 600)     
 gantt
 dev.off()

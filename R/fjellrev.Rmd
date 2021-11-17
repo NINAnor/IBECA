@@ -172,13 +172,13 @@ myMatr <- NIcalc::sampleObsMat(
         )
 
 ```
-Antall fjeller for hele Norge i refereansetilstand:
+Antall fjellrev for hele Norge i refereansetilstand:
 ```{r}
 mean(colSums(myMatr))
 ```
 
 
-Først regner jeg ut uskalerte verdier for regoinene
+Først regner jeg ut uskalerte verdier for regionene
 
 ```{r}
 regions <- c("Norge", "N", "C", "W", "S", "E")
