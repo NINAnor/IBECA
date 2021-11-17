@@ -89,7 +89,7 @@ stopImplicitCluster()
 
 ### 1.2 Nedbør - Dager
 Antall dager med nedbør i perioden Mai - Oktober.
-```{r, echo = TRUE, eval = FALSE}
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Set up for parallel run 
 UseCores = 12
@@ -145,7 +145,7 @@ stopImplicitCluster()
 
 ### 1.3 Temperatur - Sommer 
 Gjennomsnittlig sommertemperatur, $^\circ$C (Juni - Aug.).
-```{r, echo = TRUE, eval = FALSE}
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Set up for parallel run 
 UseCores = 12 
@@ -200,7 +200,7 @@ stopImplicitCluster()
 
 ### 1.4 Temperatur - Vinter
 Gjennomsnittlig vintertemperatur, $^\circ$C (Des. - Feb.).
-```{r, echo = TRUE, eval = FALSE}
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Set up for parallel run 
 UseCores = 12 
@@ -2105,7 +2105,7 @@ sumPrecip_diff$variable = "sumPrecip"
 ```
 
 ### 6.2 Differanse fra normalperioden for dager med nedbør
-```{r}
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Region 1
 normalDP_r1 = daysPrecipMountCount_region1[[5:34]]
@@ -2234,7 +2234,7 @@ daysPrecip_diff$variable = "daysPrecip"
 ```
 
 ### 6.3 Differanse fra normalperioden for gjennomsnittlig sommertemperatur
-```{r}
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 # Region 1
 normalMS_r1 = meanSummerMountCount_region1[[5:34]]
 normalMS_r1_med = median(values(normalMS_r1), na.rm = TRUE)
@@ -2361,7 +2361,7 @@ meanSummer_diff$variable = "meanSummer"
 ```
 
 ### 6.4 Differanse fra normalperioden for gjennomsnittlig vintertemperatur
-```{r}
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 # Region 1
 normalMW_r1 = meanWinterMountCount_region1[[5:34]]
 normalMW_r1_med = median(values(normalMW_r1), na.rm = TRUE)
@@ -2487,574 +2487,148 @@ meanWinter_diff$variable = "meanWinter"
 
 ```
 
-### 6.X Snødekke
-```{r}
+### 6.5 Snødekke
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 # For indikatorene vinterregn, snødekke, vekstsesong må vi benytte oss av en bootstrap metode også med medianen. celler mer enn 50% fjell her også. Trenger da ikke å vekte på fjell. Da blir det kun et tifeldig år i normalperioden og et tilfeldig år i nåværende periode, sjekk differansen. Gjenta 10 000 ganger. 
-norm_snowCover = daysSnowCoverMountCount_region1[[5:34]]
-curr_snowCover = daysSnowCoverMountCount_region1[[59:63]]
+daysSnowCoverMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
+daysSnowCoverMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region2_1957_2020.grd")[1]
+daysSnowCoverMountCount_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region3_1957_2020.grd")[1]
+daysSnowCoverMountCount_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region4_1957_2020.grd")[1]
+daysSnowCoverMountCount_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region5_1957_2020.grd")[1]
 
-diff_vec = c()
-for(i in 1:10000){
-  norm_samp = sample(c(1:30), 1)
-  curr_samp = sample(c(1:5), 1)
+daysSnowCoverMountCount_region1 = stack(daysSnowCoverMountCount_region1)
+daysSnowCoverMountCount_region2 = stack(daysSnowCoverMountCount_region2)
+daysSnowCoverMountCount_region3 = stack(daysSnowCoverMountCount_region3)
+daysSnowCoverMountCount_region4 = stack(daysSnowCoverMountCount_region4)
+daysSnowCoverMountCount_region5 = stack(daysSnowCoverMountCount_region5)
+snowCover_vec = c(daysSnowCoverMountCount_region1, daysSnowCoverMountCount_region2, daysSnowCoverMountCount_region3, daysSnowCoverMountCount_region4, daysSnowCoverMountCount_region5)
+
+# Create normal period and current period for each region
+diff_vec = list()
+for(i in 1:5){
+  norm_snowCover = snowCover_vec[[i]][[5:34]] # normal period
+  curr_snowCover = snowCover_vec[[i]][[59:63]] # current period
+  temp_vec = c()
   
-  temp_norm = median(values(norm_snowCover[[norm_samp]]), na.rm = TRUE)
-  temp_curr = median(values(curr_snowCover[[curr_samp]]), na.rm = TRUE)
-  
-  temp_diff = temp_curr - temp_norm
-  
-  diff_vec = append(diff_vec, temp_diff)
+  for(j in 1:10000){
+    norm_samp = sample(c(1:30), 1)
+    curr_samp = sample(c(1:5), 1)
+    
+    temp_norm = median(values(norm_snowCover[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
+    temp_curr = median(values(curr_snowCover[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
+    
+    temp_diff = temp_curr - temp_norm
+    temp_vec = append(temp_vec, temp_diff)
+  }
+  diff_vec[[i]] = temp_vec
 }
-
-head(diff_vec)
-hist(diff_vec, breaks = 100)
+snowCover_r1 = diff_vec[[1]]
+snowCover_r2 = diff_vec[[2]]
+snowCover_r3 = diff_vec[[3]]
+snowCover_r4 = diff_vec[[4]]
+snowCover_r5 = diff_vec[[5]]
+snowCover_df = cbind(snowCover_r1, snowCover_r2, snowCover_r3, snowCover_r4, snowCover_r5)
+snowCover_df = data.frame(snowCover_df)
+snowCover_df = as_tibble(snowCover_df) %>% rename("nord-norge" = snowCover_r1, "midt-norge" = snowCover_r2, "østlandet" = snowCover_r3, "vestlandet" = snowCover_r4, "sørlandet" = snowCover_r5) %>% mutate(variable = "snowCover")
+#write_xlsx(snowCover_df, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/snowCover_diff.xlsx")
 
 ```
 
-### 6.X Vekstsesong
+### 6.6 Vekstsesong
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+# Load data
+growthSeasonMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
+growthSeasonMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/", full.names = TRUE, pattern = "region2_1957_2020.grd")[1]
+growthSeasonMountCount_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/", full.names = TRUE, pattern = "region3_1957_2020.grd")[1]
+growthSeasonMountCount_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/", full.names = TRUE, pattern = "region4_1957_2020.grd")[1]
+growthSeasonMountCount_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/", full.names = TRUE, pattern = "region5_1957_2020.grd")[1]
+
+# Stack the rasters
+growthSeasonMountCount_region1 = stack(growthSeasonMountCount_region1)
+growthSeasonMountCount_region2 = stack(growthSeasonMountCount_region2)
+growthSeasonMountCount_region3 = stack(growthSeasonMountCount_region3)
+growthSeasonMountCount_region4 = stack(growthSeasonMountCount_region4)
+growthSeasonMountCount_region5 = stack(growthSeasonMountCount_region5)
+growthSeason_vec = c(growthSeasonMountCount_region1, growthSeasonMountCount_region2, growthSeasonMountCount_region3, growthSeasonMountCount_region4, growthSeasonMountCount_region5)
+
+# Create normal period and current period for each region
+diff_vec = list()
+for(i in 1:5){
+  norm_growthSeason = growthSeason_vec[[i]][[5:34]] # normal period
+  curr_growthSeason = growthSeason_vec[[i]][[60:64]] # current period
+  temp_vec = c()
+  
+  for(j in 1:10000){
+    norm_samp = sample(c(1:30), 1)
+    curr_samp = sample(c(1:5), 1)
+    
+    temp_norm = median(values(norm_growthSeason[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
+    temp_curr = median(values(curr_growthSeason[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
+    
+    temp_diff = temp_curr - temp_norm
+    temp_vec = append(temp_vec, temp_diff)
+  }
+  diff_vec[[i]] = temp_vec
+}
+growthSeason_r1 = diff_vec[[1]]
+growthSeason_r2 = diff_vec[[2]]
+growthSeason_r3 = diff_vec[[3]]
+growthSeason_r4 = diff_vec[[4]]
+growthSeason_r5 = diff_vec[[5]]
+growthSeason_df = cbind(growthSeason_r1, growthSeason_r2, growthSeason_r3, growthSeason_r4, growthSeason_r5)
+growthSeason_df = data.frame(growthSeason_df)
+growthSeason_df = as_tibble(growthSeason_df) %>% rename("nord-norge" = growthSeason_r1, "midt-norge" = growthSeason_r2, "østlandet" = growthSeason_r3, "vestlandet" = growthSeason_r4, "sørlandet" = growthSeason_r5) %>% mutate(variable = "growthSeason")
+#write_xlsx(growthSeason_df, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/growthSeason_diff.xlsx")
+
+```
+
+### 6.7 Vinterregn
 ```{r}
+# Load data
+winterRainMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
+winterRainMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region2_1957_2020.grd")[1]
+winterRainMountCount_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region3_1957_2020.grd")[1]
+winterRainMountCount_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region4_1957_2020.grd")[1]
+winterRainMountCount_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region5_1957_2020.grd")[1]
 
+# Stack the rasters
+winterRainMountCount_region1 = stack(winterRainMountCount_region1)
+winterRainMountCount_region2 = stack(winterRainMountCount_region2)
+winterRainMountCount_region3 = stack(winterRainMountCount_region3)
+winterRainMountCount_region4 = stack(winterRainMountCount_region4)
+winterRainMountCount_region5 = stack(winterRainMountCount_region5)
+winterRain_vec = c(winterRainMountCount_region1, winterRainMountCount_region2, winterRainMountCount_region3, winterRainMountCount_region4, winterRainMountCount_region5)
 
+# Create normal period and current period for each region
+diff_vec = list()
+for(i in 1:5){
+  norm_winterRain = winterRain_vec[[i]][[5:34]] # normal period
+  curr_winterRain = winterRain_vec[[i]][[60:64]] # current period
+  temp_vec = c()
+  
+  for(j in 1:10000){
+    norm_samp = sample(c(1:30), 1)
+    curr_samp = sample(c(1:5), 1)
+    
+    temp_norm = median(values(norm_winterRain[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
+    temp_curr = median(values(curr_winterRain[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
+    
+    temp_diff = temp_curr - temp_norm
+    temp_vec = append(temp_vec, temp_diff)
+  }
+  diff_vec[[i]] = temp_vec
+}
+winterRain_r1 = diff_vec[[1]]
+winterRain_r2 = diff_vec[[2]]
+winterRain_r3 = diff_vec[[3]]
+winterRain_r4 = diff_vec[[4]]
+winterRain_r5 = diff_vec[[5]]
+winterRain_df = cbind(winterRain_r1, winterRain_r2, winterRain_r3, winterRain_r4, winterRain_r5)
+winterRain_df = data.frame(winterRain_df)
+winterRain_df = as_tibble(winterRain_df) %>% rename("nord-norge" = winterRain_r1, "midt-norge" = winterRain_r2, "østlandet" = winterRain_r3, "vestlandet" = winterRain_r4, "sørlandet" = winterRain_r5) %>% mutate(variable = "winterRain")
+#write_xlsx(winterRain_df, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/winterRain_diff.xlsx")
 
 ```
 
-### 6.X Vinterregn
-```{r}
-
-
-
-```
-
-
-## 6. Beregn avvik fra normalperioden 1961 - 1990
-```{r, echo = TRUE, eval = FALSE, message = FALSE, warning = FALSE}
-#######################################################################################
-### Script for summarising monthly avg/sum anomalies for climate variable data
-### Data prepared by Markus Fjellstad Israelsen (separate scripts)
-###
-### By: Simon Jakobsson, 4 April 2021
-### For: IBECA national assessment forest ecosystem
-###
-### Steps:
-### 1) Basics
-### 2) Loop to summarise deviation from climate normal per region and variable; SAVE
-### 3) Plot summary output; SAVE
-### 4) Plot regression output (not used)
-###
-### *Note that 'write.csv' commands are inactivated in the current version to 
-### avoid overwriting
-###
-########################################################################################
-
-### 1. Basics
-
-# Clean workspace and load libraries
-rm(list=ls())
-library(raster)
-library(Hmisc)
-library(tidyverse)
-
-# Basic check and prep based on raw data
-setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
-
-folders_climate <- list.files()
-
-variables_climate <- data.frame(folders_climate)
-variables_climate$folders_climate <- sub(" and Forest Pixel Count", "", variables_climate$folders_climate)
-
-# Variable names
-variables_climate$variables <- c("Antall dager med nedbør", 
-                                 "Antall dager med snødekke", 
-                                 "Antall dager med snødekke og > 0\u00B0C",
-                                 "Lengde vekstsesong",
-                                 "Gjennomsnittlig sommertemperatur (\u00B0C)",
-                                 "Gjennomsnittlig vintertemperatur (\u00B0C)",
-                                 "Sum nedbør (mm)")
-
-#Region 1 = nord Norge, Region 2 = midt Norge, Region 3 = Øst norge, Region 4 = vest Norge, Region 5 = sør-Norge
-regions <- data.frame(c(1:5))
-regions$navn <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Vestlandet", "Sørlandet")
-
-### 2. Loop to summarise deviation from climate normal per region and variable
-
-# Start time (takes around 2.5-3 hours)
-start <- Sys.time()
-
-# Loop for each climate variable (j)
-for (j in 1:nrow(variables_climate)){
-
-  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
-  setwd(paste(getwd(), "/", folders_climate[j], sep=""))
-  
-  files_climate <- list.files(pattern = "*.grd$")
-  var_pre <- substr(files_climate[1], 1, 7) # Extract variable name
-  
-  # Data frames for Norway
-  temp_all_reg <- data.frame()
-  temp_all_reg_slope <- data.frame()
-  x_all2_slope <- data.frame()
-  
-  # Loop for each region (k)
-  for (k in 1:nrow(regions)){
-
-    x_all_slope <- data.frame()
-    
-    # Load data
-    setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
-    setwd(paste(getwd(), "/", folders_climate[j], sep=""))
-    dat <- stack(paste(files_climate[k]))
-
-    # Climate normal 1961-1990 #
-    
-    if(var_pre == "gSeason") { # Growing season data starts one year later
-      
-      normal <-        overlay(dat[[4]], dat[[5]],dat[[6]],dat[[7]], dat[[8]], dat[[9]],dat[[10]],
-                             dat[[11]],dat[[12]], dat[[13]], dat[[14]],dat[[15]],
-                             dat[[16]],dat[[17]], dat[[18]], dat[[19]],dat[[20]],
-                             dat[[21]],dat[[22]], dat[[23]], dat[[24]],dat[[25]],
-                             dat[[26]],dat[[27]], dat[[28]], dat[[29]],dat[[30]],
-                             dat[[31]], dat[[32]], dat[[33]],fun=mean)
-    } else {    
-      normal <-       overlay(dat[[5]],dat[[6]],dat[[7]], dat[[8]], dat[[9]],dat[[10]],
-                            dat[[11]],dat[[12]], dat[[13]], dat[[14]],dat[[15]],
-                            dat[[16]],dat[[17]], dat[[18]], dat[[19]],dat[[20]],
-                            dat[[21]],dat[[22]], dat[[23]], dat[[24]],dat[[25]],
-                            dat[[26]],dat[[27]], dat[[28]], dat[[29]],dat[[30]],
-                            dat[[31]], dat[[32]], dat[[33]], dat[[34]],fun=mean)
-    }
-    
-    x_all <- data.frame()
-    temp_all_yrs <- data.frame()
-    
-    # Number of years (-1)    
-    nyears <- nlayers(dat)-1
-
-    # Loop for each year: calculate difference between year estimates and climate normal
-    for(i in 1:nyears){
-      
-      year <- ifelse(var_pre == "gSeason", 1957+i, 1956+i) # Start year
-      reg <- regions$navn[k]
-      
-      # Calculates anomalies for each year # 
-      diff1 <- overlay(dat[[i]],normal, fun=function(r1, r2){return(r1-r2)}) # Function that calculates diff
-      
-      temp1 <- data.frame(normal=values(normal), forest=values(dat[['forCount']]), 
-                         clim=values(dat[[i]]), diff = values(diff1), year = year, reg=k)
-      temp1 <- temp1[complete.cases(temp1),]
-      temp1 <- temp1[temp1$normal!=0&temp1$diff!=0,]
-      
-      n_rows <- nrow(temp1)
-
-      # Calculate stats: weighted mean, "weighted SD", "weighted SE", lower and upper [mean+/-SD]
-      # NOTE: these numbers are not very straight forward, and currently not used in reporting. 
-      # Would have been better using the bootstrap approach, or a more advanced modelling, but
-      # as this is not top priority it has not been elaborated.
-      
-      wm1 <- wtd.mean(temp1$diff, w=temp1$forest) 
-      wsd <- sqrt(wtd.var(temp1$diff, w=temp1$forest))
-      wse <- wsd/sqrt(n_rows)
-      low1 <- wm1-wsd
-      upp1 <- wm1+wsd
-      
-      # Bind summary stats
-      x_all <- rbind(x_all,data.frame(reg, year, low1, wm1, upp1, wsd, wse, n_rows)) # Summarise stats in table
-      
-      # Bind complete data frame
-      temp_all_yrs <- rbind(temp_all_yrs, temp1)
-      
-      # Stack rasters
-      diffstack <- if(i==1){
-        diff1
-      } else {
-        stack(diffstack, diff1)
-      }
-      rm(diff1)
-    }
-    
-    # [Outside year loop[]
-    names(diffstack) <- c(names(dat)[1:nyears])
-    
-    # Linear regression on years 1990 - 2020
-    startyr <- ifelse(var_pre == "gSeason", 33, 34) # Start year regression
-    time <- startyr:nlayers(diffstack)
-    fun <- function(x) { if (is.na(x[1])){ NA } else {lm(x ~ time)$coefficients[2] }} 
-    x2 <- calc(diffstack[[startyr:nlayers(diffstack)]], fun)
-    
-    # Summary stats for slopes
-    temp2 <- data.frame(diff=values(x2), forest=values(dat[['forCount']]))
-    temp2 <- temp2[complete.cases(temp2),]
-    temp2 <- temp2[temp2$diff!=0&temp2$forest!=0,]
-
-    n_rows <- nrow(temp2)
-      
-    # Calculated stats (see notes above)
-    wm1 <- wtd.mean(temp2$diff, w=temp2$forest) 
-    wsd <- sqrt(wtd.var(temp2$diff, w=temp2$forest))
-    wse <- wsd/sqrt(n_rows)
-    low1 <- wm1-wsd
-    upp1 <- wm1+wsd
-    
-    x_all_slope <- rbind(x_all_slope,data.frame(reg, low1, wm1, upp1, wsd, wse, n_rows)) # Summarise stats in table
-    
-    temp_all_reg_slope <- rbind(temp_all_reg_slope, temp2)
-    temp_all_reg <- rbind(temp_all_reg, temp_all_yrs)
-  
-    
-  
-    x_all <- x_all[x_all$year>1960,]
-    
-    setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
-    
-    # Write regression tables
-    #write.csv(x_all, paste("regr", variables_climate$variables[j],"_",regions$navn[k], ".csv", sep=""))
-   
-    # Write region slopes
-    #write.csv(x_all_slope, paste("regr_slope", variables_climate$variables[j],"_",regions$navn[k], ".csv", sep=""))
-  }
-  
-  # Repeat process for entire Norway (all data)
-  uniq1 <- unlist(unique(temp_all_reg$year))
-  str(temp_all_reg)
-  x_all2 <- data.frame()
-  
-  for(n in 1:length(uniq1)){
-    
-    year2 <- uniq1[n]
-    sub <- subset(temp_all_reg, year==uniq1[n])
-    reg2 <- "Norge"
-    n_rows_2 <- nrow(sub)
-    wm2 <- wtd.mean(sub$diff, w=sub$forest) 
-    wv2 <- wtd.var(sub$diff, w=sub$forest) 
-    wsd2 <- sqrt(wv2)
-    wse2 <- wsd2/sqrt(nrow(sub))
-    low2 <- wm2-wsd2
-    upp2 <- wm2+wsd2
-    
-    x_all2 <- rbind(x_all2,data.frame(reg2, year2, low2, wm2, upp2, wsd2, wse2, n_rows)) # Summarise stats in table
-  }
-  
-
-
-    reg2 <- "Norge"
-    n_rows_2 <- nrow(temp_all_reg_slope)
-    wm2 <- wtd.mean(temp_all_reg_slope$diff) 
-    wsd2 <- sqrt(wtd.var(temp_all_reg_slope$diff, w=temp_all_reg_slope$forest))
-    wse2 <- wsd2/sqrt(n_rows_2)
-    low2 <- wm2-wsd2
-    upp2 <- wm2+wsd2
-    
-    x_all2_slope <- rbind(x_all2_slope,data.frame(reg2, low2, wm2, upp2, wsd2, wse2, n_rows_2)) # Summarise stats in table
-
-  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
-  # Write regression table Norway
-  #write.csv(x_all2, paste("regr", variables_climate$variables[j],"_","Norge",".csv", sep=""))
-  # Write slope table Norway
-  #write.csv(x_all2_slope, paste("regr_slope", variables_climate$variables[j],"_","Norge",".csv", sep=""))
-  }
-
-stop <- Sys.time()
-
-stop-start # Time difference of 2.685 hours (tirsdag 24.02, kveld)
-
-
-### 3. Plot summary output
-
-# First check and fix some basic data for plotting
-rm(list=ls())
-library(raster)
-library(Hmisc)
-library(tidyverse)
-
-setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
-
-folders_climate <- list.files()
-
-variables_climate <- data.frame(folders_climate)
-variables_climate$folders_climate <- sub(" and Forest Pixel Count", "", variables_climate$folders_climate)
-
-variables_climate$order <- c(1,3,2,6,4,5,7) # order as in tablefiles
-variables_climate <- variables_climate[order(variables_climate$order),]
-
-#Region 1 = nord Norge, Region 2 = midt Norge, Region 3 = Øst norge, Region 4 = vest Norge, Region 5 = sør-Norge
-regions <- data.frame(ord = c(2,1,4,6,5,3))
-regions$navn <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Vestlandet", "Sørlandet", "Norge")
-regions <- regions[order(regions$ord),]
-
-#################
-
-# Files to read
-setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
-tablefiles <- list.files(pattern=".csv")
-tablefiles <- tablefiles[grep("*_slope*",tablefiles,invert=TRUE)]
-
-# Set colour codes
-colours <- c(rep(c("#7A9A01", "#93328E", "dark grey", "#FFB25B", "#2DCCD3","#004F71"), length(tablefiles)/6))
-regions$colours <- colours[1:6]
-regions$ord2 <- c(5,6,1,2,3,4)
-
-# Set max/min data for plots
-val_dat <- data.frame(var = tablefiles,
-                      max = c(rep(60,6),rep(50,6),rep(50,6),rep(5,6),rep(10,6),rep(50,6),rep(600,6)),
-                      min = c(rep(-60,6),rep(-50,6),rep(-80,6),rep(-5,6),rep(-10,6),rep(-50,6),rep(-600,6)))
-
-# Loop for each variable to save png files
-for(j in 1:7){
-
-  # Attempt to change working directory, but somehoe the png files end up in the 'Tables/regr' folder anyway...
-  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Klima/combined/regr")
-
-  png(paste(variables_climate$folders_climate[j], ".png", sep=""), res=300, units="in", height=6, width=8)
-  par(mar=c(4,6,4,1))
-  
-  for(i in ((j-1)*6+1):(j*6)) {
-    setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
-
-    x_all <- read.csv(paste(tablefiles[i]), header=T)
-    x_all <- x_all[x_all$year>1960,]
-    file_x <- gsub("(\u00B0C)", "", tablefiles[i])
-    file_x <- gsub(" > ", "", file_x)
-    
-    #str_split(tablefiles[i], "_", simplify = TRUE)[1]
-    
-    if (i==1|i==7|i==13|i==19|i==25|i==31|i==37){
-      plot(x_all$wm1~x_all$year, frame=FALSE, ylim=c(val_dat$min[i], val_dat$max[i]),
-           type="n",
-           ylab=paste(paste(gsub("regr","",str_split(tablefiles[i], "_", simplify = TRUE)[1])),
-                      "- avvik fra normalperioden (1961-1990)", sep="\n"), xlab="")
-
-      abline(h=0, col="black", lty=1, lwd=1)
-      
-      lines(x_all$year, x_all$wm1, col=colours[i], lwd=1.5, lty=1) 
-      
-    } else {
-      
-      lines(x_all$year, x_all$wm1, col=colours[i], lwd=1.5, lty=1) 
-      
-    }
-    
-  }
-  
-  legend("top", legend = regions$navn[order(regions$ord2)], , col = regions$colours[order(regions$ord2)],  
-         lwd=1.5, lty=1, 
-         bty="n", inset=0, title="", horiz = TRUE,
-         cex=0.7)
-  dev.off()
- 
-}
-
-
-
-### 4. Plot regression output 
-
-rm(list=ls())
-library(raster)
-library(Hmisc)
-library(tidyverse)
-
-setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Klima")
-
-folders_climate <- list.files()
-
-variables_climate <- data.frame(folders_climate)
-variables_climate$folders_climate <- sub(" and Forest Pixel Count", "", variables_climate$folders_climate)
-
-variables_climate$order <- c(1,3,2,6,4,5,7)
-variables_climate <- variables_climate[order(variables_climate$order),]
-
-regions <- data.frame(ord = c(2,1,4,6,5,3))
-regions$navn <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Vestlandet", "Sørlandet", "Norge")
-regions <- regions[order(regions$ord),]
-
-
-#################
-
-
-setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
-tablefiles <- list.files(pattern=".csv")
-
-tablefiles <- tablefiles[grep("*_slope*",tablefiles,invert=FALSE)]
-
-colours <- c(rep(c("#7A9A01", "#93328E", "dark grey", "#FFB25B", "#2DCCD3","#004F71"), length(tablefiles)/6))
-regions$colours <- colours[1:6]
-regions$ord2 <- c(5,6,1,2,3,4)
-
-varnames <- gsub("regr_slope", "", tablefiles)
-
-
-x_all <- data.frame()
-
-for(i in 1:length(tablefiles)) {
-  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Additional_data/Tables/regr")
-  x_temp <- read.csv(paste(tablefiles[i]), header=T)
-  x_temp <- x_temp[,-1]
-  variable <- str_split(varnames[i], "_", simplify = TRUE)[1]
-  names(x_temp) <- c("reg", "low", "med", "upp", "sd", "se", "nrows")
-  x_all <- rbind(x_all, cbind(variable, x_temp))
-}
-
-x_all$low2 <- x_all$med-1.96*x_all$sd
-x_all$upp2 <- x_all$med+1.96*x_all$sd
-
-x_all$med[37:42] <- x_all$med[37:42]/10
-x_all$low2[37:42] <- x_all$low2[37:42]/10
-x_all$upp2[37:42] <- x_all$upp2[37:42]/10
-
-x_all$med[19:30] <- x_all$med[19:30]*10
-x_all$low2[19:30] <- x_all$low2[19:30]*10
-x_all$upp2[19:30] <- x_all$upp2[19:30]*10
-
-x_all$change <- ifelse(x_all$low2>0&x_all$upp2>0, "positive", "")
-x_all$change <- ifelse(x_all$low2<0&x_all$upp2<0, "negative", x_all$change)
-
-x_all$lwdP <- ifelse(x_all$change=="", 1, 2)
-x_all$ltyP <- ifelse(x_all$change=="", 3, 1)
-
-
-regions <- regions[order(regions$ord2),]
-
-x_all$variable2 <- as.numeric(x_all$variable)*1.5
-x_all$variable <- gsub("vekstsesong", "vekstsesong (dager)", x_all$variable)
-
-uniq1 <- unlist(unique(x_all$variable))
-uniq2 <- unlist(unique(regions$navn))
-
-regOrder = c(regions$navn)
-x_all <- x_all[order(match(x_all$reg,regOrder)),]
-
-### Wrong rotation plot (not saved, just a try)
-
-par(mar=c(20.5,3.5,0.5,0.5))
-plot(x_all$med~x_all$variable2, frame=FALSE, 
-     type="n",
-     #ylab="Regresjonskoefficient ('slope') 1990-2020",
-     ylab="",
-     xlab="",
-     xlim=c(1,11),
-     ylim=c(-1.3,2.5), 
-     yaxt='n',
-     xaxt='n')
-
-lines(x=c(1,11), y=c(0,0), col="black", lwd=1, lty=3)
-
-move <- 0.11
-for(j in 1:length(uniq1)){
-  
-  sub <- subset(x_all, variable==uniq1[j])
-
-  for(i in 1:length(uniq2)) {
-
-      arrows(sub$variable2[i]+move*(i-3.5),sub$med[i],sub$variable2[i]+move*(i-3.5),sub$upp2[i], angle=90, 
-             length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
-      arrows(sub$variable2[i]+move*(i-3.5),sub$med[i],sub$variable2[i]+move*(i-3.5),sub$low2[i], angle=90, 
-             length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
-      points(sub$variable2[i]+move*(i-3.5),sub$med[i], pch=21, bg=regions$colours[i], cex=1)
-
-      ys <- rep(seq(from=-1, to=2, by=0.5),2)
-      ys <- ys[order(ys)]
-      reps <- length(ys)/2
-      
-      lines(x=c(sub$variable2[1]-0.4,sub$variable2[1]-0.4),y=c(-1,2),lwd=0.5)
-      
-      for(n in 1:reps){
-        
-      lines(x=c(sub$variable2[1]-0.4,sub$variable2[1]-0.45),y=c(ys[(n*2-1):(n*2)]),lwd=0.5)
-      
-      if(n==3){
-        NULL
-      } else {
-        
-      if(j==4|j==5){
-      text(x=sub$variable2[1]-0.6,y=ys[(n*2)], labels=ys[(n*2)]/10, srt=90, cex=0.7)
-      } else if(j==7){
-        text(x=sub$variable2[1]-0.6,y=ys[(n*2)], labels=ys[(n*2)]*10, srt=90, cex=0.7)
-      } else {
-        text(x=sub$variable2[1]-0.6,y=ys[(n*2)], labels=ys[(n*2)], srt=90, cex=0.7)
-      }
-      
-      }
-      
-      }
-      
-    }
-}
-      
-axis(side=1, at=c(c(unique(x_all$variable2)-0.4), 12), labels=c(paste(unique(x_all$variable)), ""), 
-     cex.axis=1.3, las=2) 
-
-axis(side=2, at=c(0.5), labels="Lineær regresjonskoeffisient 1990-2020\n(endring pr. år)", 
-     cex.axis=1.3, las=0, tick=FALSE) 
-
-### Correct rotation plot (not saved, just a try)
-
-par(mar=c(0.5,20.5,4.5,8.5))
-plot(x_all$variable2~x_all$med, frame=FALSE, 
-     type="n",
-     #ylab="Regresjonskoefficient ('slope') 1990-2020",
-     ylab="",
-     xlab="",
-     ylim=c(1,11),
-     xlim=c(-1.3,2.5), 
-     yaxt='n',
-     xaxt='n')
-
-lines(y=c(1,11), x=c(0,0), col="black", lwd=1, lty=3)
-
-move <- 0.11
-for(j in 1:length(uniq1)){
-  
-  sub <- subset(x_all, variable==uniq1[j])
-  
-  for(i in 1:length(uniq2)) {
-    
-    arrows(sub$med[i],sub$variable2[i]+move*(i-3.5),sub$upp2[i], sub$variable2[i]+move*(i-3.5), angle=90, 
-           length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
-    arrows(sub$med[i],sub$variable2[i]+move*(i-3.5),sub$low2[i], sub$variable2[i]+move*(i-3.5), angle=90,
-           length=0.05, col=regions$colours[i], lwd=sub$lwdP[i], lty=sub$ltyP[i])
-    points(sub$med[i], sub$variable2[i]+move*(i-3.5), pch=21, bg=regions$colours[i], cex=1)
-    
-    ys <- rep(seq(from=-1, to=2, by=0.5),2)
-    ys <- ys[order(ys)]
-    reps <- length(ys)/2
-    
-    lines(y=c(sub$variable2[1]-0.4,sub$variable2[1]-0.4),x=c(-1,2),lwd=0.5)
-    
-    for(n in 1:reps){
-      
-      lines(y=c(sub$variable2[1]-0.4,sub$variable2[1]-0.45),x=c(ys[(n*2-1):(n*2)]),lwd=0.5)
-      
-      if(n==3){
-        NULL
-      } else {
-        
-        if(j==4|j==5){
-          text(y=sub$variable2[1]-0.6,x=ys[(n*2)], labels=ys[(n*2)]/10, srt=0, cex=0.7)
-        } else if(j==7){
-          text(y=sub$variable2[1]-0.6,x=ys[(n*2)], labels=ys[(n*2)]*10, srt=0, cex=0.7)
-        } else {
-          text(y=sub$variable2[1]-0.6,x=ys[(n*2)], labels=ys[(n*2)], srt=0, cex=0.7)
-        }
-        
-      }
-      
-    }
-    
-  }
-}
-
-axis(side=2, at=c(c(unique(x_all$variable2)-0.4), 12), labels=c(paste(unique(x_all$variable)), ""), 
-     cex.axis=1.3, las=2) 
-
-axis(side=3, at=c(0.5), labels="Lineær regresjonskoeffisient 1990-2020\n(endring pr. år)", 
-     cex.axis=1.3, las=0, tick=FALSE) 
-
-legend("right", legend = regions$navn[order(-regions$ord2)], 
-       pch=16, 
-       cex=1.2,
-       inset=-0.1, 
-       bg=c(regions$colours[order(-regions$ord2)]), # not working for pch = 21?!
-       col=c(regions$colours[order(-regions$ord2)]),
-       bty="n", xpd=TRUE)
-
-```
 
 
