@@ -602,7 +602,7 @@ Total mengde nedbør (mm) for dager med temperatur > 2$^\circ$C i perioden Janua
       k_values = values(k)
       k_values_rows = which(k_values <= 2751.5)
       
-      r_values[k_values_rows] = 0
+      r_values[k_values_rows] = NA
       values(r) = r_values
       
       RainTempCover[[j]] = r 
@@ -611,7 +611,6 @@ Total mengde nedbør (mm) for dager med temperatur > 2$^\circ$C i perioden Janua
   }
 
   WinterRain_all_years = stack(RainTempCover_all_years)
-  raster::values(WinterRain_all_years) = raster::values(WinterRain_all_years)/10 # Convert the amount of precipitation from 1/10mm to mm
   
   names(WinterRain_all_years) = uniq_y # Name by years
 
@@ -807,7 +806,8 @@ Export.image.toDrive({
 ```
 
 
-## 3. Konvertere klimavariablene fra Raster (.grd) til bildefiler (.tif)
+## 3. Konvertere klimavariablene til en filtype støttet av Google Earth Engine
+Konvertering av raster filene fra ".grd" filtype til ".tif".
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 # Sum nedbør
 rDir_snCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/" 
@@ -849,8 +849,7 @@ writeRaster(vCon, paste(rDir_vCon, "sd_gw_utm_1957_2020.grd", sep = ""), format 
 rDir_vrCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/" 
 vrCon = stack(paste(rDir_vrCon, "sd_vr_1957_2020.grd", sep=""))
 crs(vrCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
-writeRaster(vrCon, paste(rDir_vrCon, "sd_vr_utm_1957_2020.grd", sep = ""), format = "GTiff")
-
+writeRaster(vrCon, paste(rDir_vrCon, "sd_vr_utm_1957_2020.grd", sep = ""), format = "GTiff", overwrite = TRUE)
 
 ```
 
@@ -1972,8 +1971,9 @@ writeRaster(winterRainMountCount_region5, RasterLocation_r5, format = "raster", 
 
 ```
 
-## 6 Differanse fra normalperioden 1961 - 1990
-### 6.1 Differanse fra normalperioden 1961 - 1990 for sum nedbør
+
+## 6 Differanse fra normalperioden (1961 - 1990)
+### 6.1 Differanse fra normalperioden for sum nedbør
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
 # Møte med Anders
@@ -2487,9 +2487,10 @@ meanWinter_diff$variable = "meanWinter"
 
 ```
 
-### 6.5 Snødekke
+### 6.5 Bootstrapping for å finne variasjonen i differansen mellom nåværende periode og normalperioden for snødekke
+Det trekkes ut et tilfeldig år i normalperioden og et tilfeldig år i nåværende periode (2016-2020), finner medianen for hver, og trekker medianen i normalperioden fra medianen i nåværende periode. Dette gjentas så 10 000 ganger.
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
-# For indikatorene vinterregn, snødekke, vekstsesong må vi benytte oss av en bootstrap metode også med medianen. celler mer enn 50% fjell her også. Trenger da ikke å vekte på fjell. Da blir det kun et tifeldig år i normalperioden og et tilfeldig år i nåværende periode, sjekk differansen. Gjenta 10 000 ganger. 
+# Load data
 daysSnowCoverMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
 daysSnowCoverMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region2_1957_2020.grd")[1]
 daysSnowCoverMountCount_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/", full.names = TRUE, pattern = "region3_1957_2020.grd")[1]
@@ -2503,7 +2504,6 @@ daysSnowCoverMountCount_region4 = stack(daysSnowCoverMountCount_region4)
 daysSnowCoverMountCount_region5 = stack(daysSnowCoverMountCount_region5)
 snowCover_vec = c(daysSnowCoverMountCount_region1, daysSnowCoverMountCount_region2, daysSnowCoverMountCount_region3, daysSnowCoverMountCount_region4, daysSnowCoverMountCount_region5)
 
-# Create normal period and current period for each region
 diff_vec = list()
 for(i in 1:5){
   norm_snowCover = snowCover_vec[[i]][[5:34]] # normal period
@@ -2534,7 +2534,8 @@ snowCover_df = as_tibble(snowCover_df) %>% rename("nord-norge" = snowCover_r1, "
 
 ```
 
-### 6.6 Vekstsesong
+### 6.6 Bootstrapping for å finne variasjonen i differansen mellom nåværende periode og normalperioden for vekstsesong
+Det trekkes ut et tilfeldig år i normalperioden og et tilfeldig år i nåværende periode (2016-2020), finner medianen for hver, og trekker medianen i normalperioden fra medianen i nåværende periode. Dette gjentas så 10 000 ganger.
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 # Load data
 growthSeasonMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
@@ -2582,8 +2583,9 @@ growthSeason_df = as_tibble(growthSeason_df) %>% rename("nord-norge" = growthSea
 
 ```
 
-### 6.7 Vinterregn
-```{r}
+### 6.7 Bootstrapping for å finne variasjonen i differansen mellom nåværende periode og normalperioden for vinterregn
+Det trekkes ut et tilfeldig år i normalperioden og et tilfeldig år i nåværende periode (2016-2020), finner medianen for hver, og trekker medianen i normalperioden fra medianen i nåværende periode. Dette gjentas så 10 000 ganger.
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 # Load data
 winterRainMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
 winterRainMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region2_1957_2020.grd")[1]
@@ -2597,6 +2599,44 @@ winterRainMountCount_region2 = stack(winterRainMountCount_region2)
 winterRainMountCount_region3 = stack(winterRainMountCount_region3)
 winterRainMountCount_region4 = stack(winterRainMountCount_region4)
 winterRainMountCount_region5 = stack(winterRainMountCount_region5)
+
+# Set condition of > 0mm precipitation and > 2 degrees centigrade
+for(i in 1:64){
+  vals = values(winterRainMountCount_region1[[i]])
+  vals_rows = which(vals == 0)
+  vals[vals_rows] = NA
+  values(winterRainMountCount_region1[[i]]) = vals
+}
+
+for(i in 1:64){
+  vals = values(winterRainMountCount_region2[[i]])
+  vals_rows = which(vals == 0)
+  vals[vals_rows] = NA
+  values(winterRainMountCount_region2[[i]]) = vals
+}
+
+for(i in 1:64){
+  vals = values(winterRainMountCount_region3[[i]])
+  vals_rows = which(vals == 0)
+  vals[vals_rows] = NA
+  values(winterRainMountCount_region3[[i]]) = vals
+}
+
+for(i in 1:64){
+  vals = values(winterRainMountCount_region4[[i]])
+  vals_rows = which(vals == 0)
+  vals[vals_rows] = NA
+  values(winterRainMountCount_region4[[i]]) = vals
+}
+
+for(i in 1:64){
+  vals = values(winterRainMountCount_region5[[i]])
+  vals_rows = which(vals == 0)
+  vals[vals_rows] = NA
+  values(winterRainMountCount_region5[[i]]) = vals
+}
+
+
 winterRain_vec = c(winterRainMountCount_region1, winterRainMountCount_region2, winterRainMountCount_region3, winterRainMountCount_region4, winterRainMountCount_region5)
 
 # Create normal period and current period for each region
@@ -2629,6 +2669,7 @@ winterRain_df = as_tibble(winterRain_df) %>% rename("nord-norge" = winterRain_r1
 #write_xlsx(winterRain_df, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/winterRain_diff.xlsx")
 
 ```
+
 
 
 
