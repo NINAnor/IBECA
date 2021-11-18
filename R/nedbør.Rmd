@@ -23,58 +23,68 @@ library(data.table)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Klimadata er prossesert av MArkis F. Isaksen og dokumenteres i på [en annen](klima-databehandling.html) side. Her tar vi bare inn dataene og plotter de.
+Klimadata er prossesert av Markus F. Isaksen og dokumenteres i på [en annen](klima-databehandling.html) side. Her tar vi bare inn dataene og plotter de.
+
+Disse dataene er klippet slik at det bare kommer fra fjellarealer. 
 
 # Årsnedbør
 
 ```{r}
-sumPrecip_med <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_med.xlsx")
-head(sumPrecip_med)
+err <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_med.xlsx")
+head(err)
 ```
 Her ser vi medianen og variasjonen til denne variablene under forrige normalperiode 1961-1990. La oss normalisere disse.
 
 ```{r}
-names(sumPrecip_med) <- c("Region", "variable", "median", "low", "upp")
+names(err) <- c("Region", "variable", "median", "low", "upp")
 
-sumPrecip_med$low <- as.numeric(sumPrecip_med$low)
-sumPrecip_med$upp <- as.numeric(sumPrecip_med$upp)
-sumPrecip_med$median <- as.numeric(sumPrecip_med$median)
+err$low     <- as.numeric(err$low)
+err$upp     <- as.numeric(err$upp)
+err$median  <- as.numeric(err$median)
 
-sumPrecip_med$low <- 
-  sumPrecip_med$low - sumPrecip_med$median
-sumPrecip_med$upp <- 
-  sumPrecip_med$upp - sumPrecip_med$median
+err$low <-   err$low - err$median
+err$upp <-   err$upp - err$median
 ```
 
 ```{r}
-err <- sumPrecip_med
-rm(sumPrecip_med)
+err$Region[err$Region=="norge-norge"] <- "Nord-Norge"
+err$Region[err$Region=="midt-norge"] <- "Midt-Norge"
+err$Region[err$Region=="østlandet"] <- "Østlandet"
+err$Region[err$Region=="vestlandet"] <- "Vestlandet"
+err$Region[err$Region=="sørlandet"] <- "Sørlandet"
+
 ```
 
 
 ```{r}
-sumPrecip_diff <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_diff.xlsx")
-head(sumPrecip_diff)
+dat <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_diff.xlsx")
+
+head(dat)
 ```
 Her ser vi gjennomsnittlig årsnedbør siste 5 år minus gjennomsnittet i normalperioden.
 
 ```{r}
-setDT(sumPrecip_diff)
-dat <- melt(sumPrecip_diff,
-            measure.vars = names(sumPrecip_diff)[2:6],
+setDT(dat)
+dat <- melt(dat,
+            measure.vars = names(dat)[2:6],
             id.vars = "year",
             variable.name = "Region")
+dat$Region <- as.character(dat$Region)
+dat$Region[dat$Region=="nord-norge"] <- "Nord-Norge"
+dat$Region[dat$Region=="midt-norge"] <- "Midt-Norge"
+dat$Region[dat$Region=="østlandet"] <- "Østlandet"
+dat$Region[dat$Region=="vestlandet"] <- "Vestlandet"
+dat$Region[dat$Region=="sørlandet"] <- "Sørlandet"
 ```
 
-Fikser en skrivefeil:
-```{r}
-err$Region[err$Region == "norge-norge"] <- "nord-norge"
-```
+
 
 ```{r}
-fig_nedbør <- ggplot(data = dat)+
-  geom_line(aes(x         = year, 
-                y         = value))+
+fig_nedbør <- ggplot(data = dat,
+                    aes(x = year, 
+                        y = value))+
+  geom_line()+
+  geom_smooth()+
   ylab("Årsnedbør (mm)")+
   geom_hline(yintercept=0)+
   geom_hline(data = err, aes(yintercept=low), linetype=2)+
@@ -104,6 +114,14 @@ dager_err$upp <-
 ```
 
 ```{r}
+dager_err$Region[dager_err$Region=="nord-norge"] <- "Nord-Norge"
+dager_err$Region[dager_err$Region=="midt-norge"] <- "Midt-Norge"
+dager_err$Region[dager_err$Region=="østlandet"] <- "Østlandet"
+dager_err$Region[dager_err$Region=="vestlandet"] <- "Vestlandet"
+dager_err$Region[dager_err$Region=="sørlandet"] <- "Sørlandet"
+```
+
+```{r}
 dager <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_diff.xlsx")
 ```
 
@@ -113,12 +131,20 @@ dager <- melt(dager,
             measure.vars = names(dager)[2:6],
             id.vars = "year",
             variable.name = "Region")
+dager$Region <- as.character(dager$Region)
+dager$Region[dager$Region=="nord-norge"] <- "Nord-Norge"
+dager$Region[dager$Region=="midt-norge"] <- "Midt-Norge"
+dager$Region[dager$Region=="østlandet"] <- "Østlandet"
+dager$Region[dager$Region=="vestlandet"] <- "Vestlandet"
+dager$Region[dager$Region=="sørlandet"] <- "Sørlandet"
 ```
 
 ```{r}
-fig_dager <- ggplot(data = dager)+
-  geom_line(aes(x         = year, 
-                y         = value))+
+fig_dager <- ggplot(data = dager,
+          aes(x= year, 
+              y= value))+
+  geom_line()+
+  geom_smooth()+
   ylab("Antall dager med nedbør")+
   geom_hline(yintercept=0)+
   geom_hline(data = dager_err, aes(yintercept=low), linetype=2)+

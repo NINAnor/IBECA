@@ -36,6 +36,10 @@ knitr::opts_chunk$set(echo = TRUE)
 <br>
 Klimadata hentes fra SeNorge datasettet. Noen av disse variblene brukes som tilstandsindikatorer, og noen brukes som påvirkningsindikatorer. Behandlingen av disse dataene er ganske omfattende, og de gjøres samtidig for alle de variablene vi ønsker å inkludere. Noe av prosessen skjer i Google Earth Engine. Vi har derfor å ikke inkludere denne infoamsjonen på de enekelte sidene til tilstandsvariablene, men samler heller all dokumentasjonen på [denne siden. ](klima-databehandling.html) 
 
+### Nedbør
+[Klikk her](nedbor.html) for mer informasjon
+
+
 <br>
 
 ## Supplerende indikatorer
