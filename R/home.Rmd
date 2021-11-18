@@ -34,75 +34,6 @@ På denne siden vil du finne informasjon om hvordan NINA har jobber med å vurde
 
 
 
-Figuren under viser den grunnleggende arbeidsflyten rundt fremskaffelsen av tilstandsindikatorer:
-```{r, echo=F}
-library(DiagrammeR)
-
-
-
-grViz("digraph{
-
-     graph [compound = true, nodesep = .5, ranksep = .5,
-         color = crimson, rankdir = TB]
-
-  node [fontname = Helvetica, fontcolor = darkslategray,
-        shape = rectangle, fixedsize = true, width = 2,
-        color = darkslategray]
-        
-  Forslag[label = 'Forslag på indikator og\nreferanseverdier']
-  Datasett[label = 'Mulige datasett']
-  Indikatorer[label = 'Mulige indikatorer']
-  Ekspert[label='Indikatorekspert(er)']
-  Umulig[label = 'Umulig' shape=plaintext, fontcolor=red, fontsize=20]
-  Sjekkliste[label = 'Utfylling\nav sjekkliste']
-  Ekskludert[shape = plaintext, fontcolor=red, fontsize=20]
-  Mulig[shape = plaintext, fontcolor=darkgreen, fontsize=20]
-  OK[shape = plaintext, fontcolor=darkgreen, fontsize=20]
-  Rapport[label='Ferdig rapport']
-  Ekspert1[label=Ekspertpanel]
-  Ekspert2[label=Ekspertpanel]
-  Metadata[label = 'Dokumentasjon\n(metadata)']
-
-  
-  edge [color = black]
-  
-  subgraph cluster0 {
-       label = Scoping;
-       node [fixedsize = true, width = 2];
-      Datasett
-      Indikatorer
-      
-      edge[dir = both]
-      Datasett -> Indikatorer
-  }
-  
-  
-  subgraph cluster {
-       label = Analyse;
-       node [fixedsize = true, width = 2];
-      Utregninger
-      Metadata
-      
-      edge[dir = both]
-      Utregninger -> Metadata
-  }
-       
-       Datasett -> Forslag [ltail = cluster0, headport = w, tailport = e]
-       Ekspert -> Forslag
-       Forslag -> Umulig
-       Forslag -> Mulig
-       Mulig -> Sjekkliste
-       Ekspert1 -> Sjekkliste
-       Sjekkliste -> Ekskludert
-       Sjekkliste -> OK
-       OK -> Utregninger[lhead = cluster, tailclip=false]
-       Utregninger -> Rapportutkast
-       Rapportutkast -> Rapport
-       Ekspert2 -> Rapportutkast
-       Metadata -> 'GitHub-pages'
-}")
-
-```
 
 
 ## GitHub
@@ -113,11 +44,34 @@ grViz("digraph{
 
 ## Publikasjoner
 
-```{r, echo=FALSE,out.width="49%",out.height="20%",fig.cap="",fig.show='hold',fig.align='center', fig.link=c('https://brage.nina.no/nina-xmlui/handle/11250/2739886', 'https://www.regjeringen.no/contentassets/7c4be071791f439b83fa035c03cdfc82/fagsystem-for-fastsetting-av-god-okologisk-tilstand_2017.pdf')}
+![](../figures/skograpporten.png){width=4cm} 
 
-knitr::include_graphics(c("../figures/skograpporten.png","../figures/Fagsystemrapporten.png"))
+[NINA rapport 2000. Økologisk tilstand i skog](https://brage.nina.no/nina-xmlui/handle/11250/2739886)
 
-``` 
+<br><br>
+
+
+![](../figures/Fagsystemrapporten.png){width=4cm} 
+
+[Fagsystem for fastsetting av god økologisk tilstand fra 2017](https://www.regjeringen.no/contentassets/7c4be071791f439b83fa035c03cdfc82/fagsystem-for-fastsetting-av-god-okologisk-tilstand_2017.pdf)
+
+<br><br>
+
+![](../figures/NINArapport1672.png){width=4cm} 
+
+[NINA-rapport om uttesting av indeksmetoden i Trøndelag 2019](https://brage.nina.no/nina-xmlui/handle/11250/2599977)
+
+<br><br>
+
+![](../figures/Jakobsson2021.png){width=4cm} 
+
+[Fagfellevurdert artikkel med en introduksjon av IBECAmetoden med uttesting i Trøndelag](https://www.sciencedirect.com/science/article/pii/S1470160X20311912)
+
+<br><br>
+
+![](../figures/Jakobsson2020.png){width=4cm} 
+
+[Fagfellevurdert artikkel om metoden for skalering av indikatorverdier opp imot referanseverdier](https://www.sciencedirect.com/science/article/pii/S1470160X20304295)
 
 
 

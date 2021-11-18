@@ -1,0 +1,145 @@
+---
+title: "Nedbør"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'nedbor.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(DT)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(data.table)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Klimadata er prossesert av MArkis F. Isaksen og dokumenteres i på [en annen](klima-databehandling.html) side. Her tar vi bare inn dataene og plotter de.
+
+# Årsnedbør
+
+```{r}
+sumPrecip_med <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_med.xlsx")
+head(sumPrecip_med)
+```
+Her ser vi medianen og variasjonen til denne variablene under forrige normalperiode 1961-1990. La oss normalisere disse.
+
+```{r}
+names(sumPrecip_med) <- c("Region", "variable", "median", "low", "upp")
+
+sumPrecip_med$low <- as.numeric(sumPrecip_med$low)
+sumPrecip_med$upp <- as.numeric(sumPrecip_med$upp)
+sumPrecip_med$median <- as.numeric(sumPrecip_med$median)
+
+sumPrecip_med$low <- 
+  sumPrecip_med$low - sumPrecip_med$median
+sumPrecip_med$upp <- 
+  sumPrecip_med$upp - sumPrecip_med$median
+```
+
+```{r}
+err <- sumPrecip_med
+rm(sumPrecip_med)
+```
+
+
+```{r}
+sumPrecip_diff <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_diff.xlsx")
+head(sumPrecip_diff)
+```
+Her ser vi gjennomsnittlig årsnedbør siste 5 år minus gjennomsnittet i normalperioden.
+
+```{r}
+setDT(sumPrecip_diff)
+dat <- melt(sumPrecip_diff,
+            measure.vars = names(sumPrecip_diff)[2:6],
+            id.vars = "year",
+            variable.name = "Region")
+```
+
+Fikser en skrivefeil:
+```{r}
+err$Region[err$Region == "norge-norge"] <- "nord-norge"
+```
+
+```{r}
+fig_nedbør <- ggplot(data = dat)+
+  geom_line(aes(x         = year, 
+                y         = value))+
+  ylab("Årsnedbør (mm)")+
+  geom_hline(yintercept=0)+
+  geom_hline(data = err, aes(yintercept=low), linetype=2)+
+  geom_hline(data = err, aes(yintercept=upp), linetype=2)+
+  facet_wrap(.~Region)+
+  theme_bw(base_size = 20)
+```
+![](../output/paavirkningsindikatorer/årsnedbør_tidsserie.png)
+
+# Dager med nedbør
+
+```{r}
+dager_err <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_med.xlsx")
+```
+
+```{r}
+names(dager_err) <- c("Region", "variable", "median", "low", "upp")
+
+dager_err$low     <- as.numeric(dager_err$low)
+dager_err$upp     <- as.numeric(dager_err$upp)
+dager_err$median  <- as.numeric(dager_err$median)
+
+dager_err$low <- 
+  dager_err$low - dager_err$median
+dager_err$upp <- 
+  dager_err$upp - dager_err$median
+```
+
+```{r}
+dager <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_diff.xlsx")
+```
+
+```{r}
+setDT(dager)
+dager <- melt(dager,
+            measure.vars = names(dager)[2:6],
+            id.vars = "year",
+            variable.name = "Region")
+```
+
+```{r}
+fig_dager <- ggplot(data = dager)+
+  geom_line(aes(x         = year, 
+                y         = value))+
+  ylab("Antall dager med nedbør")+
+  geom_hline(yintercept=0)+
+  geom_hline(data = dager_err, aes(yintercept=low), linetype=2)+
+  geom_hline(data = dager_err, aes(yintercept=upp), linetype=2)+
+  facet_wrap(.~Region)+
+  theme_bw(base_size = 20)
+```
+![](../output/paavirkningsindikatorer/dagerMedNedbør_tidsserie.png)
+
+Det er tydelig at antall dager med nedbør har økt, såpass mye at gjennomsnittet de siste fem årene på sør- og østlandet vill blitt kalt ekstremår i forrige normalperiode (over 2 standardavvik fra normalen.)
+
+# Eksporter figurer
+```{r}
+png("../output/paavirkningsindikatorer/årsnedbør_tidsserie.png", 
+    units="in", width=10, height=7, res=300)
+fig_nedbør
+dev.off()
+```
+```{r}
+png("../output/paavirkningsindikatorer/dagerMedNedbør_tidsserie.png", 
+    units="in", width=10, height=7, res=300)
+fig_dager
+dev.off()
+```
