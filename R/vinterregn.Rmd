@@ -111,20 +111,26 @@ ref$upp2 <- ref$upp-ref$value
 ```
 
 ```{r}
-ggplot(data = winterRain,
-       aes(x = year, y = diff))+
+tempdat <- winterRain
+tempdat$var <- sign(tempdat$diff)*sqrt(abs(tempdat$diff))
+tempdat$col <- ifelse(tempdat$var<0, "one", "two")
+
+ggplot(data = tempdat,
+       aes(x = year, y = var, fill = col))+
   geom_bar(stat="identity")+
   geom_hline(data = ref,
-        aes(yintercept = upp2),
+        aes(yintercept = sqrt(upp)),
         linetype=2)+
+  scale_fill_hue(l=70, c=60)+
   theme_bw()+
-  ylab("Vinterregn (mm)")+
+  ylab("Vinterregn avvik fra 1961-1990 (mm)")+
+  guides(fill="none")+
   facet_wrap( .~ factor(reg, levels = regOrder),
               ncol=2,
               scales = "free_y")
 
 ```
-Det ble ikke nå bedre tror jeg.
+Det ble bedre tror jeg.
 
 Det er uansett ingen endringer, men vi må fortsatt regne ut indikatorverdien. 
 
@@ -236,23 +242,24 @@ dev.off()
 ![](../output/indicatorPlots/vinterregn_boxplot.png)
 ```{r}
 
-
-myPlot2 <- ggplot(data = winterRain,
-       aes(x = year, y = value))+
+myPlot2 <- ggplot(data = tempdat,
+       aes(x = year, y = var, fill = col))+
   geom_bar(stat="identity")+
   geom_hline(data = ref,
-        aes(yintercept = value))+
-  geom_hline(data = ref,
-        aes(yintercept = upp),
+        aes(yintercept = sqrt(upp)),
         linetype=2)+
+  scale_fill_hue(l=70, c=60)+
   theme_bw(base_size = 20)+
-  ylab("Vinterregn (mm)")+
+  ylab("Vinterregn avvik fra 1961-1990 (mm)")+
   xlab("År")+
+  guides(fill="none")+
   facet_wrap( .~ factor(reg, levels = regOrder),
               ncol=1,
               scales = "free_y")
+  
+ 
 
-png("../output/indicatorPlots/vinterregn_uskalert_boxplot.png", 
+png("../output/indicatorPlots/vinterregn_normalisert_barplot.png", 
     units="in", width=5, height=12, res=300)
 myPlot2
 dev.off()
