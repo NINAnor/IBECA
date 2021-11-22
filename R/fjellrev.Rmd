@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Import
 
-Data er allerede hentet ned fra NI-databasen av Simon.
+Data er allerede hentet ned fra NI-databasen av Simon. 
 ```{r, eval =FALSE}
 fjellrev <- read_csv("output/indicator_values/fjellrev.csv")
 ```

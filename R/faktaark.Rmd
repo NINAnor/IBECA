@@ -163,6 +163,17 @@ tbl
 
 ```
 
+## NDVI
+
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/NDVI.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("NDVI")
+tbl
+
+```
+
 
 ## Smågnagere
 

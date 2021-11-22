@@ -18,5 +18,267 @@ library(knitr)
 library(DT)
 library(dplyr)
 library(ggplot2)
+library(readxl)
+library(data.table)
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+# Import
+
+```{r}
+winterRain <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/winterRain_med.xlsx")
+```
+
+```{r}
+winterRain$year <- as.numeric(winterRain$year)
+winterRain$reg  <- as.factor(winterRain$reg)
+```
+
+```{r}
+table(winterRain$reg)
+```
+
+```{r}
+ref <- aggregate(data = 
+      winterRain[winterRain$year %between% c(1961, 1990),],
+                 value~reg,
+                 FUN = mean)
+
+upp <- aggregate(data = 
+      winterRain[winterRain$year %between% c(1961, 1990),],
+                 value~reg,
+                 FUN = sd)
+upp$value <- upp$value*2
+ref$upp <- upp$value
+rm(upp)
+```
+
+# Trender
+
+```{r}
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Vestlandet",
+  "Østlandet",
+  "Sørlandet"
+             )
+```
+
+```{r}
+ggplot(data = winterRain,
+       aes(x = year, y = value))+
+  geom_bar(stat="identity")+
+  geom_hline(data = ref,
+        aes(yintercept = value))+
+  geom_hline(data = ref,
+        aes(yintercept = upp),
+        linetype=2)+
+  theme_bw()+
+  ylab("Vinterregn (mm)")+
+  facet_wrap( .~ factor(reg, levels = regOrder),
+              scales = "free_y",
+              ncol=2)
+
+```
+
+Stipplalinja er 2sd og den heltrukne linja er gjennomsnittet (av forrige normalperioden).
+
+Samme figur, men med log:
+```{r}
+ggplot(data = winterRain,
+       aes(x = year, y = log(value+1)))+
+  geom_bar(stat="identity")+
+  geom_hline(data = ref,
+        aes(yintercept = log(value+1)))+
+  geom_hline(data = ref,
+        aes(yintercept = log(upp+1)),
+        linetype=2)+
+  theme_bw()+
+  ylab("log(Vinterregn (mm))+1")+
+  ylim(c(0, 5))+
+  facet_wrap( .~ factor(reg, levels = regOrder),
+              ncol=2)
+
+```
+
+Vi kan også vise det som en avstand fra gjennomsnittet i referanseperioden.
+```{r}
+winterRain$ref <- ref$value[match(winterRain$reg, ref$reg)]
+winterRain$diff <- winterRain$value-winterRain$ref
+
+ref$upp2 <- ref$upp-ref$value
+```
+
+```{r}
+ggplot(data = winterRain,
+       aes(x = year, y = diff))+
+  geom_bar(stat="identity")+
+  geom_hline(data = ref,
+        aes(yintercept = upp2),
+        linetype=2)+
+  theme_bw()+
+  ylab("Vinterregn (mm)")+
+  facet_wrap( .~ factor(reg, levels = regOrder),
+              ncol=2,
+              scales = "free_y")
+
+```
+Det ble ikke nå bedre tror jeg.
+
+Det er uansett ingen endringer, men vi må fortsatt regne ut indikatorverdien. 
+
+Bootstrapping (60% uten tilbakelegging) av gjennomsnittlig vinterregn siset 5 år. 
+```{r}
+new <- winterRain[winterRain$year %between% c(2016, 2020),]
+
+regn <- data.frame(
+  reg = rep(levels(winterRain$reg), each = 10000),
+  year = 2020,
+  val = NA)
+
+for(n in levels(winterRain$reg)){
+  temp <- new[new$reg==n,]
+ for(i in 1:10000){
+   regn$val[i+10000*(which(levels(winterRain$reg)==n)-1)] <- 
+     mean(sample(temp$value, 3, replace=F))
+ }
+}
+```
+
+# Skalering
+Når mengden vinterregn øker går den skalerte verdien mot null, og blir null når den når 6 sd fra normalperioden (ganske virkårlig bestemt). Da blir GØT samtidig satt til 2sd, noe som gir mening og kan tolkes som grensverdien for hva man ville kallt ekstremvær under forrige normalperiode. 
+
+```{r}
+regn$ref <- ref$value[match(regn$reg, ref$reg)]
+regn$maks <- ref$upp[match(regn$reg, ref$reg)]*3
+
+
+
+# trunkerer 
+regn$valS <- ifelse(regn$val<regn$ref,
+                    regn$ref,
+                    regn$val)
+regn$valS <- ifelse(regn$valS>regn$maks,
+                    regn$maks,
+                    regn$valS)
+
+regn$valS <- 1-((regn$valS-regn$ref)/(regn$maks-regn$ref))
+```
+
+```{r}
+ggplot(data=regn, aes(x = valS))+
+  geom_histogram()+
+  facet_wrap(.~reg)
+```
+
+```{r}
+regn$valS[regn$reg=="Østlandet"] <- 1
+```
+
+
+
+# Arealvekting
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+```
+
+```{r}
+norge <- data.frame(
+  reg = rep("Norge", 10000),
+  year = 2020,
+  val = NA,
+  ref = NA,
+  maks = NA,
+  valS = NA
+)
+
+temp <- regn
+    
+temp2 <- c(
+      sample(temp$valS[temp$reg == "Nord-Norge"], wgt$Fjellareal2[wgt$reg == "N"]*10000, replace =T),
+      sample(temp$valS[temp$reg == "Østlandet"], wgt$Fjellareal2[wgt$reg == "E"]*10000, replace =T),
+      sample(temp$valS[temp$reg == "Vestlandet"], wgt$Fjellareal2[wgt$reg == "W"]*10000, replace =T),
+      sample(temp$valS[temp$reg == "Sørlandet"], wgt$Fjellareal2[wgt$reg == "S"]*10000, replace =T),
+      sample(temp$valS[temp$reg == "Midt-Norge"], wgt$Fjellareal2[wgt$reg == "C"]*10000, replace =T)
+    )
+
+temp3 <- sample(temp2, 10000, replace = F)
+norge$valS <- temp3
+regn <- rbind(regn, norge)
+```
+
+
+# Plotting
+
+
+```{r, warning=FALSE}
+regOrder2 <- c(regOrder, "Norge")
+myPlot <- ggplot(data = regn, 
+      aes(x = factor(reg, levels = regOrder2), 
+          y = valS))+
+  geom_boxplot(fill = "grey", lwd=1.2)+
+  ylim(c(0,1))+
+  ylab("Vinterregn skalert mot referanseverdi")+
+  xlab("")+
+  theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )
+
+png("../output/indicatorPlots/vinterregn_boxplot.png", 
+    units="in", width=10, height=7, res=300)
+myPlot
+dev.off()
+```
+![](../output/indicatorPlots/vinterregn_boxplot.png)
+```{r}
+
+
+myPlot2 <- ggplot(data = winterRain,
+       aes(x = year, y = value))+
+  geom_bar(stat="identity")+
+  geom_hline(data = ref,
+        aes(yintercept = value))+
+  geom_hline(data = ref,
+        aes(yintercept = upp),
+        linetype=2)+
+  theme_bw(base_size = 20)+
+  ylab("Vinterregn (mm)")+
+  xlab("År")+
+  facet_wrap( .~ factor(reg, levels = regOrder),
+              ncol=1,
+              scales = "free_y")
+
+png("../output/indicatorPlots/vinterregn_uskalert_boxplot.png", 
+    units="in", width=5, height=12, res=300)
+myPlot2
+dev.off()
+```
+![](../output/indicatorPlots/vinterregn_uskalert_boxplot.png)
+# Tabell
+
+```{r, echo=F}
+
+finalTbl <- aggregate(data=regn,
+          valS~year+reg,
+          FUN= function(x) round(
+            quantile(x, c(.025, .5, .975)), 2))
+
+finalTbl <- do.call(data.frame, finalTbl)
+names(finalTbl) <- c("year", "reg", "low", "med", "upp")
+
+DT::datatable(
+  finalTbl, 
+  extensions = "FixedColumns",
+  options = list(
+    scrollX = TRUE,
+    scrollY=T,
+    pageLength = 10
+  ))
+```
+
+
+
