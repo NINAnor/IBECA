@@ -147,6 +147,9 @@ nodes2$URL[nodes2$nodes== "Fjellrype"] <- "https://ninanor.github.io/IBECA/fakta
 nodes2$URL[nodes2$nodes== "NI for fjell"] <- "https://ninanor.github.io/IBECA/faktaark#naturindeks-for-fjell"
 nodes2$URL[nodes2$nodes== "Areal av isbreer"] <- "https://ninanor.github.io/IBECA/faktaark#areal-av-isbreer"
 nodes2$URL[nodes2$nodes== "Snømengde"] <- "https://ninanor.github.io/IBECA/faktaark#snømengde"
+nodes2$URL[nodes2$nodes== "Vinterregn"] <- "https://ninanor.github.io/IBECA/faktaark#vinterregn"
+nodes2$URL[nodes2$nodes== "NDVI"] <- "https://ninanor.github.io/IBECA/faktaark#NDVI"
+
 
 # Påvirkninger
 nodes2$URL[nodes2$nodes== "Beskatning"] <- 

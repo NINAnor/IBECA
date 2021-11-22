@@ -197,6 +197,16 @@ tbl <- get("Snømengde")
 tbl
 ```
 
+## Vinterregn
+
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/vinterregn.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Vinterregn")
+tbl
+```
+
 # Skog
 ...
 
