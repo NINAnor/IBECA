@@ -151,7 +151,7 @@ Når mengden vinterregn øker går den skalerte verdien mot null, og blir null n
 
 ```{r}
 regn$ref <- ref$value[match(regn$reg, ref$reg)]
-regn$maks <- ref$upp[match(regn$reg, ref$reg)]*3
+regn$maks <- ref$upp[match(regn$reg, ref$reg)]*2.5
 
 
 
