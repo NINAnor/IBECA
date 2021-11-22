@@ -264,7 +264,7 @@ png("../output/indicatorPlots/vinterregn_normalisert_barplot.png",
 myPlot2
 dev.off()
 ```
-![](../output/indicatorPlots/vinterregn_uskalert_boxplot.png)
+![](../output/indicatorPlots/vinterregn_normalisert_barplot.png)
 # Tabell
 
 ```{r, echo=F}
