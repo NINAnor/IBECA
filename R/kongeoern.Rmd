@@ -29,7 +29,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-## Analyser av kongeørnterritorier
+# Analyser av kongeørnterritorier
 Datasettet ligger på P:// som er en server på NINA.
 
 
@@ -242,6 +242,35 @@ expdat$val[expdat$reg == "E" |
 expdat$val[expdat$val>1] <- 1
 summary(expdat$val)
 ```
+# Arealvekting
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+```
+
+```{r}
+norge <- data.frame(
+  reg = rep("Norge", 10000),
+  year = 2019,
+  val = NA
+)
+
+temp <- expdat
+    
+temp2 <- c(
+      sample(temp$val[temp$reg == "N"], wgt$Fjellareal2[wgt$reg == "N"]*10000, replace =T),
+      sample(temp$val[temp$reg == "E"], wgt$Fjellareal2[wgt$reg == "E"]*10000, replace =T),
+      sample(temp$val[temp$reg == "W"], wgt$Fjellareal2[wgt$reg == "W"]*10000, replace =T),
+      sample(temp$val[temp$reg == "S"], wgt$Fjellareal2[wgt$reg == "S"]*10000, replace =T),
+      sample(temp$val[temp$reg == "C"], wgt$Fjellareal2[wgt$reg == "C"]*10000, replace =T)
+    )
+
+temp3 <- sample(temp2, 10000, replace = F)
+norge$val <- temp3
+expdat <- rbind(expdat, norge)
+```
+
 ```{r, eval=F}
 write.csv(expdat, "../output/indicator_values/kongeorn.csv")
 ```
