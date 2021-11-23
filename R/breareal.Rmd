@@ -466,7 +466,14 @@ breNorge$val <- sample(temp2, 10000, replace=T)
 breTbl <- rbind(breTbl, breNorge)
 
 ```
+# Eksport CSV
+```{r, eval=F}
+expdat <- dplyr::select(breTbl, reg, year, val)
+write.csv(expdat, "../output/indicator_values/breareal.csv")
+```
 
+
+# Plotting
 ```{r}
 eval(parse("indicator_plots2.R", encoding="UTF-8"))
 ```
