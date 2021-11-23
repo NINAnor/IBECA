@@ -55,7 +55,9 @@ rm(myPwd)
 
 Laster tilbake datasettet:
 ```{r, message=F}
-fjelldat <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-1990-2019.rds")
+#fjelldat <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-1990-2019.rds")
+
+fjelldat <- readRDS("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-1990-2019.rds")
 ```
 
 Liste over arter som inngår
@@ -99,7 +101,9 @@ rm(fjell_assemeble)
 
 Henter tilbake datasettet
 ```{r}
-fjell_assemeble <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble.rds")
+#fjell_assemeble <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble.rds")
+
+fjell_assemeble <- readRDS("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble.rds")
 ```
 
 
@@ -154,7 +158,9 @@ saveRDS(fjell_imputes, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastlands
 
 Henter tilbake datasettet
 ```{r}
-fjell_imputes <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes.rds")
+#fjell_imputes <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes.rds")
+
+fjell_imputes <- readRDS("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes.rds")
 ```
 
 
@@ -268,7 +274,9 @@ rm(myPwd)
 
 Laster tilbake datasettet:
 ```{r, message=F}
-fjelldat_red <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell_red_1990-2019.rds")
+#fjelldat_red <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell_red_1990-2019.rds")
+
+fjelldat_red <- readRDS("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell_red_1990-2019.rds")
 ```
 
 
@@ -289,7 +297,9 @@ rm(fjell_assemeble_red)
 ```
 
 ```{r}
-fjell_assemeble_red <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble_red_v2.rds")
+#fjell_assemeble_red <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble_red_v2.rds")
+
+fjell_assemeble_red <- readRDS("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellAssemble_red_v2.rds")
 ```
 
 
@@ -334,7 +344,9 @@ saveRDS(fjell_imputes_v2, "/data/P-Prosjekter/41201042_okologisk_tilstand_fastla
 
 Henter tilbake datasettet
 ```{r}
-fjell_imputes_v2 <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes_v2.rds")
+#fjell_imputes_v2 <- readRDS("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes_v2.rds")
+
+fjell_imputes_v2 <- readRDS("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjell-imputes_v2.rds")
 ```
 
 
@@ -361,6 +373,36 @@ fjellIndex2 <- NIcalc::calculateIndex(
 )
 ```
 
+Så lager jeg er dataframe med resultatene og eksporterer csv. 
+```{r, eval=F}
+
+NIunits <- names(fjellIndex2)
+myYears <- c("1990","2000","2010","2014","2019")
+
+IND_samp <- data.frame(reg  = rep(NIunits, each=length(myYears)*10000),
+                       year = rep(myYears, each=10000, times= length(NIunits)),
+                       val  = NA)
+
+for(i in 1:length(NIunits)){
+  for(n in 1:length(myYears)){
+    #print(i)
+    #print(n)
+    temp <- fjellIndex2[[i]][[n]]$index
+    IND_samp$val[IND_samp$reg == NIunits[i] &
+                    IND_samp$year == myYears[n]] <- temp
+    
+  }
+  
+}
+
+IND_samp$reg[IND_samp$reg=="wholeArea"] <- "Norge"
+
+head(IND_samp)
+```
+```{r, eval = F}
+write.csv(IND_samp, "../output/indicator_values/fjellindeks.csv", row.names = F)
+
+```
 
 Her er verdiene for hele landet og for regionene.
 ```{r}
@@ -423,7 +465,7 @@ DT::datatable(
     pageLength = 10
   ))
 ```
-Fra datasettet over så bare summerer jeg vektene per funskjonelle gruppe, osamt teller opp antall indikatorer per gruppe.
+Fra datasettet over så bare summerer jeg vektene per funskjonelle gruppe, samt teller opp antall indikatorer per gruppe.
 
 ```{r}
 par(mar=c(12,5,1,0),

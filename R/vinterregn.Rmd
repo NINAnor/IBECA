@@ -287,5 +287,10 @@ DT::datatable(
   ))
 ```
 
+# Export csv
+```{r, eval=F}
+exp <- dplyr::select(regn, reg, year, val = valS)
+write.csv(exp, "../output/indicator_values/vinterregn.csv", row.names = F)
+```
 
 
