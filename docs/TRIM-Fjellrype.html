@@ -1600,8 +1600,9 @@ div.tocify {
 </div>
 
 
-<div id="load-data" class="section level2">
-<h2>Load data</h2>
+<div id="last-inn-data" class="section level2">
+<h2>Last inn data</h2>
+<p>NB - Må kjøres på NINA sin Rstudio server</p>
 <pre class="r"><code># Connect to server and get trim results data (MUST BE RUN IN RSTUDIO ON NINA SERVER)
 # myconn &lt;- DBI::dbConnect(odbc::odbc(),
 #                          Driver   = &quot;FreeTDS&quot;,
@@ -1621,8 +1622,8 @@ div.tocify {
 # write.csv(Species, file = paste(getwd(), &quot;/Species.csv&quot;, sep =&quot;&quot;))
 # write.csv(TrimResults, file = paste(getwd(), &quot;/TrimResults.csv&quot;, sep =&quot;&quot;))</code></pre>
 </div>
-<div id="data-management" class="section level2">
-<h2>Data management</h2>
+<div id="databehandling" class="section level2">
+<h2>Databehandling</h2>
 <pre class="r"><code># Species table
 Species = read.csv(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/TRIM Fjellrype/Species.csv&quot;)
 Species = Species %&gt;% filter(ArtsID == 1540)
@@ -1646,8 +1647,8 @@ fjellrype_info = Species %&gt;% dplyr::select(ArtsID, Artsnavn_Norsk) %&gt;% ren
 fjellrype = left_join(TrimResults, fjellrype_info, by = &quot;Species&quot;)
 fjellrype = left_join(fjellrype, trimdata_orig, by = c(&quot;Site&quot;))</code></pre>
 </div>
-<div id="run-trim-function" class="section level2">
-<h2>Run TRIM function</h2>
+<div id="kjør-trim-funksjonen" class="section level2">
+<h2>Kjør TRIM funksjonen</h2>
 <pre class="r"><code># Fjellrype - 1540
 fjellNord = fjellrype %&gt;% filter(region == &quot;nord&quot;)
 fjellMidt = fjellrype %&gt;% filter(region == &quot;midt&quot;)
@@ -1655,14 +1656,16 @@ fjellOst = fjellrype %&gt;% filter(region == &quot;øst&quot;)
 fjellVest = fjellrype %&gt;% filter(region == &quot;vest&quot;)
 fjellSor = fjellrype %&gt;% filter(region == &quot;sør&quot;)
 
-# Run trim for species Storfugl
+# Run trim
 fjellNordMod = trim(Count ~ Site + Year, data = fjellNord, model = 2, changepoints = &quot;all&quot;, stepwise = FALSE, serialcor = TRUE, overdisp = TRUE)
 fjellMidtMod = trim(Count ~ Site + Year, data = fjellMidt, model = 2, changepoints = &quot;all&quot;, stepwise = FALSE, serialcor = TRUE, overdisp = TRUE)
 fjellOstMod = trim(Count ~ Site + Year, data = fjellOst, model = 2, changepoints = &quot;all&quot;, stepwise = FALSE, serialcor = TRUE, overdisp = TRUE)
 fjellVestMod = trim(Count ~ Site + Year, data = fjellVest, model = 2, changepoints = &quot;all&quot;, stepwise = FALSE, serialcor = TRUE, overdisp = TRUE)
-fjellSorMod = trim(Count ~ Site + Year, data = fjellSor, model = 2, changepoints = &quot;all&quot;, stepwise = FALSE, serialcor = TRUE, overdisp = TRUE)
-
-# Create the index table
+fjellSorMod = trim(Count ~ Site + Year, data = fjellSor, model = 2, changepoints = &quot;all&quot;, stepwise = FALSE, serialcor = TRUE, overdisp = TRUE)</code></pre>
+</div>
+<div id="lag-fjellrype-indekstabellen" class="section level2">
+<h2>Lag fjellrype indekstabellen</h2>
+<pre class="r"><code># Create the index table
 fjellTab = data.frame(matrix(data = c(&quot;fjellrype&quot;, 1540), nrow = 1, ncol = 2, dimnames = list(c(), c(&quot;Species&quot;, &quot;SpeciesID&quot;))))
 fjellTab = fjellTab[rep(1:nrow(fjellTab), rep(c(5), dim(fjellTab)[1])), ]
 fjellTab1 = fjellTab %&gt;% mutate(Rectype = 1, &quot;2010&quot; = 0, &quot;2011&quot; = 0, &quot;2012&quot; = 0, &quot;2013&quot; = 0, &quot;2014&quot; = 0, &quot;2015&quot; = 0, &quot;2016&quot; = 0, &quot;2017&quot; = 0, &quot;2018&quot; = 0, &quot;2019&quot; = 0, &quot;2020&quot; = 0, Region = rep(c(&quot;nord&quot;, &quot;midt&quot;, &quot;øst&quot;, &quot;vest&quot;, &quot;sør&quot;), 1), Slope_add = 0, Slope_add_se = 0, Slope_mul = 0, Slope_mul_se = 0, p_trend = 0, Trend_class = 0)
@@ -1707,9 +1710,11 @@ fjellTab4[1, 4:14] = rypeNordTot$se_imp
 fjellTab4[2, 4:14] = rypeNordTot$se_imp
 fjellTab4[3, 4:14] = rypeNordTot$se_imp
 fjellTab4[4, 4:14] = rypeNordTot$se_imp
-fjellTab4[5, 4:14] = rypeNordTot$se_imp
-
-# For loop that gets the additive and multiplicative slopes, as well as the trend class for each model
+fjellTab4[5, 4:14] = rypeNordTot$se_imp</code></pre>
+</div>
+<div id="for-løkke-for-å-få-additiv-multiplikativ-og-trend-klassen-for-hver-modell" class="section level2">
+<h2>For-løkke for å få additiv, multiplikativ og trend klassen for hver modell</h2>
+<pre class="r"><code># For loop that gets the additive and multiplicative slopes, as well as the trend class for each model
 model_list = list(fjellNordMod, fjellMidtMod, fjellOstMod, fjellVestMod, fjellSorMod)
 
 tmp_add = c()
@@ -1738,52 +1743,115 @@ fjellTab_df = rbind(fjellTab1, fjellTab2, fjellTab3, fjellTab4)
 fjellTab_df = fjellTab_df %&gt;% arrange(factor(Region, levels = c(&quot;nord&quot;, &quot;midt&quot;, &quot;øst&quot;, &quot;vest&quot;, &quot;sør&quot;)))
 
 fjellTab_df[, 4:14] = round(fjellTab_df[, 4:14], digits = 3)
+fjellTab_df[, 16:20] = round(fjellTab_df[, 16:20], digits = 3)
 
+fjellTab_df = fjellTab_df %&gt;% mutate(Slope_add = ifelse(Rectype != 1, NA, Slope_add), Slope_add_se = ifelse(Rectype != 1, NA, Slope_add_se), Slope_mul = ifelse(Rectype != 1, NA, Slope_mul), Slope_mul_se = ifelse(Rectype != 1, NA, Slope_mul_se), p_trend = ifelse(Rectype != 1, NA, p_trend), Trend_class = ifelse(Rectype != 1, NA, Trend_class))
 
-storf_df[, 18:22] = round(storf_df[, 18:22], digits = 3)
-storf_df = storf_df %&gt;% mutate(n_tot = ifelse(Rectype != 1, NA, n_tot), Slope_add = ifelse(Rectype != 1, NA, Slope_add), Slope_add_se = ifelse(Rectype != 1, NA, Slope_add_se), Slope_mul = ifelse(Rectype != 1, NA, Slope_mul), Slope_mul_se = ifelse(Rectype != 1, NA, Slope_mul_se), p_trend = ifelse(Rectype != 1, NA, p_trend), Trend_class = ifelse(Rectype != 1, NA, Trend_class))
+fjellTab_df[1:8,]</code></pre>
+<pre><code>##        Species SpeciesID Rectype 2010    2011   2012   2013    2014    2015
+## 1    fjellrype      1540       1    1   1.951  1.357  1.709   2.376   2.212
+## 11   fjellrype      1540       2    0   0.994  0.664  0.842   1.133   1.010
+## 12   fjellrype      1540       3   58 113.000 79.000 99.000 138.000 129.000
+## 13   fjellrype      1540       4   26  29.000 18.000 23.000  27.000  16.000
+## 1.1  fjellrype      1540       1    1   1.621  2.317  0.750   1.798   1.782
+## 1.11 fjellrype      1540       2    0   1.078  1.462  0.528   1.139   1.144
+## 1.12 fjellrype      1540       3   17  27.000 38.000 12.000  30.000  29.000
+## 1.13 fjellrype      1540       4   26  29.000 18.000 23.000  27.000  16.000
+##         2016    2017   2018    2019   2020 Region Slope_add Slope_add_se
+## 1      2.317   2.478  1.565   1.716  1.652   nord     0.029        0.026
+## 11     1.049   1.126  0.719   0.790  0.784   nord        NA           NA
+## 12   135.000 144.000 91.000 100.000 96.000   nord        NA           NA
+## 13    16.000  18.000 12.000  14.000 17.000   nord        NA           NA
+## 1.1    3.263   2.543  3.034   1.993  2.446   midt     0.083        0.034
+## 1.11   2.006   1.580  1.866   1.286  1.519   midt        NA           NA
+## 1.12  54.000  42.000 50.000  33.000 40.000   midt        NA           NA
+## 1.13  16.000  18.000 12.000  14.000 17.000   midt        NA           NA
+##      Slope_mul Slope_mul_se p_trend                Trend_class
+## 1        1.029        0.027   0.298                  Uncertain
+## 11          NA           NA      NA                       &lt;NA&gt;
+## 12          NA           NA      NA                       &lt;NA&gt;
+## 13          NA           NA      NA                       &lt;NA&gt;
+## 1.1      1.087        0.037   0.036 Moderate increase (p&lt;0.05)
+## 1.11        NA           NA      NA                       &lt;NA&gt;
+## 1.12        NA           NA      NA                       &lt;NA&gt;
+## 1.13        NA           NA      NA                       &lt;NA&gt;</code></pre>
+<pre class="r"><code># Export the index and totals table
+# write_xlsx(fjellTab_df, path = &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/TRIM Fjellrype/fjellrypeIndex.xlsx&quot;)</code></pre>
+</div>
+<div id="bootstrapping" class="section level2">
+<h2>Bootstrapping</h2>
+<p>Lag en bootstrapping for-løkke som sampler lognormale indeksverdier og standardavvik for å finne gjennomsnittlig indeks for hvert år.</p>
+<pre class="r"><code>### Take the mean of 10000 samples for fjellrype in each region
+lnorm_fjellNord = normal2Lognormal(fjellTab1[1, 4:14], fjellTab2[1, 4:14])
+lnorm_fjellMidt = normal2Lognormal(fjellTab1[2, 4:14], fjellTab2[2, 4:14])
+lnorm_fjellOst = normal2Lognormal(fjellTab1[3, 4:14], fjellTab2[3, 4:14])
+lnorm_fjellVest = normal2Lognormal(fjellTab1[4, 4:14], fjellTab2[4, 4:14])
+lnorm_fjellSor = normal2Lognormal(fjellTab1[5, 4:14], fjellTab2[5, 4:14])
 
-# Export the index and totals table
-# write_xlsx(storf_df, path = &quot;/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/Tables/storfugl_30_12_2020.xlsx&quot;)
+fjellNordSmp = c()
+fjellMidtSmp = c()
+fjellOstSmp = c()
+fjellVestSmp = c()
+fjellSorSmp = c()
 
-### Take the mean of 10000 samples for all species in each region
-lnorm_storf_c = normal2Lognormal(storf_tab1[1, 7:16], storf_tab2[1, 7:16])
-lnorm_storf_sw = normal2Lognormal(storf_tab1[2, 7:16], storf_tab2[2, 7:16])
-lnorm_storf_e = normal2Lognormal(storf_tab1[3, 7:16], storf_tab2[3, 7:16])
-
-storf_c_smp = c()
-storf_sw_smp = c()
-storf_e_smp = c()
+tmp1 = c()
 tmp2 = c()
 tmp3 = c()
 tmp4 = c()
+tmp5 = c()
 k = 10000
-for(i in 1:length(unique(storf_c$Year))){
+for(i in 1:length(unique(fjellNord$Year))){
   for(j in 1:k){
-      tmp2 = append(tmp2, rlnorm(n = 1, meanlog = lnorm_storf_c$mean[[i]], 
-                                              sdlog = lnorm_storf_c$sd[[i]]))
+      tmp1 = append(tmp1, rlnorm(n = 1, meanlog = lnorm_fjellNord$mean[[i]],
+                                 sdlog = lnorm_fjellNord$sd[[i]]))
       
-      tmp3 = append(tmp3, rlnorm(n = 1, meanlog = lnorm_storf_sw$mean[[i]], 
-                                                sdlog = lnorm_storf_sw$sd[[i]]))
+      tmp2 = append(tmp2, rlnorm(n = 1, meanlog = lnorm_fjellMidt$mean[[i]],
+                                 sdlog = lnorm_fjellMidt$sd[[i]]))
       
-      tmp4 = append(tmp4, rlnorm(n = 1, meanlog = lnorm_storf_e$mean[[i]], 
-                                              sdlog = lnorm_storf_e$sd[[i]]))
-    storf_c_smp = append(storf_c_smp, mean(tmp2))
-    storf_sw_smp = append(storf_sw_smp, mean(tmp3))
-    storf_e_smp = append(storf_e_smp, mean(tmp4))
-    tmp2 = c()
-    tmp3 = c()
-    tmp4 = c()
+      tmp3 = append(tmp3, rlnorm(n = 1, meanlog = lnorm_fjellOst$mean[[i]],
+                                 sdlog = lnorm_fjellOst$sd[[i]]))
+      
+      tmp4 = append(tmp4, rlnorm(n = 1, meanlog = lnorm_fjellVest$mean[[i]],
+                                 sdlog = lnorm_fjellVest$sd[[i]]))
+      
+      tmp5 = append(tmp5, rlnorm(n = 1, meanlog = lnorm_fjellSor$mean[[i]],
+                                 sdlog = lnorm_fjellSor$sd[[i]]))
+      
+      fjellNordSmp = append(fjellNordSmp, mean(tmp1))
+      fjellMidtSmp = append(fjellMidtSmp, mean(tmp2))
+      fjellOstSmp = append(fjellOstSmp, mean(tmp3))
+      fjellVestSmp = append(fjellVestSmp, mean(tmp4))
+      fjellSorSmp = append(fjellSorSmp, mean(tmp5))
+      
+      tmp1 = c()
+      tmp2 = c()
+      tmp3 = c()
+      tmp4 = c()
+      tmp5 = c()
   }
 }
 
-storf_c_smp = matrix(data = storf_c_smp, nrow = k, ncol = length(unique(storf_c$Year)), dimnames = list(c(), c(as.character(2011:2020))))
-storf_sw_smp = matrix(data = storf_sw_smp, nrow = k, ncol = length(unique(storf_sw$Year)), dimnames = list(c(), c(as.character(2011:2020))))
-storf_e_smp = matrix(data = storf_e_smp, nrow = k, ncol = length(unique(storf_e$Year)), dimnames = list(c(), c(as.character(2011:2020))))
+fjellNordSmp = matrix(data = fjellNordSmp, nrow = k, ncol = length(unique(fjellNord$Year)), dimnames = list(c(), c(as.character(2010:2020))))
+fjellMidtSmp = matrix(data = fjellMidtSmp, nrow = k, ncol = length(unique(fjellMidt$Year)), dimnames = list(c(), c(as.character(2010:2020)))) 
+fjellOstSmp = matrix(data = fjellOstSmp, nrow = k, ncol = length(unique(fjellOst$Year)), dimnames = list(c(), c(as.character(2010:2020))))
+fjellVestSmp = matrix(data = fjellVestSmp, nrow = k, ncol = length(unique(fjellVest$Year)), dimnames = list(c(), c(as.character(2010:2020))))
+fjellSorSmp = matrix(data = fjellSorSmp, nrow = k, ncol = length(unique(fjellSor$Year)), dimnames = list(c(), c(as.character(2010:2020))))
 
-# Mean of the 1000 samples for the 8 species in each region in the conifer forest ecosystem 
-storf_smp_mean = rbind(colMeans(storf_c_smp), colMeans(storf_sw_smp), colMeans(storf_e_smp))
-storf_smp_mean = as_tibble(storf_smp_mean) %&gt;% mutate(Region = c(&quot;central&quot;, &quot;southwest&quot;, &quot;east&quot;))</code></pre>
+# Mean of the 10000 samples 
+fjellSmpMean = rbind(colMeans(fjellNordSmp), colMeans(fjellMidtSmp), colMeans(fjellOstSmp), colMeans(fjellVestSmp), colMeans(fjellSorSmp))
+fjellSmpMean = as_tibble(fjellSmpMean) %&gt;% mutate(Region = c(&quot;nord&quot;, &quot;midt&quot;, &quot;øst&quot;, &quot;vest&quot;, &quot;sør&quot;))
+
+head(fjellSmpMean)</code></pre>
+<pre><code>## # A tibble: 5 x 12
+##   `2010` `2011` `2012` `2013` `2014` `2015` `2016` `2017` `2018` `2019` `2020`
+##    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1      1  1.94    1.34  1.71   2.39    2.22  2.30   2.46   1.57   1.70    1.65
+## 2      1  1.62    2.33  0.743  1.80    1.75  3.28   2.52   3.04   2.01    2.46
+## 3      1  3.33    1.85  1.17   6.84    3.14  8.33   3.64   2.89   4.01    4.23
+## 4      1  0.287   1.43  0.775  1.04    1.37  0.751  1.28   1.44   1.07    1.30
+## 5      1  1.17    1.29  0.515  0.506   1.86  0.279  0.532  0.716  0.453   2.40
+## # ... with 1 more variable: Region &lt;chr&gt;</code></pre>
+<pre class="r"><code>#write_xlsx(fjellSmpMean, path = &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/TRIM Fjellrype/fjellrypeSmpMean.xlsx&quot;)</code></pre>
 </div>
 
 
