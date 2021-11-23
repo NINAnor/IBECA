@@ -196,6 +196,56 @@ scaled
 saveRDS(scaled, "../output/kongeorn_scaledOutput.Rda")
 ```
 
+# Eksporterer bootstrapped datasett
+```{r}
+scaled$scaledLow-scaled$scaledMean
+```
+
+```{r}
+scaled$scaledMean-scaled$scaledHigh
+```
+Dette viser oss at usikkerheten ikke er summetrisk rundt estimatet. 
+Jeg må jeg gjøre en forrenkling og si at den er det allikevel.
+
+```{r}
+sdsør <- (scaled$scaledHigh[1]-scaled$scaledMean[1])/2
+
+test <- rnorm(100, 
+      mean = scaled$scaledMean[1], 
+      sd=sdsør)
+quantile(test, c(0.025, 0.5, 0.975))
+```
+Disse tallene ligner veldig på de usikkerheten som Jenny leverte. 
+```{r}
+sdnord <- (scaled$scaledHigh[2]-scaled$scaledMean[2])/2
+print(c(sdnord, sdsør))
+```
+
+
+```{r}
+
+expdat <- data.frame(
+  reg = rep(c("N", "C", "E", "W", "S"), each=10000),
+  year = 2019,
+  val = NA
+  )
+expdat$val[expdat$reg == "N" | expdat$reg == "C"] <-
+  rnorm(20000, 
+      mean = scaled$scaledMean[scaled$Region=="Nord-Norge"], 
+      sd=sdnord)
+expdat$val[expdat$reg == "E" | 
+             expdat$reg == "W" |
+             expdat$reg == "S"] <-
+  rnorm(30000, 
+      mean = scaled$scaledMean[scaled$Region=="Sør-Norge"], 
+      sd=sdsør)
+expdat$val[expdat$val>1] <- 1
+summary(expdat$val)
+```
+```{r, eval=F}
+write.csv(expdat, "../output/indicator_values/kongeorn.csv")
+```
+
 
 ## Spørring mot NI-databasen
 Denne opperasjonen er litt overflødig nå, men her gjør jeg en spørring mot NIdatabasen for å se mer nøyaktig hva som ligger der.
