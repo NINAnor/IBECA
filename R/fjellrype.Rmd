@@ -261,7 +261,36 @@ ggplot(data=finalTbl, aes(x = year, y = med, group = reg, linetype=reg, colour=r
   scale_x_continuous(breaks=c(2010, 2015, 2020))+
   xlab("")
 ```
+Og en versjon til
+```{r}
+gg <- ggplot(data = finalTbl, aes(x = year, y = med))+
+  geom_line(size=1.2, colour="grey30")+
+  geom_errorbar(aes(ymax=upp, ymin=low), size = .8, 
+                colour="grey30",
+                alpha=0.6,
+                width=0.5)+
+  theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )+
+  scale_x_continuous(breaks = c(2010, 2012, 2014, 2016, 2018, 2020))+
+  ylab("Fjellrypebestand\nskalert mot referanseverdi")+
+  xlab("")+
+  facet_wrap(.~reg)
 
+```
+
+```{r, eval=F}
+png("../output/indicatorPlots/fjellrype_facet.png", 
+    units="in", width=12, height=7, res=300)
+
+gg
+
+dev.off()
+```
+![](../output/indicatorPlots/fjellrype_facet.png)
+
+Som alltid, errorbars er 95%CI.
 
 # Eksporter csv
 
