@@ -249,9 +249,14 @@ fjellSorSmp = matrix(data = fjellSorSmp, nrow = k, ncol = length(unique(fjellSor
 # Mean of the 10000 samples 
 fjellSmpMean = rbind(colMeans(fjellNordSmp), colMeans(fjellMidtSmp), colMeans(fjellOstSmp), colMeans(fjellVestSmp), colMeans(fjellSorSmp))
 fjellSmpMean = as_tibble(fjellSmpMean) %>% mutate(Region = c("nord", "midt", "øst", "vest", "sør"))
-
 head(fjellSmpMean)
-#write_xlsx(fjellSmpMean, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/TRIM Fjellrype/fjellrypeSmpMean.xlsx")
+
+fjellSmp = rbind(fjellNordSmp, fjellMidtSmp, fjellOstSmp, fjellVestSmp, fjellSorSmp)
+fjellSmp = as_tibble(fjellSmp) %>% mutate(Region = c(rep("nord", 10000), rep("midt", 10000), rep("øst", 10000), rep("vest", 10000), rep("sør", 10000)))
+head(fjellSmp)
+
+# write_xlsx(fjellSmpMean, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/TRIM Fjellrype/fjellrypeSmpMean.xlsx")
+# write_xlsx(fjellSmp, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/TRIM Fjellrype/fjellrypeSmp.xlsx")
 
 ```
 
