@@ -111,15 +111,16 @@ ref$upp2 <- ref$upp-ref$value
 ```
 
 ```{r}
-tempdat <- winterRain
-tempdat$var <- sign(tempdat$diff)*sqrt(abs(tempdat$diff))
-tempdat$col <- ifelse(tempdat$var<0, "one", "two")
+#tempdat <- winterRain
+#tempdat$var <- sign(tempdat$diff)*sqrt(abs(tempdat$diff))
+#tempdat$col <- ifelse(tempdat$var<0, "one", "two")
+winterRain$col <- ifelse(winterRain$diff<0, "one", "two")
 
-ggplot(data = tempdat,
-       aes(x = year, y = var, fill = col))+
+ggplot(data = winterRain,
+       aes(x = year, y = diff, fill = col))+
   geom_bar(stat="identity")+
   geom_hline(data = ref,
-        aes(yintercept = sqrt(upp)),
+        aes(yintercept = upp),
         linetype=2)+
   scale_fill_hue(l=70, c=60)+
   theme_bw()+
@@ -130,8 +131,7 @@ ggplot(data = tempdat,
               scales = "free_y")
 
 ```
-Det ble bedre tror jeg.
-
+Det ble bedre tror jeg. men det er mange nuller i dette datasettet.
 Det er uansett ingen endringer, men vi må fortsatt regne ut indikatorverdien. 
 
 Bootstrapping (60% uten tilbakelegging) av gjennomsnittlig vinterregn siset 5 år. 
@@ -153,7 +153,7 @@ for(n in levels(winterRain$reg)){
 ```
 
 # Skalering
-Når mengden vinterregn øker går den skalerte verdien mot null, og blir null når den når 6 sd fra normalperioden (ganske virkårlig bestemt). Da blir GØT samtidig satt til 2sd, noe som gir mening og kan tolkes som grensverdien for hva man ville kallt ekstremvær under forrige normalperiode. 
+Når mengden vinterregn øker går den skalerte verdien mot null, og blir null når den når 5 sd fra normalperioden (ganske virkårlig bestemt). Da blir GØT samtidig satt til 2sd, noe som gir mening og kan tolkes som grensverdien for hva man ville kallt ekstremvær under forrige normalperiode. 
 
 ```{r}
 regn$ref <- ref$value[match(regn$reg, ref$reg)]
@@ -242,16 +242,15 @@ dev.off()
 ![](../output/indicatorPlots/vinterregn_boxplot.png)
 ```{r}
 
-myPlot2 <- ggplot(data = tempdat,
-       aes(x = year, y = var, fill = col))+
+myPlot2 <- ggplot(data = winterRain,
+       aes(x = year, y = diff, fill = col))+
   geom_bar(stat="identity")+
   geom_hline(data = ref,
-        aes(yintercept = sqrt(upp)),
+        aes(yintercept = upp),
         linetype=2)+
   scale_fill_hue(l=70, c=60)+
-  theme_bw(base_size = 20)+
+  theme_bw()+
   ylab("Vinterregn avvik fra 1961-1990 (mm)")+
-  xlab("År")+
   guides(fill="none")+
   facet_wrap( .~ factor(reg, levels = regOrder),
               ncol=1,
