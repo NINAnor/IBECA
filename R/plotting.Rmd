@@ -70,6 +70,17 @@ manual steps required due to different data structures
 
 ### Breareal
 ```{r}
+alien <- read.csv("../output/indicator_values/alien.csv", header=T)
+
+alien$period <- 
+  periods$period[match(alien$year, periods$year)]
+
+alien$X <- "alien"
+
+```
+
+### Breareal
+```{r}
 breareal <- read.csv("../output/indicator_values/breareal.csv", header=T)
 
 breareal$period <- 
