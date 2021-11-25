@@ -60,6 +60,7 @@ write.csv(periods, "../output/periods.csv")
 # Step 2: 
 load and adjust indicator data
 
+# List files
 List files with bootstrapped indicator values
 ```{r}
 list.files(path = "../output/indicator_values/",
@@ -68,7 +69,7 @@ list.files(path = "../output/indicator_values/",
 ## Load and adjust data headings etc. 
 manual steps required due to different data structures
 
-### Breareal
+### Alien
 ```{r}
 alien <- read.csv("../output/indicator_values/alien.csv", header=T)
 
@@ -89,6 +90,31 @@ breareal$period <-
 breareal$X <- "breareal"
 
 ```
+
+### Ellenberg L
+Her bruker jeg for nå bare den øvre-skalerte indikatoren siden denne har flest ruter, [se her](tilrettelegge.html).
+```{r}
+EllLH <- read.csv("../output/indicator_values/ell_L_high.csv", header=T)
+
+EllLH$period <- 
+  periods$period[match(EllLH$year, periods$year)]
+
+EllLH$X <- "EllLH"
+
+```
+
+### Ellenberg N
+Her bruker jeg for nå bare den nedre-skalerte indikatoren siden denne har flest ruter, [se her](tilrettelegge.html).
+```{r}
+EllNN <- read.csv("../output/indicator_values/ell_N_low.csv", header=T)
+
+EllNN$period <- 
+  periods$period[match(EllNN$year, periods$year)]
+
+EllNN$X <- "EllLH"
+
+```
+
 
 ### Fjellindeks
 ```{r}
@@ -111,6 +137,19 @@ fjellrev$X <- "fjellrev"
 table(fjellrev$reg, fjellrev$period)
 ```
 
+### Fjellrype
+Her må jeg skjekke litt. 
+```{r}
+#fjellrype <- read.csv("../output/indicator_values/fjellrype.csv", header=T)
+
+```
+
+### Heat req
+Her må jeg skjekke litt. 
+```{r}
+#heat <- read.csv("../output/indicator_values/heat_req.csv", header=T)
+
+```
 
 ### INON
 [INON](inon.html) har ingen usikkerhet knyttet til seg. 
@@ -140,6 +179,29 @@ kongeorn$period <-
 kongeorn$X <- "kongeørn"
 ```
 
+
+### NDVI
+```{r}
+ndvi <- read.csv("../output/indicator_values/ndvi.csv", header=T)
+unique(ndvi$reg)
+ndvi$year <- 2020
+ndvi$period <- 
+  periods$period[match(ndvi$year, periods$year)]
+
+ndvi$X <- "ndvi"
+ndvi <- select(ndvi, -X.1)
+```
+
+
+### Snødekke
+```{r}
+snodekke <- read.csv("../output/indicator_values/snodekke.csv", header=T)
+snodekke$X <-  "snodekke"
+snodekke$period <- 
+  periods$period[match(snodekke$year, periods$year)]
+table(snodekke$reg, snodekke$period)
+```
+
 ### Smågnagere
 ```{r}
 smaagnagere <- read.csv("../output/indicator_values/smågnagere.csv", header=T)
@@ -148,7 +210,6 @@ smaagnagere$period <-
   periods$period[match(smaagnagere$year, periods$year)]
 table(smaagnagere$reg, smaagnagere$period)
 ```
-
 ### Vinterregn
 ```{r}
 vinterregn <- read.csv("../output/indicator_values/vinterregn.csv", header=T)
@@ -172,32 +233,33 @@ vinterregn$reg <- plyr::revalue(vinterregn$reg,
 
 # Step 3: Combine datasets
 
-Starting with fjellindeks
-```{r}
-allind <- fjellindeks
-```
-
-I'm just going to do this for the last period and not bother with the time series
-```{r}
-allind <- allind[allind$period==6,]
-```
-
 ```{r}
 # Periods to use
-periods_use <- unlist(unique(allind$period))
+periods_use <- 6
 ```
+
 Subset additional data
 ```{r}
-fjellrev <- fjellrev[fjellrev$period%in%periods_use,]
-inon     <- inon[inon$period%in%periods_use,]
-jerv     <- jerv[jerv$period%in%periods_use,]
-smaagnagere <- smaagnagere[smaagnagere$period%in%periods_use,]
-vinterregn <- vinterregn[vinterregn$period%in%periods_use,]
-
-kongeorn <- kongeorn[kongeorn$period%in%periods_use,]
-
-breareal <- breareal[breareal$period%in%periods_use,]
+alien        <- alien[alien$period%in%periods_use,]
+breareal     <- breareal[breareal$period%in%periods_use,]
+EllLH        <- EllLH[EllLH$period%in%periods_use,]
+EllNN        <- EllNN[EllNN$period%in%periods_use,]
+fjellindeks  <- fjellindeks[fjellindeks$period%in%periods_use,]
+fjellrev     <- fjellrev[fjellrev$period%in%periods_use,]
+inon         <- inon[inon$period%in%periods_use,]
+jerv         <- jerv[jerv$period%in%periods_use,]
+kongeorn     <- kongeorn[kongeorn$period%in%periods_use,]
+ndvi         <- ndvi[ndvi$period%in%periods_use,]
+smaagnagere  <- smaagnagere[smaagnagere$period%in%periods_use,]
+snodekke     <- snodekke[snodekke$period%in%periods_use,]
+vinterregn   <- vinterregn[vinterregn$period%in%periods_use,]
 ```
+
+## Weights
+
+adding later
+
+
 
 ## Order data
 
@@ -207,43 +269,86 @@ regOrder = c("C","N","W", "S", "E","Norge")
 ```
 
 ```{r}
-fjellindeks <- fjellindeks %>%
-  arrange(match(reg, regOrder), desc(period))
+alien <- alien %>%
+  arrange(match(reg, regOrder), desc(period)) %>%
+  select(X, reg, period, val)
+
+alien <- alien %>%
+  arrange(match(reg, regOrder), desc(period)) %>%
+  select(X, reg, period, val)
 
 breareal <- breareal %>%
-  arrange(match(reg, regOrder), desc(period))
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
-kongeorn <- kongeorn %>%
-  arrange(match(reg, regOrder), desc(period))
+EllLH <- EllLH %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
+EllNN <- EllNN %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+fjellindeks <- fjellindeks %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
 fjellrev <- fjellrev %>%
-  arrange(match(reg, regOrder), desc(period))
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+# fjellrype
+
+# heat req
 
 inon <- inon %>%
-  arrange(match(reg, regOrder), desc(period))
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
 jerv <- jerv %>%
-  arrange(match(reg, regOrder), desc(period))
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+kongeorn <- kongeorn %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+ndvi <- ndvi %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+snodekke <- snodekke %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
 smaagnagere <- smaagnagere %>%
-  arrange(match(reg, regOrder), desc(period))
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
 vinterregn <- vinterregn %>%
-  arrange(match(reg, regOrder), desc(period))
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
 ```
 
 ## Add additional data to allind data
 ```{r}
-allind <- rbind(allind, 
-                 fjellrev,
-                 inon,
-                 jerv,
-                 smaagnagere,
-                 vinterregn,
-                kongeorn,
-                breareal)
+allind <- rbind( 
+  alien,
+  breareal,
+  EllLH,
+  EllNN,
+  fjellindeks,
+  fjellrev,
+  #fjellrype,
+  #heat,
+  inon,
+  jerv,
+  kongeorn,
+  ndvi,
+  snodekke,
+  smaagnagere,
+  vinterregn)
 table(allind$X)
 ```
 
@@ -254,6 +359,7 @@ The number of re-samplings differs.
 write.csv(allind, "../output/allind_temp.csv")
 ```
 
+
 Here Simon added reduced weighting to indiactors with both high and low scaling methods. I will do this only if neccessary.
 
 # Step 4: Fill indicator <-> characteristics matrix
@@ -261,8 +367,10 @@ Here Simon added reduced weighting to indiactors with both high and low scaling 
 Empty indicator <-> character matrix 
 ```{r}
 # Specify total number of indicators (incl. double counting of two-sided)
-nind <- 8 
+nind <- length(unique(allind$X))
+``` 
 
+```{r}
 ind_char <- data.frame(matrix(nrow=nind, ncol=8))
 names(ind_char) <- c("IND", characteristics)
 ```
@@ -307,7 +415,8 @@ ind_char$fgw <- ifelse(
 
 # Structurally important species and biophysical structures
 ind_char$isf <- ifelse(
-  ind_char$IND=="smaagnagere"
+  ind_char$IND=="smaagnagere"|
+  ind_char$IND=="alien"  
     ,
                        1,0)
 
@@ -326,11 +435,11 @@ ind_char$lsp <- ifelse(
 
 # Abiotic factors
 ind_char$abf <- ifelse(
-  ind_char$IND=="ellenbergN"|
-  ind_char$IND=="ellenbergL"|
+  ind_char$IND=="EllNN"|
+  ind_char$IND=="EllLH"|
   ind_char$IND=="breareal"|
   ind_char$IND=="snømengde"|
-  ind_char$IND=="snøvarighet"|
+  ind_char$IND=="snodekke"|
   ind_char$IND=="vinterregn"
     ,
                        1,0)
@@ -346,60 +455,294 @@ write.csv(ind_char, "../output/ind_char.csv")
 # Step 5: Indicator quantiles per region and period
 
 ```{r}
-#unique(allind$X[allind$reg=="Sørlandet"])
+#unique(allind$X[allind$reg=="A"])
 
 periods <- unlist(unique(allind$period))
 regions <- unlist(unique(allind$reg))
-all_Q <- data.frame()
 per_reg <- length(periods)*length(regions)
 ```
 
 ```{r}
-for (i in 4:ncol(allind)) {
-  temp_ind <- allind[,c(1:3,i)]
+all_Q <- data.frame()
+
+for(n in unique(allind$X)){
+  temp <- allind[allind$X == n,]
   
-  for (j in 1:length(periods)){
-    
-    temp_ind2 <- subset(temp_ind, a_period==periods[j])
-    
+  td <- aggregate(data = temp,
+                  val~X+reg+period,
+                  FUN = function(x) c(quantile(x, c(0.025, .5, 0.975))))
+  td <- do.call(data.frame, td)
+  names(td) <- c("ind", "reg", "per", "low", "med", "upp")
+  all_Q <- rbind(all_Q, td)
+  
+}
+```
+
+
+# Step 6: Aggregated characteristic calculations
+
+```{r}
+agg_ind <- data.frame()
+w_boot <- data.frame()
+nsim<- 100
+```
+
+```{r}
+for (n in 1:length(characteristics)){
+  
+  
+  
+  # Select by ind_char data frame
+  temp_char <- cbind(ind_char$IND, ind_char[names(ind_char)%in%characteristics[n]])
+  temp_char <- temp_char[temp_char[,2]==1,]
+  
+  temp_ind <- allind[allind$X %in% temp_char$`ind_char$IND`,]
+  
+# Here Simon had a for loop for subsetting period, but I only ise one period 
+  
     for (k in 1:length(regions)){
+
       
-      # Subset region, and delete reg/per columns
-      temp_ind3 <- subset(temp_ind2, a_reg==regions[k])
       
-      ind <- names(temp_ind3)[4]
+      temp_ind3 <- subset(temp_ind, reg==regions[k])
+      
+      # Simon use a wide format, but thats not so good when the number of rows differ between indicators
+
+      
+      # weights
+      #temp_weights <- weights[weights$a_reg==regions[k],]
+      #temp_weights <- temp_weights[temp_weights$a_period==periods[j],]
+      #temp_weights <- temp_weights[,names(temp_weights)%in%names(temp_ind3)]
+      #temp_weights[is.na(temp_weights)] <- 0
+      #temp_weights <- decostand(temp_weights, method="total", margin =1)
+      
+      # check?
+      #(names(temp_ind3)==names(temp_weights))
+      
+      # Truncate values
+      #temp_ind3[temp_ind3>1] <- 1
+      
+      
+      # Empty sample mean vector
+      #temp_x_boot <- NULL
+      
+      #for (m in 1:nsim){ # make 10 000
+        
+        # Empty sample values vector  
+        temp_x <- NULL
+        temp_x2 <- NULL
+        
+        for (i in 1:length(unique(temp_ind3$X))) {
+          
+          print(paste(
+            characteristics[n],
+            regions[k],
+            unique(temp_ind3$X)[i]))
+          
+  
+          # Sample from indicator i
+          start <- length(temp_x)
+          
+          temp_x[(start+1):(start+nsim)] <- 
+            tryCatch(
+            sample(
+             temp_ind3$val[temp_ind3$X == unique(temp_ind3$X)[i]], 
+              nsim, replace = T), 
+               error=function(e){})
+          
+          temp_x2[(start+1):(start+nsim)] <- unique(temp_ind3$X)[i]
+          
+        } 
+        
+       temp_x3 <- as.data.frame(cbind(val=temp_x, 
+                                      ind =temp_x2))
+       setDT(temp_x3)
+       temp_x3$sim <- rep(1:nsim, times=length(unique(temp_ind3$X)))
+       temp_x3$val <- as.numeric(temp_x3$val)
+       temp_x3 <- data.table::dcast(temp_x3,
+                                    sim~ind,
+                                    value.var="val")
+       
+        x_boot <- rowMeans(temp_x3[,-1])
+        #x_boot2 <- ifelse(is.null(x_boot), NA, x_boot)
+        
+      
+      
+      # Info data
+      chr <- characteristics[n]
       reg <- regions[k]
-      per <- periods[j]
+      #per <- periods[j]
       
-      if(ind=="deer_scaled"){ 
-        
-        (if(mean(temp_ind3[,4])>1){
-          
-          temp_ind3[,4] <- (2-temp_ind3[,4])
-          temp_ind3[,4][temp_ind3[,4]<0] <- 0
-          
-          ind <- "deer_scaled_upper"
-          
-        } else {
-          temp_ind3[,4] <- temp_ind3[,4]
-          ind <- "deer_scaled_lower"
-        })
-      } else {
-        
-        NULL
-        
-      }
+      w_boot <- rbind(w_boot, data.frame(chr, reg, x_boot))
       
-      temp_Q <- tryCatch(quantile(temp_ind3[,4],c(0.025, 0.5, 0.975)), error=function(e){})
-      all_Q <- rbind(all_Q, data.frame(ind, reg, per, 
-                                       ifelse(is.null(temp_Q), NA, temp_Q[1]),
-                                       ifelse(is.null(temp_Q), NA, temp_Q[2]),
-                                       ifelse(is.null(temp_Q), NA, temp_Q[3]))) 
+      # Quantiles
+      temp_Q <- tryCatch(quantile(x_boot,c(0.025, 0.5, 0.975)), error=function(e){})
+      
+      # Compile data
+      agg_ind <- rbind(agg_ind, data.frame(chr, reg,
+                                           ifelse(is.null(temp_Q), NA, temp_Q[1]),
+                                           ifelse(is.null(temp_Q), NA, temp_Q[2]),
+                                           ifelse(is.null(temp_Q), NA, temp_Q[3]))) 
+    
     }
-  }
 }
 
-names(all_Q) <- c("ind", "reg", "per", "low", "med", "upp")
-
+# Rename columns
+names(agg_ind) <- c("ind", "reg", "low", "med", "upp")
+names(w_boot)[3] <- c("val")
 ```
+
+
+# Step 7: Aggregated total calculations
+
+
+```{r}
+
+nsim <- 100
+regions <- unlist(unique(allind$reg))
+char_w <- unlist(unique(w_boot$chr))
+tot_ind <- data.frame()
+tot_ind_w <- data.frame()
+#per_reg <- length(periods)*length(regions)
+weights_all <- data.frame()
+  # Subset period
+
+  temp_ind2 <- allind
+  temp_chr2 <- w_boot
+  
+  for (k in 1:length(regions)){
+    
+    # Subset region
+    temp_ind3 <- subset(temp_ind2, reg==regions[k])
+    temp_chr3 <- subset(temp_chr2, reg==regions[k])
+    
+  #  temp_ind3 <- temp_ind3[,-(1:3)]
+    
+   # # weights
+   # temp_weights <- weights[weights$a_reg==regions[k],]
+   # temp_weights <- temp_weights[temp_weights$a_period==periods[j],]
+   # temp_weights <- temp_weights[,names(temp_weights)%in%names(temp_ind3)]
+   # temp_weights[is.na(temp_weights)] <- 0
+   # temp_weights <- decostand(temp_weights, method="total", margin =1)
+#
+   # # check?
+   # (names(temp_ind3)==names(temp_weights))
+    
+   
+    
+    # Empty sample mean vector
+    temp_x_boot <- NULL
+    temp_chr_boot <- NULL
+    
+      
+      # Empty sample values vector  
+      temp_x <- NULL
+      temp_x2 <- NULL
+      
+      for (i in 1:length(unique(temp_ind3$X))) {
+        
+        # Sample from indicator i
+        print(paste(regions[k],
+                    unique(temp_ind3$X)[i]))
+        
+        start <- length(temp_x)
+          
+          temp_x[(start+1):(start+nsim)] <- 
+            tryCatch(
+            sample(
+             temp_ind3$val[temp_ind3$X == unique(temp_ind3$X)[i]], 
+              nsim, replace = T), 
+               error=function(e){})
+          
+          temp_x2[(start+1):(start+nsim)] <- unique(temp_ind3$X)[i]
+      } 
+      
+      temp_x3 <- as.data.frame(cbind(val=temp_x, 
+                                      ind =temp_x2))
+       setDT(temp_x3)
+       temp_x3$sim <- rep(1:nsim, times=length(unique(temp_ind3$X)))
+       temp_x3$val <- as.numeric(temp_x3$val)
+       temp_x3 <- data.table::dcast(temp_x3,
+                                    sim~ind,
+                                    value.var="val")
+       
+        x_boot <- rowMeans(temp_x3[,-1])
+        
+    # Mean of all indicators (weighted)
+      #x_boot <- tryCatch(weighted.mean(x=na.omit(temp_x), w=temp_weights[temp_weights!=0]), error=function(e){})
+      #x_boot <- ifelse(is.null(x_boot), NA, x_boot)
+      #temp_x_boot[m] <- x_boot
+      
+      # Empty sample values vector  
+      temp_chr <- NULL
+      temp_chrX <- NULL
+
+      for (n in 1:length(char_w)) {
+        temp_chr4 <- subset(temp_chr3, chr==char_w[n])
+        
+        # Sample from indicator i
+        #temp_chr[n] <- tryCatch(sample(temp_chr4$val, 1), error=function(e){})
+        
+        
+         start2 <- length(temp_chr)
+          
+          temp_chr[(start2+1):(start2+nsim)] <- 
+            tryCatch(
+            sample(
+             temp_chr4$val, 
+              nsim, replace = T), 
+               error=function(e){})
+          
+          temp_chrX[(start2+1):(start2+nsim)] <- char_w[n]
+          
+      } 
+      
+      temp_chr3 <- as.data.frame(cbind(val=temp_chr, 
+                                      chr =temp_chrX))
+       setDT(temp_chr3)
+       
+       temp_chr3$sim <- rep(1:nsim, times=length(char_w))
+       temp_chr3$val <- as.numeric(temp_chr3$val)
+       temp_chr3 <- data.table::dcast(temp_chr3,
+                                    sim~chr,
+                                    value.var="val")
+       
+        temp_chr_boot <- rowMeans(temp_chr3[,-1])
+     
+      
+      # Characteristic mean (unweighted)
+      #temp_chr_boot[m] <- mean(na.omit(temp_chr)) 
+    
+    
+    # Info data
+    tot <- "Total"
+    #totw <- "Total_w"
+    reg <- regions[k]
+    #per <- periods[j]
+
+    #weights_all <- rbind(weights_all, data.frame(reg, per, temp_weights))
+    
+    # Quantiles
+    temp_Q <- tryCatch(quantile(x_boot,c(0.025, 0.5, 0.975)), error=function(e){})
+    temp_Qw <- tryCatch(quantile(temp_chr_boot,c(0.025, 0.5, 0.975)), error=function(e){})
+    
+    # Compile data
+    tot_ind <- rbind(tot_ind, data.frame(tot, reg, 
+                                         ifelse(is.null(temp_Q), NA, temp_Q[1]),
+                                         ifelse(is.null(temp_Q), NA, temp_Q[2]),
+                                         ifelse(is.null(temp_Q), NA, temp_Q[3])))
+    
+    tot_ind_w <- rbind(tot_ind_w, data.frame(totw, reg, 
+                                             ifelse(is.null(temp_Qw), NA, temp_Qw[1]),
+                                             ifelse(is.null(temp_Qw), NA, temp_Qw[2]),
+                                             ifelse(is.null(temp_Qw), NA, temp_Qw[3]))) 
+  
+}
+
+# Rename columns
+names(tot_ind) <- c("ind", "reg",  "low", "med", "upp")
+names(tot_ind_w) <- c("ind", "reg",  "low", "med", "upp")
+```
+
+
 

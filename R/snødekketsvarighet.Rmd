@@ -104,7 +104,7 @@ gg <- ggplot(data = dat,
        aes(x = year2, y = diff))+
   scale_fill_hue(l=70, c=60)+
   theme_bw(base_size = 20)+
-  ylab("Snødekkets varighet\navvik fra 1961-1990 (mm)")+
+  ylab("Snødekkets varighet\ndagers avvik fra 1961-1990")+
   xlab("")+
   theme(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
@@ -122,11 +122,11 @@ dev.off()
 ```
 ![](../output/indicatorPlots/snødekkets varighet tiddserie.png)
 
-Stipplalinja er 2sd under forrige normalperioden.
+Stiplalinja er 2sd under forrige normalperioden.
 
 
 
-Bootstrapping (60% uten tilbakelegging) av gjennomsnittlig vinterregn siset 5 år. 
+Bootstrapping (60% uten tilbakelegging) av gjennomsnittlig vinterregn siste 5 år. 
 ```{r}
 new <- dat[dat$year2 %between% c(2016, 2020),]
 round(tapply(new$diff, new$reg, FUN = mean), 1)
