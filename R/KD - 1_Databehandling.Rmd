@@ -625,6 +625,67 @@ Total mengde nedbør (mm) for dager med temperatur > 2$^\circ$C i perioden Janua
 
 ```
 
+### 1.8 Snødybde 
+Gjennomsnittlig snødybde (mm) i perioden Desember - Mai.
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Set up for parallel run 
+rm(list = ls())
+UseCores = 12 
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
+
+# List files in R:/ directory
+setwd("/home/NINA.NO/markus.israelsen/Mounts/")
+AllFilesInSD = list.files("/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd", full.names = TRUE, pattern = ".bil$")
+
+# Define years
+uniq_y = c(1957:2020) 
+
+# Define months
+uniq_m = c("12", "01", "02", "03", "04", "05") # Des - May
+
+# Subsetting the dataset by selecting only the months we are interested in (all years)
+SampleMonths = foreach(i = 1:length(AllFilesInSD), .combine = c, .packages = c("doParallel", "raster")) %dopar% {
+  if((substring(AllFilesInSD[i], first = nchar(AllFilesInSD[i])-8, last = nchar(AllFilesInSD[i])-7)) %in% uniq_m){ # if the month in line "i" is one of the months we are interested in, append that line to SampleMonths
+    AllFilesInSD[i] 
+  }
+}
+
+# Calculating the number of days with snow cover for each year
+snowDepth_all_years = list()
+
+snowDepth_all_years = foreach(i = 2:length(uniq_y), .packages = c("doParallel","raster", "rlist")) %dopar% {
+
+  snowDepth_year = SampleMonths[grepl(paste("sd", uniq_y[i]-1, 12, sep = "_"), SampleMonths, fixed = TRUE)]
+  
+  snowDepth_year = list.append(snowDepth_year, SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[2], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[3], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[4], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[5], sep = "_"), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste("sd", uniq_y[i], uniq_m[6], sep = "_"), SampleMonths, fixed = TRUE)])
+  
+  snowDepth_year = stack(snowDepth_year)
+  snowDepth_all_years[[i-1]] = stackApply(stack(snowDepth_year), c(1), fun = mean)
+  
+}
+
+# Stacking the years to one raster stack
+snowDepth_all_years = stack(snowDepth_all_years) 
+
+layerNames = c()
+for(i in 1:length(uniq_y)){
+  layerNames = append(layerNames, paste(substring(uniq_y[i], first = nchar(uniq_y[i])-1, last = nchar(uniq_y[i])), substring(uniq_y[i+1], first = nchar(uniq_y[i+1])-1, last = nchar(uniq_y[i+1])), sep="-"))
+}
+layerNames = layerNames[1:(length(uniq_y)-1)]
+names(snowDepth_all_years) = layerNames # Name by years
+
+# Rasterstack directory; 
+RasterLocation <- paste("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", paste(paste("sd_snowdepth", uniq_y[1], uniq_y[length(uniq_y)], sep = "_"),".grd", sep = ""), sep = "")
+
+# Write raster
+writeRaster(snowDepth_all_years, RasterLocation, format="raster", overwrite = TRUE)
+
+stopImplicitCluster()
+
+```
+
 
 ## 2. Google Earth Engine (GEE)
 Beregn antall "fjellpixler" og legg layer til infrastruktur raster (Må kjøres i GEE).
@@ -850,6 +911,12 @@ rDir_vrCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell
 vrCon = stack(paste(rDir_vrCon, "sd_vr_1957_2020.grd", sep=""))
 crs(vrCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
 writeRaster(vrCon, paste(rDir_vrCon, "sd_vr_utm_1957_2020.grd", sep = ""), format = "GTiff", overwrite = TRUE)
+
+# Snødybde
+rDir_sdCon = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/"
+sdCon = stack(paste(rDir_sdCon, "sd_snowdepth_1957_2020.grd", sep = ""))
+crs(sdCon) = CRS("+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs")
+writeRaster(sdCon, paste(rDir_sdCon, "snowDepth_utm_1957_2020.grd", sep = ""), format = "GTiff", overwrite = TRUE)
 
 ```
 
@@ -1971,6 +2038,101 @@ writeRaster(winterRainMountCount_region5, RasterLocation_r5, format = "raster", 
 
 ```
 
+### 5.8 Beregne antall fjellpixler i hver "snowDepth" rasterpixel for hver region og slå de to lagene sammen til en raster
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Snow depth region 1
+snowDepth_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region1.tif$")
+snowDepth_region1 = stack(snowDepth_region1) 
+snowD_region1 = list()
+for(i in 1:nlayers(snowDepth_region1)){
+  snowD_region1[[i]] = overlay(snowDepth_region1[[i]], mountCount_region1_red, fun = function(x, y){
+    x[y <= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region1 = stack(snowD_region1)
+snowDepthMountCount_region1 = addLayer(snowD_region1, mountCount_region1_red)
+winterSeason = c(1957:2020)
+wS = c()
+for(i in 2:length(winterSeason)){
+  wS = append(wS, paste(substr(x = winterSeason[i-1], start = 3, stop = 4), substr(x = winterSeason[i], start = 3, stop = 4), sep = "-"))
+}
+names(snowDepthMountCount_region1) = c(wS, "mountCount") 
+
+# Winter rain region 2
+snowDepth_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region2.tif$")
+snowDepth_region2 = stack(snowDepth_region2) 
+snowD_region2 = list()
+for(i in 1:nlayers(snowDepth_region2)){
+  snowD_region2[[i]] = overlay(snowDepth_region2[[i]], MCount_region2_red, fun = function(x, y){
+    x[y <= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region2 = stack(snowD_region2)
+snowDepthMountCount_region2 = addLayer(snowD_region2, MCount_region2_red) 
+names(snowDepthMountCount_region2) = c(wS, "mountCount") 
+
+# Winter rain region 3
+snowDepth_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region3.tif$")
+snowDepth_region3 = stack(snowDepth_region3) 
+snowD_region3 = list()
+for(i in 1:nlayers(snowDepth_region3)){
+  snowD_region3[[i]] = overlay(snowDepth_region3[[i]], MCount_region3_red, fun = function(x, y){
+    x[y <= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region3 = stack(snowD_region3)
+snowDepthMountCount_region3 = addLayer(snowD_region3, MCount_region3_red) 
+names(snowDepthMountCount_region3) = c(wS, "mountCount")
+
+# Winter rain region 4
+snowDepth_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region4.tif$")
+snowDepth_region4 = stack(snowDepth_region4) 
+snowD_region4 = list()
+for(i in 1:nlayers(snowDepth_region4)){
+  snowD_region4[[i]] = overlay(snowDepth_region4[[i]], mountCount_region4_red, fun = function(x, y){
+    x[y <= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region4 = stack(snowD_region4)
+snowDepthMountCount_region4 = addLayer(snowD_region4, mountCount_region4_red) 
+names(snowDepthMountCount_region4) = c(wS, "mountCount")
+
+# Winter rain region 5
+snowDepth_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region5.tif$")
+snowDepth_region5 = stack(snowDepth_region5) 
+snowD_region5 = list()
+for(i in 1:nlayers(snowDepth_region5)){
+  snowD_region5[[i]] = overlay(snowDepth_region5[[i]], mountCount_region5_red, fun = function(x, y){
+    x[y <= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region5 = stack(snowD_region5)
+snowDepthMountCount_region5 = addLayer(snowD_region5, mountCount_region5_red) 
+names(snowDepthMountCount_region5) = c(wS, "mountCount")
+
+
+# Export the raster
+RasterLocation_r1 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", paste(paste("snowDepthMountCount_region1", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r2 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", paste(paste("snowDepthMountCount_region2", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r3 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", paste(paste("snowDepthMountCount_region3", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r4 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", paste(paste("snowDepthMountCount_region4", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+RasterLocation_r5 = paste("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", paste(paste("snowDepthMountCount_region5", 1957, 2020, sep = "_"), ".grd", sep = ""), sep = "")
+
+
+# Write Raster
+writeRaster(snowDepthMountCount_region1, RasterLocation_r1, format = "raster", overwrite = TRUE)
+writeRaster(snowDepthMountCount_region2, RasterLocation_r2, format = "raster", overwrite = TRUE)
+writeRaster(snowDepthMountCount_region3, RasterLocation_r3, format = "raster", overwrite = TRUE)
+writeRaster(snowDepthMountCount_region4, RasterLocation_r4, format = "raster", overwrite = TRUE)
+writeRaster(snowDepthMountCount_region5, RasterLocation_r5, format = "raster", overwrite = TRUE)
+
+```
+
 
 ## 6 Medianverdi
 ### 6.1 Beregne medianen for hvert år for sum nedbør
@@ -3041,7 +3203,6 @@ write_xlsx(growthSeason_val, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020
 ### 6.7 Beregne medianen for hvert år for vinterregn
 ```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
 
-
 # Region 1
 winterRainMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
 winterRainMountCount_region1 = stack(winterRainMountCount_region1)
@@ -3198,5 +3359,79 @@ write_xlsx(winterRain_val, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_d
 
 ```
 
+### 6.8 Beregne medianen for hvert år for snødybde
+```{r, echo = TRUE, warnings = FALSE, message = FALSE, eval = FALSE}
+
+# Region 1
+snowDepthMountCount_region1 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region1_1957_2020.grd")[1]
+snowDepthMountCount_region1 = stack(snowDepthMountCount_region1)
+years = c(1:63)
+winterSeason = c(1957:2020)
+ws = c()
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region1[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = "-"))
+}
+snowDepth_val = data.frame(matrix(c(rep("Nord-Norge", 63), rep("Snødybde", 63), rep("mm", 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c("reg", "variable", "unit", "year", "value")
+colnames(snowDepth_val) = columnNames
+
+# Region 2
+snowDepthMountCount_region2 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region2_1957_2020.grd")[1]
+snowDepthMountCount_region2 = stack(snowDepthMountCount_region2)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region2[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region2 = data.frame(matrix(c(rep("Midt-Norge", 63), rep("Snødybde", 63), rep("mm", 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c("reg", "variable", "unit", "year", "value")
+colnames(snowDepth_val_region2) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region2)
+
+# Region 3
+snowDepthMountCount_region3 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region3_1957_2020.grd")[1]
+snowDepthMountCount_region3 = stack(snowDepthMountCount_region3)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region3[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region3 = data.frame(matrix(c(rep("Østlandet", 63), rep("Snødybde", 63), rep("mm", 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c("reg", "variable", "unit", "year", "value")
+colnames(snowDepth_val_region3) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region3)
+
+# Region 4
+snowDepthMountCount_region4 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region4_1957_2020.grd")[1]
+snowDepthMountCount_region4 = stack(snowDepthMountCount_region4)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region4[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region4 = data.frame(matrix(c(rep("Vestlandet", 63), rep("Snødybde", 63), rep("mm", 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c("reg", "variable", "unit", "year", "value")
+colnames(snowDepth_val_region4) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region4)
+
+# Region 5
+snowDepthMountCount_region5 = list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/", full.names = TRUE, pattern = "region5_1957_2020.grd")[1]
+snowDepthMountCount_region5 = stack(snowDepthMountCount_region5)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region5[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region5 = data.frame(matrix(c(rep("Sørlandet", 63), rep("Snødybde", 63), rep("mm", 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c("reg", "variable", "unit", "year", "value")
+colnames(snowDepth_val_region5) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region5)
+
+write_xlsx(snowDepth_val, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/snowDepth_med.xlsx")
+
+```
 
 

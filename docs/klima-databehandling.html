@@ -2171,6 +2171,64 @@ stopImplicitCluster()</code></pre>
   
   stopImplicitCluster()</code></pre>
 </div>
+<div id="snødybde" class="section level3">
+<h3>1.8 Snødybde</h3>
+<p>Gjennomsnittlig snødybde (mm) i perioden Desember - Mai.</p>
+<pre class="r"><code># Set up for parallel run 
+rm(list = ls())
+UseCores = 12 
+cl = makeCluster(UseCores)
+registerDoParallel(cl)
+
+# List files in R:/ directory
+setwd(&quot;/home/NINA.NO/markus.israelsen/Mounts/&quot;)
+AllFilesInSD = list.files(&quot;/data/R/GeoSpatialData/Meteorology/Norway_SeNorge/Original/sd&quot;, full.names = TRUE, pattern = &quot;.bil$&quot;)
+
+# Define years
+uniq_y = c(1957:2020) 
+
+# Define months
+uniq_m = c(&quot;12&quot;, &quot;01&quot;, &quot;02&quot;, &quot;03&quot;, &quot;04&quot;, &quot;05&quot;) # Des - May
+
+# Subsetting the dataset by selecting only the months we are interested in (all years)
+SampleMonths = foreach(i = 1:length(AllFilesInSD), .combine = c, .packages = c(&quot;doParallel&quot;, &quot;raster&quot;)) %dopar% {
+  if((substring(AllFilesInSD[i], first = nchar(AllFilesInSD[i])-8, last = nchar(AllFilesInSD[i])-7)) %in% uniq_m){ # if the month in line &quot;i&quot; is one of the months we are interested in, append that line to SampleMonths
+    AllFilesInSD[i] 
+  }
+}
+
+# Calculating the number of days with snow cover for each year
+snowDepth_all_years = list()
+
+snowDepth_all_years = foreach(i = 2:length(uniq_y), .packages = c(&quot;doParallel&quot;,&quot;raster&quot;, &quot;rlist&quot;)) %dopar% {
+
+  snowDepth_year = SampleMonths[grepl(paste(&quot;sd&quot;, uniq_y[i]-1, 12, sep = &quot;_&quot;), SampleMonths, fixed = TRUE)]
+  
+  snowDepth_year = list.append(snowDepth_year, SampleMonths[grepl(paste(&quot;sd&quot;, uniq_y[i], uniq_m[2], sep = &quot;_&quot;), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste(&quot;sd&quot;, uniq_y[i], uniq_m[3], sep = &quot;_&quot;), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste(&quot;sd&quot;, uniq_y[i], uniq_m[4], sep = &quot;_&quot;), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste(&quot;sd&quot;, uniq_y[i], uniq_m[5], sep = &quot;_&quot;), SampleMonths, fixed = TRUE)], SampleMonths[grepl(paste(&quot;sd&quot;, uniq_y[i], uniq_m[6], sep = &quot;_&quot;), SampleMonths, fixed = TRUE)])
+  
+  snowDepth_year = stack(snowDepth_year)
+  snowDepth_all_years[[i-1]] = stackApply(stack(snowDepth_year), c(1), fun = mean)
+  
+}
+
+# Stacking the years to one raster stack
+snowDepth_all_years = stack(snowDepth_all_years) 
+
+layerNames = c()
+for(i in 1:length(uniq_y)){
+  layerNames = append(layerNames, paste(substring(uniq_y[i], first = nchar(uniq_y[i])-1, last = nchar(uniq_y[i])), substring(uniq_y[i+1], first = nchar(uniq_y[i+1])-1, last = nchar(uniq_y[i+1])), sep=&quot;-&quot;))
+}
+layerNames = layerNames[1:(length(uniq_y)-1)]
+names(snowDepth_all_years) = layerNames # Name by years
+
+# Rasterstack directory; 
+RasterLocation &lt;- paste(&quot;/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, paste(paste(&quot;sd_snowdepth&quot;, uniq_y[1], uniq_y[length(uniq_y)], sep = &quot;_&quot;),&quot;.grd&quot;, sep = &quot;&quot;), sep = &quot;&quot;)
+
+# Write raster
+writeRaster(snowDepth_all_years, RasterLocation, format=&quot;raster&quot;, overwrite = TRUE)
+
+stopImplicitCluster()</code></pre>
+</div>
 </div>
 <div id="google-earth-engine-gee" class="section level2">
 <h2>2. Google Earth Engine (GEE)</h2>
@@ -2392,7 +2450,13 @@ writeRaster(vCon, paste(rDir_vCon, &quot;sd_gw_utm_1957_2020.grd&quot;, sep = &q
 rDir_vrCon = &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot; 
 vrCon = stack(paste(rDir_vrCon, &quot;sd_vr_1957_2020.grd&quot;, sep=&quot;&quot;))
 crs(vrCon) = CRS(&quot;+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs&quot;)
-writeRaster(vrCon, paste(rDir_vrCon, &quot;sd_vr_utm_1957_2020.grd&quot;, sep = &quot;&quot;), format = &quot;GTiff&quot;, overwrite = TRUE)</code></pre>
+writeRaster(vrCon, paste(rDir_vrCon, &quot;sd_vr_utm_1957_2020.grd&quot;, sep = &quot;&quot;), format = &quot;GTiff&quot;, overwrite = TRUE)
+
+# Snødybde
+rDir_sdCon = &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;
+sdCon = stack(paste(rDir_sdCon, &quot;sd_snowdepth_1957_2020.grd&quot;, sep = &quot;&quot;))
+crs(sdCon) = CRS(&quot;+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs&quot;)
+writeRaster(sdCon, paste(rDir_sdCon, &quot;snowDepth_utm_1957_2020.grd&quot;, sep = &quot;&quot;), format = &quot;GTiff&quot;, overwrite = TRUE)</code></pre>
 </div>
 <div id="begrense-klimavariablene-til-de-ulike-regionene-i-norge-må-kjøres-i-gee." class="section level2">
 <h2>4. Begrense klimavariablene til de ulike regionene i Norge (Må kjøres i GEE).</h2>
@@ -3484,688 +3548,1374 @@ writeRaster(winterRainMountCount_region3, RasterLocation_r3, format = &quot;rast
 writeRaster(winterRainMountCount_region4, RasterLocation_r4, format = &quot;raster&quot;, overwrite = TRUE)
 writeRaster(winterRainMountCount_region5, RasterLocation_r5, format = &quot;raster&quot;, overwrite = TRUE)</code></pre>
 </div>
+<div id="beregne-antall-fjellpixler-i-hver-snowdepth-rasterpixel-for-hver-region-og-slå-de-to-lagene-sammen-til-en-raster" class="section level3">
+<h3>5.8 Beregne antall fjellpixler i hver “snowDepth” rasterpixel for hver region og slå de to lagene sammen til en raster</h3>
+<pre class="r"><code># Snow depth region 1
+snowDepth_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region1.tif$&quot;)
+snowDepth_region1 = stack(snowDepth_region1) 
+snowD_region1 = list()
+for(i in 1:nlayers(snowDepth_region1)){
+  snowD_region1[[i]] = overlay(snowDepth_region1[[i]], mountCount_region1_red, fun = function(x, y){
+    x[y &lt;= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region1 = stack(snowD_region1)
+snowDepthMountCount_region1 = addLayer(snowD_region1, mountCount_region1_red)
+winterSeason = c(1957:2020)
+wS = c()
+for(i in 2:length(winterSeason)){
+  wS = append(wS, paste(substr(x = winterSeason[i-1], start = 3, stop = 4), substr(x = winterSeason[i], start = 3, stop = 4), sep = &quot;-&quot;))
+}
+names(snowDepthMountCount_region1) = c(wS, &quot;mountCount&quot;) 
+
+# Winter rain region 2
+snowDepth_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region2.tif$&quot;)
+snowDepth_region2 = stack(snowDepth_region2) 
+snowD_region2 = list()
+for(i in 1:nlayers(snowDepth_region2)){
+  snowD_region2[[i]] = overlay(snowDepth_region2[[i]], MCount_region2_red, fun = function(x, y){
+    x[y &lt;= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region2 = stack(snowD_region2)
+snowDepthMountCount_region2 = addLayer(snowD_region2, MCount_region2_red) 
+names(snowDepthMountCount_region2) = c(wS, &quot;mountCount&quot;) 
+
+# Winter rain region 3
+snowDepth_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region3.tif$&quot;)
+snowDepth_region3 = stack(snowDepth_region3) 
+snowD_region3 = list()
+for(i in 1:nlayers(snowDepth_region3)){
+  snowD_region3[[i]] = overlay(snowDepth_region3[[i]], MCount_region3_red, fun = function(x, y){
+    x[y &lt;= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region3 = stack(snowD_region3)
+snowDepthMountCount_region3 = addLayer(snowD_region3, MCount_region3_red) 
+names(snowDepthMountCount_region3) = c(wS, &quot;mountCount&quot;)
+
+# Winter rain region 4
+snowDepth_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region4.tif$&quot;)
+snowDepth_region4 = stack(snowDepth_region4) 
+snowD_region4 = list()
+for(i in 1:nlayers(snowDepth_region4)){
+  snowD_region4[[i]] = overlay(snowDepth_region4[[i]], mountCount_region4_red, fun = function(x, y){
+    x[y &lt;= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region4 = stack(snowD_region4)
+snowDepthMountCount_region4 = addLayer(snowD_region4, mountCount_region4_red) 
+names(snowDepthMountCount_region4) = c(wS, &quot;mountCount&quot;)
+
+# Winter rain region 5
+snowDepth_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region5.tif$&quot;)
+snowDepth_region5 = stack(snowDepth_region5) 
+snowD_region5 = list()
+for(i in 1:nlayers(snowDepth_region5)){
+  snowD_region5[[i]] = overlay(snowDepth_region5[[i]], mountCount_region5_red, fun = function(x, y){
+    x[y &lt;= 21000] = NA; x # Use only cells that consist of more than 50% mountain
+  })
+}
+snowD_region5 = stack(snowD_region5)
+snowDepthMountCount_region5 = addLayer(snowD_region5, mountCount_region5_red) 
+names(snowDepthMountCount_region5) = c(wS, &quot;mountCount&quot;)
+
+
+# Export the raster
+RasterLocation_r1 = paste(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, paste(paste(&quot;snowDepthMountCount_region1&quot;, 1957, 2020, sep = &quot;_&quot;), &quot;.grd&quot;, sep = &quot;&quot;), sep = &quot;&quot;)
+
+RasterLocation_r2 = paste(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, paste(paste(&quot;snowDepthMountCount_region2&quot;, 1957, 2020, sep = &quot;_&quot;), &quot;.grd&quot;, sep = &quot;&quot;), sep = &quot;&quot;)
+
+RasterLocation_r3 = paste(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, paste(paste(&quot;snowDepthMountCount_region3&quot;, 1957, 2020, sep = &quot;_&quot;), &quot;.grd&quot;, sep = &quot;&quot;), sep = &quot;&quot;)
+
+RasterLocation_r4 = paste(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, paste(paste(&quot;snowDepthMountCount_region4&quot;, 1957, 2020, sep = &quot;_&quot;), &quot;.grd&quot;, sep = &quot;&quot;), sep = &quot;&quot;)
+
+RasterLocation_r5 = paste(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, paste(paste(&quot;snowDepthMountCount_region5&quot;, 1957, 2020, sep = &quot;_&quot;), &quot;.grd&quot;, sep = &quot;&quot;), sep = &quot;&quot;)
+
+
+# Write Raster
+writeRaster(snowDepthMountCount_region1, RasterLocation_r1, format = &quot;raster&quot;, overwrite = TRUE)
+writeRaster(snowDepthMountCount_region2, RasterLocation_r2, format = &quot;raster&quot;, overwrite = TRUE)
+writeRaster(snowDepthMountCount_region3, RasterLocation_r3, format = &quot;raster&quot;, overwrite = TRUE)
+writeRaster(snowDepthMountCount_region4, RasterLocation_r4, format = &quot;raster&quot;, overwrite = TRUE)
+writeRaster(snowDepthMountCount_region5, RasterLocation_r5, format = &quot;raster&quot;, overwrite = TRUE)</code></pre>
 </div>
-<div id="differanse-fra-normalperioden-1961---1990" class="section level2">
-<h2>6 Differanse fra normalperioden (1961 - 1990)</h2>
-<div id="differanse-fra-normalperioden-for-sum-nedbør" class="section level3">
-<h3>6.1 Differanse fra normalperioden for sum nedbør</h3>
-<pre class="r"><code># Møte med Anders
-# For alle celler med mer enn 50% fjell, regn ut medianen for alle år per region. Regn ut differansen i median for hvert år mot medianen for normalperioden 1961 - 1990. Finn også +- 2 SD for normalperioden. Dette brukes for å se om medianen for noen av årene havner utenfor denne grensen. 
-
-# Region 1
-normalSP_r1 = sumPrecipMountCount_region1[[5:34]]
-normalSP_r1_med = median(values(normalSP_r1), na.rm = TRUE)
-
+</div>
+<div id="medianverdi" class="section level2">
+<h2>6 Medianverdi</h2>
+<div id="beregne-medianen-for-hvert-år-for-sum-nedbør" class="section level3">
+<h3>6.1 Beregne medianen for hvert år for sum nedbør</h3>
+<pre class="r"><code># Region 1
+sumPrecipMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+sumPrecipMountCount_region1 = stack(sumPrecipMountCount_region1)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(sumPrecipMountCount_region1[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalSP_r1_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nSP_r1_SD_plus = normalSP_r1_med + (2*sd(med[5:34]))
-nSP_r1_SD_min = normalSP_r1_med - (2*sd(med[5:34]))
-sumPrecip_med = data.frame(matrix(c(&quot;norge-norge&quot;, &quot;sumPrecip&quot;, normalSP_r1_med, nSP_r1_SD_min, nSP_r1_SD_plus), nrow = 1))
-colnames(sumPrecip_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
-
-sumPrecip_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
-columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
-colnames(sumPrecip_diff) = columnNames
-sumPrecip_diff[, 2] = diff
+sumPrecip_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;mm&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(sumPrecip_val) = columnNames
 
 # Region 2
-normalSP_r2 = sumPrecipMountCount_region2[[5:34]]
-normalSP_r2_med = median(values(normalSP_r2), na.rm = TRUE)
-
+sumPrecipMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+sumPrecipMountCount_region2 = stack(sumPrecipMountCount_region2)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(sumPrecipMountCount_region2[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalSP_r2_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nSP_r2_SD_plus = normalSP_r2_med + (2*sd(med[5:34]))
-nSP_r2_SD_min = normalSP_r2_med - (2*sd(med[5:34]))
-
-sumPrecip_diff[, 3] = diff
-sumPrecip_med = rbind(sumPrecip_med, c(&quot;midt-norge&quot;, &quot;sumPrecip&quot;, normalSP_r2_med, nSP_r2_SD_min, nSP_r2_SD_plus))
+sumPrecip_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;mm&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(sumPrecip_val_region2) = columnNames
+sumPrecip_val = rbind(sumPrecip_val, sumPrecip_val_region2)
 
 # Region 3
-normalSP_r3 = sumPrecipMountCount_region3[[5:34]]
-normalSP_r3_med = median(values(normalSP_r3), na.rm = TRUE)
-
+sumPrecipMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+sumPrecipMountCount_region3 = stack(sumPrecipMountCount_region3)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(sumPrecipMountCount_region3[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalSP_r3_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nSP_r3_SD_plus = normalSP_r3_med + (2*sd(med[5:34]))
-nSP_r3_SD_min = normalSP_r3_med - (2*sd(med[5:34]))
-
-sumPrecip_diff[, 4] = diff
-sumPrecip_med = rbind(sumPrecip_med, c(&quot;østlandet&quot;, &quot;sumPrecip&quot;, normalSP_r3_med, nSP_r3_SD_min, nSP_r3_SD_plus))
+sumPrecip_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;mm&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(sumPrecip_val_region3) = columnNames
+sumPrecip_val = rbind(sumPrecip_val, sumPrecip_val_region3)
 
 # Region 4
-normalSP_r4 = sumPrecipMountCount_region4[[5:34]]
-normalSP_r4_med = median(values(normalSP_r4), na.rm = TRUE)
-
+sumPrecipMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+sumPrecipMountCount_region4 = stack(sumPrecipMountCount_region4)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(sumPrecipMountCount_region4[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalSP_r4_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nSP_r4_SD_plus = normalSP_r4_med + (2*sd(med[5:34]))
-nSP_r4_SD_min = normalSP_r4_med - (2*sd(med[5:34]))
-
-sumPrecip_diff[, 5] = diff
-sumPrecip_med = rbind(sumPrecip_med, c(&quot;vestlandet&quot;, &quot;sumPrecip&quot;, normalSP_r4_med, nSP_r4_SD_min, nSP_r4_SD_plus))
+sumPrecip_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;mm&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(sumPrecip_val_region4) = columnNames
+sumPrecip_val = rbind(sumPrecip_val, sumPrecip_val_region4)
 
 # Region 5
-normalSP_r5 = sumPrecipMountCount_region5[[5:34]]
-normalSP_r5_med = median(values(normalSP_r5), na.rm = TRUE)
-
+sumPrecipMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+sumPrecipMountCount_region5 = stack(sumPrecipMountCount_region5)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(sumPrecipMountCount_region5[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalSP_r5_med
-  diff = append(diff, temp_diff)
-  
 }
+sumPrecip_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;mm&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(sumPrecip_val_region5) = columnNames
+sumPrecip_val = rbind(sumPrecip_val, sumPrecip_val_region5)
 
-nSP_r5_SD_plus = normalSP_r5_med + (2*sd(med[5:34]))
-nSP_r5_SD_min = normalSP_r5_med - (2*sd(med[5:34]))
+write_xlsx(sumPrecip_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/medianNedbør.xlsx&quot;)
 
-sumPrecip_diff[, 6] = diff
-sumPrecip_med = rbind(sumPrecip_med, c(&quot;sørlandet&quot;, &quot;sumPrecip&quot;, normalSP_r5_med, nSP_r5_SD_min, nSP_r5_SD_plus))
+# Region 1
+# normalSP_r1 = sumPrecipMountCount_region1[[5:34]]
+# normalSP_r1_med = median(values(normalSP_r1), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(sumPrecipMountCount_region1[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalSP_r1_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nSP_r1_SD_plus = normalSP_r1_med + (2*sd(med[5:34]))
+# nSP_r1_SD_min = normalSP_r1_med - (2*sd(med[5:34]))
+# sumPrecip_med = data.frame(matrix(c(&quot;norge-norge&quot;, &quot;sumPrecip&quot;, normalSP_r1_med, nSP_r1_SD_min, nSP_r1_SD_plus), nrow = 1))
+# colnames(sumPrecip_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
+# 
+# sumPrecip_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
+# columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
+# colnames(sumPrecip_diff) = columnNames
+# sumPrecip_diff[, 2] = diff
 
-sumPrecip_diff$variable = &quot;sumPrecip&quot;
+# Region 2
+# normalSP_r2 = sumPrecipMountCount_region2[[5:34]]
+# normalSP_r2_med = median(values(normalSP_r2), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(sumPrecipMountCount_region2[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalSP_r2_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nSP_r2_SD_plus = normalSP_r2_med + (2*sd(med[5:34]))
+# nSP_r2_SD_min = normalSP_r2_med - (2*sd(med[5:34]))
+# 
+# sumPrecip_diff[, 3] = diff
+# sumPrecip_med = rbind(sumPrecip_med, c(&quot;midt-norge&quot;, &quot;sumPrecip&quot;, normalSP_r2_med, nSP_r2_SD_min, nSP_r2_SD_plus))
+# 
+# # Region 3
+# normalSP_r3 = sumPrecipMountCount_region3[[5:34]]
+# normalSP_r3_med = median(values(normalSP_r3), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(sumPrecipMountCount_region3[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalSP_r3_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nSP_r3_SD_plus = normalSP_r3_med + (2*sd(med[5:34]))
+# nSP_r3_SD_min = normalSP_r3_med - (2*sd(med[5:34]))
+# 
+# sumPrecip_diff[, 4] = diff
+# sumPrecip_med = rbind(sumPrecip_med, c(&quot;østlandet&quot;, &quot;sumPrecip&quot;, normalSP_r3_med, nSP_r3_SD_min, nSP_r3_SD_plus))
+
+# Region 4
+# normalSP_r4 = sumPrecipMountCount_region4[[5:34]]
+# normalSP_r4_med = median(values(normalSP_r4), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(sumPrecipMountCount_region4[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalSP_r4_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nSP_r4_SD_plus = normalSP_r4_med + (2*sd(med[5:34]))
+# nSP_r4_SD_min = normalSP_r4_med - (2*sd(med[5:34]))
+# 
+# sumPrecip_diff[, 5] = diff
+# sumPrecip_med = rbind(sumPrecip_med, c(&quot;vestlandet&quot;, &quot;sumPrecip&quot;, normalSP_r4_med, nSP_r4_SD_min, nSP_r4_SD_plus))
+# 
+# # Region 5
+# normalSP_r5 = sumPrecipMountCount_region5[[5:34]]
+# normalSP_r5_med = median(values(normalSP_r5), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(sumPrecipMountCount_region5[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalSP_r5_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nSP_r5_SD_plus = normalSP_r5_med + (2*sd(med[5:34]))
+# nSP_r5_SD_min = normalSP_r5_med - (2*sd(med[5:34]))
+# 
+# sumPrecip_diff[, 6] = diff
+# sumPrecip_med = rbind(sumPrecip_med, c(&quot;sørlandet&quot;, &quot;sumPrecip&quot;, normalSP_r5_med, nSP_r5_SD_min, nSP_r5_SD_plus))
+# 
+# sumPrecip_diff$variable = &quot;sumPrecip&quot;
 #write_xlsx(sumPrecip_diff, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_diff.xlsx&quot;)
 #write_xlsx(sumPrecip_med, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_med.xlsx&quot;)</code></pre>
 </div>
-<div id="differanse-fra-normalperioden-for-dager-med-nedbør" class="section level3">
-<h3>6.2 Differanse fra normalperioden for dager med nedbør</h3>
+<div id="beregne-medianen-for-hvert-år-for-dager-med-nedbør" class="section level3">
+<h3>6.2 Beregne medianen for hvert år for dager med nedbør</h3>
 <pre class="r"><code># Region 1
-normalDP_r1 = daysPrecipMountCount_region1[[5:34]]
-normalDP_r1_med = median(values(normalDP_r1), na.rm = TRUE)
-
+daysPrecipMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+daysPrecipMountCount_region1 = stack(daysPrecipMountCount_region1)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(daysPrecipMountCount_region1[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalDP_r1_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nDP_r1_SD_plus = normalDP_r1_med + (2*sd(med[5:34]))
-nDP_r1_SD_min = normalDP_r1_med - (2*sd(med[5:34]))
-daysPrecip_med = data.frame(matrix(c(&quot;nord-norge&quot;, &quot;daysPrecip&quot;, normalDP_r1_med, nDP_r1_SD_min, nDP_r1_SD_plus), nrow = 1))
-colnames(daysPrecip_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
-
-daysPrecip_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
-columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
-colnames(daysPrecip_diff) = columnNames
-daysPrecip_diff[, 2] = diff
+daysPrecip_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;dager&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(daysPrecip_val) = columnNames
 
 # Region 2
-normalDP_r2 = daysPrecipMountCount_region2[[5:34]]
-normalDP_r2_med = median(values(normalDP_r2), na.rm = TRUE)
-
+daysPrecipMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+daysPrecipMountCount_region2 = stack(daysPrecipMountCount_region2)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(daysPrecipMountCount_region2[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalDP_r2_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nDP_r2_SD_plus = normalDP_r2_med + (2*sd(med[5:34]))
-nDP_r2_SD_min = normalDP_r2_med - (2*sd(med[5:34]))
-
-daysPrecip_diff[, 3] = diff
-daysPrecip_med = rbind(daysPrecip_med, c(&quot;midt-norge&quot;, &quot;daysPrecip&quot;, normalDP_r2_med, nDP_r2_SD_min, nDP_r2_SD_plus))
+daysPrecip_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;dager&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(daysPrecip_val_region2) = columnNames
+daysPrecip_val = rbind(daysPrecip_val, daysPrecip_val_region2)
 
 # Region 3
-normalDP_r3 = daysPrecipMountCount_region3[[5:34]]
-normalDP_r3_med = median(values(normalDP_r3), na.rm = TRUE)
-
+daysPrecipMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+daysPrecipMountCount_region3 = stack(daysPrecipMountCount_region3)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(daysPrecipMountCount_region3[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalDP_r3_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nDP_r3_SD_plus = normalDP_r3_med + (2*sd(med[5:34]))
-nDP_r3_SD_min = normalDP_r3_med - (2*sd(med[5:34]))
-
-daysPrecip_diff[, 4] = diff
-daysPrecip_med = rbind(daysPrecip_med, c(&quot;østlandet&quot;, &quot;daysPrecip&quot;, normalDP_r3_med, nDP_r3_SD_min, nDP_r3_SD_plus))
+daysPrecip_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;dager&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(daysPrecip_val_region3) = columnNames
+daysPrecip_val = rbind(daysPrecip_val, daysPrecip_val_region3)
 
 # Region 4
-normalDP_r4 = daysPrecipMountCount_region4[[5:34]]
-normalDP_r4_med = median(values(normalDP_r4), na.rm = TRUE)
-
+daysPrecipMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+daysPrecipMountCount_region4 = stack(daysPrecipMountCount_region4)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(daysPrecipMountCount_region4[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalDP_r4_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nDP_r4_SD_plus = normalDP_r4_med + (2*sd(med[5:34]))
-nDP_r4_SD_min = normalDP_r4_med - (2*sd(med[5:34]))
-
-daysPrecip_diff[, 5] = diff
-daysPrecip_med = rbind(daysPrecip_med, c(&quot;vestlandet&quot;, &quot;daysPrecip&quot;, normalDP_r4_med, nDP_r4_SD_min, nDP_r4_SD_plus))
+daysPrecip_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;dager&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(daysPrecip_val_region4) = columnNames
+daysPrecip_val = rbind(daysPrecip_val, daysPrecip_val_region4)
 
 # Region 5
-normalDP_r5 = daysPrecipMountCount_region5[[5:34]]
-normalDP_r5_med = median(values(normalDP_r5), na.rm = TRUE)
-
+daysPrecipMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+daysPrecipMountCount_region5 = stack(daysPrecipMountCount_region5)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(daysPrecipMountCount_region5[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalDP_r5_med
-  diff = append(diff, temp_diff)
-  
 }
+daysPrecip_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 64), rep(&quot;nedbør&quot;, 64), rep(&quot;dager&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(daysPrecip_val_region5) = columnNames
+daysPrecip_val = rbind(daysPrecip_val, daysPrecip_val_region5)
 
-nDP_r5_SD_plus = normalDP_r5_med + (2*sd(med[5:34]))
-nDP_r5_SD_min = normalDP_r5_med - (2*sd(med[5:34]))
-
-daysPrecip_diff[, 6] = diff
-daysPrecip_med = rbind(daysPrecip_med, c(&quot;sørlandet&quot;, &quot;daysPrecip&quot;, normalDP_r5_med, nDP_r5_SD_min, nDP_r5_SD_plus))
-
-daysPrecip_diff$variable = &quot;daysPrecip&quot;
+write_xlsx(daysPrecip_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/medianNedbør_dager.xlsx&quot;)
+# 
+# # Region 1
+# normalDP_r1 = daysPrecipMountCount_region1[[5:34]]
+# normalDP_r1_med = median(values(normalDP_r1), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(daysPrecipMountCount_region1[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalDP_r1_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nDP_r1_SD_plus = normalDP_r1_med + (2*sd(med[5:34]))
+# nDP_r1_SD_min = normalDP_r1_med - (2*sd(med[5:34]))
+# daysPrecip_med = data.frame(matrix(c(&quot;nord-norge&quot;, &quot;daysPrecip&quot;, normalDP_r1_med, nDP_r1_SD_min, nDP_r1_SD_plus), nrow = 1))
+# colnames(daysPrecip_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
+# 
+# daysPrecip_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
+# columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
+# colnames(daysPrecip_diff) = columnNames
+# daysPrecip_diff[, 2] = diff
+# 
+# # Region 2
+# normalDP_r2 = daysPrecipMountCount_region2[[5:34]]
+# normalDP_r2_med = median(values(normalDP_r2), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(daysPrecipMountCount_region2[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalDP_r2_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nDP_r2_SD_plus = normalDP_r2_med + (2*sd(med[5:34]))
+# nDP_r2_SD_min = normalDP_r2_med - (2*sd(med[5:34]))
+# 
+# daysPrecip_diff[, 3] = diff
+# daysPrecip_med = rbind(daysPrecip_med, c(&quot;midt-norge&quot;, &quot;daysPrecip&quot;, normalDP_r2_med, nDP_r2_SD_min, nDP_r2_SD_plus))
+# 
+# # Region 3
+# normalDP_r3 = daysPrecipMountCount_region3[[5:34]]
+# normalDP_r3_med = median(values(normalDP_r3), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(daysPrecipMountCount_region3[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalDP_r3_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nDP_r3_SD_plus = normalDP_r3_med + (2*sd(med[5:34]))
+# nDP_r3_SD_min = normalDP_r3_med - (2*sd(med[5:34]))
+# 
+# daysPrecip_diff[, 4] = diff
+# daysPrecip_med = rbind(daysPrecip_med, c(&quot;østlandet&quot;, &quot;daysPrecip&quot;, normalDP_r3_med, nDP_r3_SD_min, nDP_r3_SD_plus))
+# 
+# # Region 4
+# normalDP_r4 = daysPrecipMountCount_region4[[5:34]]
+# normalDP_r4_med = median(values(normalDP_r4), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(daysPrecipMountCount_region4[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalDP_r4_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nDP_r4_SD_plus = normalDP_r4_med + (2*sd(med[5:34]))
+# nDP_r4_SD_min = normalDP_r4_med - (2*sd(med[5:34]))
+# 
+# daysPrecip_diff[, 5] = diff
+# daysPrecip_med = rbind(daysPrecip_med, c(&quot;vestlandet&quot;, &quot;daysPrecip&quot;, normalDP_r4_med, nDP_r4_SD_min, nDP_r4_SD_plus))
+# 
+# # Region 5
+# normalDP_r5 = daysPrecipMountCount_region5[[5:34]]
+# normalDP_r5_med = median(values(normalDP_r5), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(daysPrecipMountCount_region5[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalDP_r5_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nDP_r5_SD_plus = normalDP_r5_med + (2*sd(med[5:34]))
+# nDP_r5_SD_min = normalDP_r5_med - (2*sd(med[5:34]))
+# 
+# daysPrecip_diff[, 6] = diff
+# daysPrecip_med = rbind(daysPrecip_med, c(&quot;sørlandet&quot;, &quot;daysPrecip&quot;, normalDP_r5_med, nDP_r5_SD_min, nDP_r5_SD_plus))
+# 
+# daysPrecip_diff$variable = &quot;daysPrecip&quot;
 #write_xlsx(daysPrecip_diff, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_diff.xlsx&quot;)
 #write_xlsx(daysPrecip_med, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_med.xlsx&quot;)</code></pre>
 </div>
-<div id="differanse-fra-normalperioden-for-gjennomsnittlig-sommertemperatur" class="section level3">
-<h3>6.3 Differanse fra normalperioden for gjennomsnittlig sommertemperatur</h3>
+<div id="beregne-medianen-for-hvert-år-for-gjennomsnittlig-sommertemperatur" class="section level3">
+<h3>6.3 Beregne medianen for hvert år for gjennomsnittlig sommertemperatur</h3>
 <pre class="r"><code># Region 1
-normalMS_r1 = meanSummerMountCount_region1[[5:34]]
-normalMS_r1_med = median(values(normalMS_r1), na.rm = TRUE)
-
+meanSummerMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+meanSummerMountCount_region1 = stack(meanSummerMountCount_region1)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(meanSummerMountCount_region1[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMS_r1_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nMS_r1_SD_plus = normalMS_r1_med + (2*sd(med[5:34]))
-nMS_r1_SD_min = normalMS_r1_med - (2*sd(med[5:34]))
-meanSummer_med = data.frame(matrix(c(&quot;nord-norge&quot;, &quot;meanSummer&quot;, normalMS_r1_med, nMS_r1_SD_min, nMS_r1_SD_plus), nrow = 1))
-colnames(meanSummer_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
-
-meanSummer_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
-columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
-colnames(meanSummer_diff) = columnNames
-meanSummer_diff[, 2] = diff
+meanSummer_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 64), rep(&quot;gjennomsnittlig sommertemperatur&quot;, 64), rep(&quot;grader celsius&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanSummer_val) = columnNames
 
 # Region 2
-normalMS_r2 = meanSummerMountCount_region2[[5:34]]
-normalMS_r2_med = median(values(normalMS_r2), na.rm = TRUE)
-
+meanSummerMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+meanSummerMountCount_region2 = stack(meanSummerMountCount_region2)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(meanSummerMountCount_region2[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMS_r2_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nMS_r2_SD_plus = normalMS_r2_med + (2*sd(med[5:34]))
-nMS_r2_SD_min = normalMS_r2_med - (2*sd(med[5:34]))
-
-meanSummer_diff[, 3] = diff
-meanSummer_med = rbind(meanSummer_med, c(&quot;midt-norge&quot;, &quot;meanSummer&quot;, normalMS_r2_med, nMS_r2_SD_min, nMS_r2_SD_plus))
+meanSummer_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 64), rep(&quot;gjennomsnittlig sommertemperatur&quot;, 64), rep(&quot;grader celsius&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanSummer_val_region2) = columnNames
+meanSummer_val = rbind(meanSummer_val, meanSummer_val_region2)
 
 # Region 3
-normalMS_r3 = meanSummerMountCount_region3[[5:34]]
-normalMS_r3_med = median(values(normalMS_r3), na.rm = TRUE)
-
+meanSummerMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+meanSummerMountCount_region3 = stack(meanSummerMountCount_region3)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(meanSummerMountCount_region3[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMS_r3_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nMS_r3_SD_plus = normalMS_r3_med + (2*sd(med[5:34]))
-nMS_r3_SD_min = normalMS_r3_med - (2*sd(med[5:34]))
-
-meanSummer_diff[, 4] = diff
-meanSummer_med = rbind(meanSummer_med, c(&quot;østlandet&quot;, &quot;meanSummer&quot;, normalMS_r3_med, nMS_r3_SD_min, nMS_r3_SD_plus))
+meanSummer_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 64), rep(&quot;gjennomsnittlig sommertemperatur&quot;, 64), rep(&quot;grader celsius&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanSummer_val_region3) = columnNames
+meanSummer_val = rbind(meanSummer_val, meanSummer_val_region3)
 
 # Region 4
-normalMS_r4 = meanSummerMountCount_region4[[5:34]]
-normalMS_r4_med = median(values(normalMS_r4), na.rm = TRUE)
-
+meanSummerMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+meanSummerMountCount_region4 = stack(meanSummerMountCount_region4)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(meanSummerMountCount_region4[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMS_r4_med
-  diff = append(diff, temp_diff)
-  
 }
-
-nMS_r4_SD_plus = normalMS_r4_med + (2*sd(med[5:34]))
-nMS_r4_SD_min = normalMS_r4_med - (2*sd(med[5:34]))
-
-meanSummer_diff[, 5] = diff
-meanSummer_med = rbind(meanSummer_med, c(&quot;vestlandet&quot;, &quot;meanSummer&quot;, normalMS_r4_med, nMS_r4_SD_min, nMS_r4_SD_plus))
+meanSummer_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 64), rep(&quot;gjennomsnittlig sommertemperatur&quot;, 64), rep(&quot;grader celsius&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanSummer_val_region4) = columnNames
+meanSummer_val = rbind(meanSummer_val, meanSummer_val_region4)
 
 # Region 5
-normalMS_r5 = meanSummerMountCount_region5[[5:34]]
-normalMS_r5_med = median(values(normalMS_r5), na.rm = TRUE)
-
+meanSummerMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+meanSummerMountCount_region5 = stack(meanSummerMountCount_region5)
 years = c(1:64)
 med = c()
-diff = c()
 for(i in years){
-  
   temp_med = median(values(meanSummerMountCount_region5[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMS_r5_med
-  diff = append(diff, temp_diff)
-  
 }
+meanSummer_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 64), rep(&quot;gjennomsnittlig sommertemperatur&quot;, 64), rep(&quot;grader celsius&quot;, 64), 1957:2020, med), nrow = 64, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanSummer_val_region5) = columnNames
+meanSummer_val = rbind(meanSummer_val, meanSummer_val_region5)
 
-nMS_r5_SD_plus = normalMS_r5_med + (2*sd(med[5:34]))
-nMS_r5_SD_min = normalMS_r5_med - (2*sd(med[5:34]))
-
-meanSummer_diff[, 6] = diff
-meanSummer_med = rbind(meanSummer_med, c(&quot;sørlandet&quot;, &quot;meanSummer&quot;, normalMS_r5_med, nMS_r5_SD_min, nMS_r5_SD_plus))
-
-meanSummer_diff$variable = &quot;meanSummer&quot;
+write_xlsx(meanSummer_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/medianMeanSummer.xlsx&quot;)
+# 
+# # Region 1
+# normalMS_r1 = meanSummerMountCount_region1[[5:34]]
+# normalMS_r1_med = median(values(normalMS_r1), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanSummerMountCount_region1[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMS_r1_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMS_r1_SD_plus = normalMS_r1_med + (2*sd(med[5:34]))
+# nMS_r1_SD_min = normalMS_r1_med - (2*sd(med[5:34]))
+# meanSummer_med = data.frame(matrix(c(&quot;nord-norge&quot;, &quot;meanSummer&quot;, normalMS_r1_med, nMS_r1_SD_min, nMS_r1_SD_plus), nrow = 1))
+# colnames(meanSummer_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
+# 
+# meanSummer_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
+# columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
+# colnames(meanSummer_diff) = columnNames
+# meanSummer_diff[, 2] = diff
+# 
+# # Region 2
+# normalMS_r2 = meanSummerMountCount_region2[[5:34]]
+# normalMS_r2_med = median(values(normalMS_r2), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanSummerMountCount_region2[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMS_r2_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMS_r2_SD_plus = normalMS_r2_med + (2*sd(med[5:34]))
+# nMS_r2_SD_min = normalMS_r2_med - (2*sd(med[5:34]))
+# 
+# meanSummer_diff[, 3] = diff
+# meanSummer_med = rbind(meanSummer_med, c(&quot;midt-norge&quot;, &quot;meanSummer&quot;, normalMS_r2_med, nMS_r2_SD_min, nMS_r2_SD_plus))
+# 
+# # Region 3
+# normalMS_r3 = meanSummerMountCount_region3[[5:34]]
+# normalMS_r3_med = median(values(normalMS_r3), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanSummerMountCount_region3[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMS_r3_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMS_r3_SD_plus = normalMS_r3_med + (2*sd(med[5:34]))
+# nMS_r3_SD_min = normalMS_r3_med - (2*sd(med[5:34]))
+# 
+# meanSummer_diff[, 4] = diff
+# meanSummer_med = rbind(meanSummer_med, c(&quot;østlandet&quot;, &quot;meanSummer&quot;, normalMS_r3_med, nMS_r3_SD_min, nMS_r3_SD_plus))
+# 
+# # Region 4
+# normalMS_r4 = meanSummerMountCount_region4[[5:34]]
+# normalMS_r4_med = median(values(normalMS_r4), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanSummerMountCount_region4[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMS_r4_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMS_r4_SD_plus = normalMS_r4_med + (2*sd(med[5:34]))
+# nMS_r4_SD_min = normalMS_r4_med - (2*sd(med[5:34]))
+# 
+# meanSummer_diff[, 5] = diff
+# meanSummer_med = rbind(meanSummer_med, c(&quot;vestlandet&quot;, &quot;meanSummer&quot;, normalMS_r4_med, nMS_r4_SD_min, nMS_r4_SD_plus))
+# 
+# # Region 5
+# normalMS_r5 = meanSummerMountCount_region5[[5:34]]
+# normalMS_r5_med = median(values(normalMS_r5), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanSummerMountCount_region5[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMS_r5_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMS_r5_SD_plus = normalMS_r5_med + (2*sd(med[5:34]))
+# nMS_r5_SD_min = normalMS_r5_med - (2*sd(med[5:34]))
+# 
+# meanSummer_diff[, 6] = diff
+# meanSummer_med = rbind(meanSummer_med, c(&quot;sørlandet&quot;, &quot;meanSummer&quot;, normalMS_r5_med, nMS_r5_SD_min, nMS_r5_SD_plus))
+# 
+# meanSummer_diff$variable = &quot;meanSummer&quot;
 #write_xlsx(meanSummer_diff, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/meanSummer_diff.xlsx&quot;)
 #write_xlsx(meanSummer_med, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/meanSummer_med.xlsx&quot;)</code></pre>
 </div>
-<div id="differanse-fra-normalperioden-for-gjennomsnittlig-vintertemperatur" class="section level3">
-<h3>6.4 Differanse fra normalperioden for gjennomsnittlig vintertemperatur</h3>
+<div id="beregne-medianen-for-hvert-år-for-gjennomsnittlig-vintertemperatur" class="section level3">
+<h3>6.4 Beregne medianen for hvert år for gjennomsnittlig vintertemperatur</h3>
 <pre class="r"><code># Region 1
-normalMW_r1 = meanWinterMountCount_region1[[5:34]]
-normalMW_r1_med = median(values(normalMW_r1), na.rm = TRUE)
-
-years = c(1:64)
+meanWinterMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+meanWinterMountCount_region1 = stack(meanWinterMountCount_region1)
+years = c(1:63)
 med = c()
-diff = c()
+winterSeason = c(1957:2020)
+ws = c()
 for(i in years){
-  
   temp_med = median(values(meanWinterMountCount_region1[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMW_r1_med
-  diff = append(diff, temp_diff)
-  
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
 }
-
-nMW_r1_SD_plus = normalMW_r1_med + (2*sd(med[5:34]))
-nMW_r1_SD_min = normalMW_r1_med - (2*sd(med[5:34]))
-meanWinter_med = data.frame(matrix(c(&quot;nord-norge&quot;, &quot;meanWinter&quot;, normalMW_r1_med, nMW_r1_SD_min, nMW_r1_SD_plus), nrow = 1))
-colnames(meanWinter_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
-
-meanWinter_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
-columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
-colnames(meanWinter_diff) = columnNames
-meanWinter_diff[, 2] = diff
+meanWinter_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 63), rep(&quot;gjennomsnittlig vintertemperatur&quot;, 63), rep(&quot;grader celsius&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanWinter_val) = columnNames
 
 # Region 2
-normalMW_r2 = meanWinterMountCount_region2[[5:34]]
-normalMW_r2_med = median(values(normalMW_r2), na.rm = TRUE)
-
-years = c(1:64)
+meanWinterMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+meanWinterMountCount_region2 = stack(meanWinterMountCount_region2)
+years = c(1:63)
 med = c()
-diff = c()
+winterSeason = c(1957:2020)
+ws = c()
 for(i in years){
-  
   temp_med = median(values(meanWinterMountCount_region2[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMW_r2_med
-  diff = append(diff, temp_diff)
-  
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
 }
-
-nMW_r2_SD_plus = normalMW_r2_med + (2*sd(med[5:34]))
-nMW_r2_SD_min = normalMW_r2_med - (2*sd(med[5:34]))
-
-meanWinter_diff[, 3] = diff
-meanWinter_med = rbind(meanWinter_med, c(&quot;midt-norge&quot;, &quot;meanWinter&quot;, normalMW_r2_med, nMW_r2_SD_min, nMW_r2_SD_plus))
+meanWinter_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 63), rep(&quot;gjennomsnittlig vintertemperatur&quot;, 63), rep(&quot;grader celsius&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanWinter_val_region2) = columnNames
+meanWinter_val = rbind(meanWinter_val, meanWinter_val_region2)
 
 # Region 3
-normalMW_r3 = meanWinterMountCount_region3[[5:34]]
-normalMW_r3_med = median(values(normalMW_r3), na.rm = TRUE)
-
-years = c(1:64)
+meanWinterMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+meanWinterMountCount_region3 = stack(meanWinterMountCount_region3)
+years = c(1:63)
 med = c()
-diff = c()
+winterSeason = c(1957:2020)
+ws = c()
 for(i in years){
-  
   temp_med = median(values(meanWinterMountCount_region3[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMW_r3_med
-  diff = append(diff, temp_diff)
-  
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
 }
-
-nMW_r3_SD_plus = normalMW_r3_med + (2*sd(med[5:34]))
-nMW_r3_SD_min = normalMW_r3_med - (2*sd(med[5:34]))
-
-meanWinter_diff[, 4] = diff
-meanWinter_med = rbind(meanWinter_med, c(&quot;østlandet&quot;, &quot;meanWinter&quot;, normalMW_r3_med, nMW_r3_SD_min, nMW_r3_SD_plus))
+meanWinter_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 63), rep(&quot;gjennomsnittlig vintertemperatur&quot;, 63), rep(&quot;grader celsius&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanWinter_val_region3) = columnNames
+meanWinter_val = rbind(meanWinter_val, meanWinter_val_region3)
 
 # Region 4
-normalMW_r4 = meanWinterMountCount_region4[[5:34]]
-normalMW_r4_med = median(values(normalMW_r4), na.rm = TRUE)
-
-years = c(1:64)
+meanWinterMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+meanWinterMountCount_region4 = stack(meanWinterMountCount_region4)
+years = c(1:63)
 med = c()
-diff = c()
+winterSeason = c(1957:2020)
+ws = c()
 for(i in years){
-  
   temp_med = median(values(meanWinterMountCount_region4[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMW_r4_med
-  diff = append(diff, temp_diff)
-  
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
 }
-
-nMW_r4_SD_plus = normalMW_r4_med + (2*sd(med[5:34]))
-nMW_r4_SD_min = normalMW_r4_med - (2*sd(med[5:34]))
-
-meanWinter_diff[, 5] = diff
-meanWinter_med = rbind(meanWinter_med, c(&quot;vestlandet&quot;, &quot;meanWinter&quot;, normalMW_r4_med, nMW_r4_SD_min, nMW_r4_SD_plus))
+meanWinter_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 63), rep(&quot;gjennomsnittlig vintertemperatur&quot;, 63), rep(&quot;grader celsius&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanWinter_val_region4) = columnNames
+meanWinter_val = rbind(meanWinter_val, meanWinter_val_region4)
 
 # Region 5
-normalMW_r5 = meanWinterMountCount_region5[[5:34]]
-normalMW_r5_med = median(values(normalMW_r5), na.rm = TRUE)
-
-years = c(1:64)
+meanWinterMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+meanWinterMountCount_region5 = stack(meanWinterMountCount_region5)
+years = c(1:63)
 med = c()
-diff = c()
+winterSeason = c(1957:2020)
+ws = c()
 for(i in years){
-  
   temp_med = median(values(meanWinterMountCount_region5[[i]]), na.rm = TRUE)
   med = append(med, temp_med)
-  
-  temp_diff = temp_med - normalMW_r5_med
-  diff = append(diff, temp_diff)
-  
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
 }
+meanWinter_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 63), rep(&quot;gjennomsnittlig vintertemperatur&quot;, 63), rep(&quot;grader celsius&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(meanWinter_val_region5) = columnNames
+meanWinter_val = rbind(meanWinter_val, meanWinter_val_region5)
 
-nMW_r5_SD_plus = normalMW_r5_med + (2*sd(med[5:34]))
-nMW_r5_SD_min = normalMW_r5_med - (2*sd(med[5:34]))
+write_xlsx(meanWinter_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/medianmeanWinter.xlsx&quot;)
 
-meanWinter_diff[, 6] = diff
-meanWinter_med = rbind(meanWinter_med, c(&quot;sørlandet&quot;, &quot;meanWinter&quot;, normalMW_r5_med, nMW_r5_SD_min, nMW_r5_SD_plus))
-
-meanWinter_diff$variable = &quot;meanWinter&quot;
+# # Region 1
+# normalMW_r1 = meanWinterMountCount_region1[[5:34]]
+# normalMW_r1_med = median(values(normalMW_r1), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanWinterMountCount_region1[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMW_r1_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMW_r1_SD_plus = normalMW_r1_med + (2*sd(med[5:34]))
+# nMW_r1_SD_min = normalMW_r1_med - (2*sd(med[5:34]))
+# meanWinter_med = data.frame(matrix(c(&quot;nord-norge&quot;, &quot;meanWinter&quot;, normalMW_r1_med, nMW_r1_SD_min, nMW_r1_SD_plus), nrow = 1))
+# colnames(meanWinter_med) = c(&quot;area&quot;, &quot;variable&quot;, &quot;norm_med&quot;, &quot;norm_-2SD&quot;, &quot;norm_+2SD&quot;)
+# 
+# meanWinter_diff = data.frame(c(1957:2020),matrix(rep(NA, 64*5), nrow = 64, ncol = 5))
+# columnNames = c(&quot;year&quot;,&quot;nord-norge&quot;, &quot;midt-norge&quot;, &quot;østlandet&quot;, &quot;vestlandet&quot;, &quot;sørlandet&quot;)
+# colnames(meanWinter_diff) = columnNames
+# meanWinter_diff[, 2] = diff
+# 
+# # Region 2
+# normalMW_r2 = meanWinterMountCount_region2[[5:34]]
+# normalMW_r2_med = median(values(normalMW_r2), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanWinterMountCount_region2[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMW_r2_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMW_r2_SD_plus = normalMW_r2_med + (2*sd(med[5:34]))
+# nMW_r2_SD_min = normalMW_r2_med - (2*sd(med[5:34]))
+# 
+# meanWinter_diff[, 3] = diff
+# meanWinter_med = rbind(meanWinter_med, c(&quot;midt-norge&quot;, &quot;meanWinter&quot;, normalMW_r2_med, nMW_r2_SD_min, nMW_r2_SD_plus))
+# 
+# # Region 3
+# normalMW_r3 = meanWinterMountCount_region3[[5:34]]
+# normalMW_r3_med = median(values(normalMW_r3), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanWinterMountCount_region3[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMW_r3_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMW_r3_SD_plus = normalMW_r3_med + (2*sd(med[5:34]))
+# nMW_r3_SD_min = normalMW_r3_med - (2*sd(med[5:34]))
+# 
+# meanWinter_diff[, 4] = diff
+# meanWinter_med = rbind(meanWinter_med, c(&quot;østlandet&quot;, &quot;meanWinter&quot;, normalMW_r3_med, nMW_r3_SD_min, nMW_r3_SD_plus))
+# 
+# # Region 4
+# normalMW_r4 = meanWinterMountCount_region4[[5:34]]
+# normalMW_r4_med = median(values(normalMW_r4), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanWinterMountCount_region4[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMW_r4_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMW_r4_SD_plus = normalMW_r4_med + (2*sd(med[5:34]))
+# nMW_r4_SD_min = normalMW_r4_med - (2*sd(med[5:34]))
+# 
+# meanWinter_diff[, 5] = diff
+# meanWinter_med = rbind(meanWinter_med, c(&quot;vestlandet&quot;, &quot;meanWinter&quot;, normalMW_r4_med, nMW_r4_SD_min, nMW_r4_SD_plus))
+# 
+# # Region 5
+# normalMW_r5 = meanWinterMountCount_region5[[5:34]]
+# normalMW_r5_med = median(values(normalMW_r5), na.rm = TRUE)
+# 
+# years = c(1:64)
+# med = c()
+# diff = c()
+# for(i in years){
+#   
+#   temp_med = median(values(meanWinterMountCount_region5[[i]]), na.rm = TRUE)
+#   med = append(med, temp_med)
+#   
+#   temp_diff = temp_med - normalMW_r5_med
+#   diff = append(diff, temp_diff)
+#   
+# }
+# 
+# nMW_r5_SD_plus = normalMW_r5_med + (2*sd(med[5:34]))
+# nMW_r5_SD_min = normalMW_r5_med - (2*sd(med[5:34]))
+# 
+# meanWinter_diff[, 6] = diff
+# meanWinter_med = rbind(meanWinter_med, c(&quot;sørlandet&quot;, &quot;meanWinter&quot;, normalMW_r5_med, nMW_r5_SD_min, nMW_r5_SD_plus))
+# 
+# meanWinter_diff$variable = &quot;meanWinter&quot;
 #write_xlsx(meanWinter_diff, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/meanWinter_diff.xlsx&quot;)
 #write_xlsx(meanWinter_med, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/meanWinter_med.xlsx&quot;)</code></pre>
 </div>
-<div id="bootstrapping-for-å-finne-variasjonen-i-differansen-mellom-nåværende-periode-og-normalperioden-for-snødekke" class="section level3">
-<h3>6.5 Bootstrapping for å finne variasjonen i differansen mellom nåværende periode og normalperioden for snødekke</h3>
-<p>Det trekkes ut et tilfeldig år i normalperioden og et tilfeldig år i nåværende periode (2016-2020), finner medianen for hver, og trekker medianen i normalperioden fra medianen i nåværende periode. Dette gjentas så 10 000 ganger.</p>
-<pre class="r"><code># Load data
-daysSnowCoverMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
-daysSnowCoverMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
-daysSnowCoverMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
-daysSnowCoverMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
-daysSnowCoverMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
-
-daysSnowCoverMountCount_region1 = stack(daysSnowCoverMountCount_region1)
-daysSnowCoverMountCount_region2 = stack(daysSnowCoverMountCount_region2)
-daysSnowCoverMountCount_region3 = stack(daysSnowCoverMountCount_region3)
-daysSnowCoverMountCount_region4 = stack(daysSnowCoverMountCount_region4)
-daysSnowCoverMountCount_region5 = stack(daysSnowCoverMountCount_region5)
-snowCover_vec = c(daysSnowCoverMountCount_region1, daysSnowCoverMountCount_region2, daysSnowCoverMountCount_region3, daysSnowCoverMountCount_region4, daysSnowCoverMountCount_region5)
-
-diff_vec = list()
-for(i in 1:5){
-  norm_snowCover = snowCover_vec[[i]][[5:34]] # normal period
-  curr_snowCover = snowCover_vec[[i]][[59:63]] # current period
-  temp_vec = c()
-  
-  for(j in 1:10000){
-    norm_samp = sample(c(1:30), 1)
-    curr_samp = sample(c(1:5), 1)
-    
-    temp_norm = median(values(norm_snowCover[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
-    temp_curr = median(values(curr_snowCover[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
-    
-    temp_diff = temp_curr - temp_norm
-    temp_vec = append(temp_vec, temp_diff)
-  }
-  diff_vec[[i]] = temp_vec
+<div id="beregne-medianen-for-hvert-år-for-dager-med-snødekke" class="section level3">
+<h3>6.5 Beregne medianen for hvert år for dager med snødekke</h3>
+<pre class="r"><code># Region 1
+snowCoverMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+snowCoverMountCount_region1 = stack(snowCoverMountCount_region1)
+years = c(1:63)
+med = c()
+winterSeason = c(1957:2020)
+ws = c()
+for(i in years){
+  temp_med = median(values(snowCoverMountCount_region1[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
 }
-snowCover_r1 = diff_vec[[1]]
-snowCover_r2 = diff_vec[[2]]
-snowCover_r3 = diff_vec[[3]]
-snowCover_r4 = diff_vec[[4]]
-snowCover_r5 = diff_vec[[5]]
-snowCover_df = cbind(snowCover_r1, snowCover_r2, snowCover_r3, snowCover_r4, snowCover_r5)
-snowCover_df = data.frame(snowCover_df)
-snowCover_df = as_tibble(snowCover_df) %&gt;% rename(&quot;nord-norge&quot; = snowCover_r1, &quot;midt-norge&quot; = snowCover_r2, &quot;østlandet&quot; = snowCover_r3, &quot;vestlandet&quot; = snowCover_r4, &quot;sørlandet&quot; = snowCover_r5) %&gt;% mutate(variable = &quot;snowCover&quot;)
-#write_xlsx(snowCover_df, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/snowCover_diff.xlsx&quot;)</code></pre>
+snowCover_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 63), rep(&quot;snødekke&quot;, 63), rep(&quot;dager&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowCover_val) = columnNames
+
+# Region 2
+snowCoverMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+snowCoverMountCount_region2 = stack(snowCoverMountCount_region2)
+years = c(1:63)
+med = c()
+winterSeason = c(1957:2020)
+ws = c()
+for(i in years){
+  temp_med = median(values(snowCoverMountCount_region2[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
+}
+snowCover_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 63), rep(&quot;snødekke&quot;, 63), rep(&quot;dager&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowCover_val_region2) = columnNames
+snowCover_val = rbind(snowCover_val, snowCover_val_region2)
+
+# Region 3
+snowCoverMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+snowCoverMountCount_region3 = stack(snowCoverMountCount_region3)
+years = c(1:63)
+med = c()
+winterSeason = c(1957:2020)
+ws = c()
+for(i in years){
+  temp_med = median(values(snowCoverMountCount_region3[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
+}
+snowCover_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 63), rep(&quot;snødekke&quot;, 63), rep(&quot;dager&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowCover_val_region3) = columnNames
+snowCover_val = rbind(snowCover_val, snowCover_val_region3)
+
+# Region 4
+snowCoverMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+snowCoverMountCount_region4 = stack(snowCoverMountCount_region4)
+years = c(1:63)
+med = c()
+winterSeason = c(1957:2020)
+ws = c()
+for(i in years){
+  temp_med = median(values(snowCoverMountCount_region4[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
+}
+snowCover_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 63), rep(&quot;snødekke&quot;, 63), rep(&quot;dager&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowCover_val_region4) = columnNames
+snowCover_val = rbind(snowCover_val, snowCover_val_region4)
+
+# Region 5
+snowCoverMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+snowCoverMountCount_region5 = stack(snowCoverMountCount_region5)
+years = c(1:63)
+med = c()
+winterSeason = c(1957:2020)
+ws = c()
+for(i in years){
+  temp_med = median(values(snowCoverMountCount_region5[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
+}
+snowCover_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 63), rep(&quot;snødekke&quot;, 63), rep(&quot;dager&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowCover_val_region5) = columnNames
+snowCover_val = rbind(snowCover_val, snowCover_val_region5)
+
+write_xlsx(snowCover_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/mediansnowCover.xlsx&quot;)
+
+# # Load data
+# daysSnowCoverMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+# daysSnowCoverMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+# daysSnowCoverMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+# daysSnowCoverMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+# daysSnowCoverMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+# 
+# daysSnowCoverMountCount_region1 = stack(daysSnowCoverMountCount_region1)
+# daysSnowCoverMountCount_region2 = stack(daysSnowCoverMountCount_region2)
+# daysSnowCoverMountCount_region3 = stack(daysSnowCoverMountCount_region3)
+# daysSnowCoverMountCount_region4 = stack(daysSnowCoverMountCount_region4)
+# daysSnowCoverMountCount_region5 = stack(daysSnowCoverMountCount_region5)
+# snowCover_vec = c(daysSnowCoverMountCount_region1, daysSnowCoverMountCount_region2, daysSnowCoverMountCount_region3, daysSnowCoverMountCount_region4, daysSnowCoverMountCount_region5)
+# 
+# diff_vec = list()
+# for(i in 1:5){
+#   norm_snowCover = snowCover_vec[[i]][[5:34]] # normal period
+#   curr_snowCover = snowCover_vec[[i]][[59:63]] # current period
+#   temp_vec = c()
+#   
+#   for(j in 1:10000){
+#     norm_samp = sample(c(1:30), 1)
+#     curr_samp = sample(c(1:5), 1)
+#     
+#     temp_norm = median(values(norm_snowCover[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
+#     temp_curr = median(values(curr_snowCover[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
+#     
+#     temp_diff = temp_curr - temp_norm
+#     temp_vec = append(temp_vec, temp_diff)
+#   }
+#   diff_vec[[i]] = temp_vec
+# }
+# snowCover_r1 = diff_vec[[1]]
+# snowCover_r2 = diff_vec[[2]]
+# snowCover_r3 = diff_vec[[3]]
+# snowCover_r4 = diff_vec[[4]]
+# snowCover_r5 = diff_vec[[5]]
+# snowCover_df = cbind(snowCover_r1, snowCover_r2, snowCover_r3, snowCover_r4, snowCover_r5)
+# snowCover_df = data.frame(snowCover_df)
+# snowCover_df = as_tibble(snowCover_df) %&gt;% rename(&quot;nord-norge&quot; = snowCover_r1, &quot;midt-norge&quot; = snowCover_r2, &quot;østlandet&quot; = snowCover_r3, &quot;vestlandet&quot; = snowCover_r4, &quot;sørlandet&quot; = snowCover_r5) %&gt;% mutate(variable = &quot;snowCover&quot;)
+# #write_xlsx(snowCover_df, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødekning/snowCover_diff.xlsx&quot;)</code></pre>
 </div>
-<div id="bootstrapping-for-å-finne-variasjonen-i-differansen-mellom-nåværende-periode-og-normalperioden-for-vekstsesong" class="section level3">
-<h3>6.6 Bootstrapping for å finne variasjonen i differansen mellom nåværende periode og normalperioden for vekstsesong</h3>
-<p>Det trekkes ut et tilfeldig år i normalperioden og et tilfeldig år i nåværende periode (2016-2020), finner medianen for hver, og trekker medianen i normalperioden fra medianen i nåværende periode. Dette gjentas så 10 000 ganger.</p>
-<pre class="r"><code># Load data
+<div id="beregne-medianen-for-hvert-år-for-vekstsesong" class="section level3">
+<h3>6.6 Beregne medianen for hvert år for vekstsesong</h3>
+<pre class="r"><code># Region 1
 growthSeasonMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
-growthSeasonMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
-growthSeasonMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
-growthSeasonMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
-growthSeasonMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
-
-# Stack the rasters
 growthSeasonMountCount_region1 = stack(growthSeasonMountCount_region1)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(growthSeasonMountCount_region1[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+growthSeason_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 63), rep(&quot;vekstsesong&quot;, 63), rep(&quot;dager&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(growthSeason_val) = columnNames
+
+# Region 2
+growthSeasonMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
 growthSeasonMountCount_region2 = stack(growthSeasonMountCount_region2)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(growthSeasonMountCount_region2[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+growthSeason_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 63), rep(&quot;vekstsesong&quot;, 63), rep(&quot;dager&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(growthSeason_val_region2) = columnNames
+growthSeason_val = rbind(growthSeason_val, growthSeason_val_region2)
+
+# Region 3
+growthSeasonMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
 growthSeasonMountCount_region3 = stack(growthSeasonMountCount_region3)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(growthSeasonMountCount_region3[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+growthSeason_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 63), rep(&quot;vekstsesong&quot;, 63), rep(&quot;dager&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(growthSeason_val_region3) = columnNames
+growthSeason_val = rbind(growthSeason_val, growthSeason_val_region3)
+
+# Region 4
+growthSeasonMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
 growthSeasonMountCount_region4 = stack(growthSeasonMountCount_region4)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(growthSeasonMountCount_region4[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+growthSeason_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 63), rep(&quot;vekstsesong&quot;, 63), rep(&quot;dager&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(growthSeason_val_region4) = columnNames
+growthSeason_val = rbind(growthSeason_val, growthSeason_val_region4)
+
+# Region 5
+growthSeasonMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
 growthSeasonMountCount_region5 = stack(growthSeasonMountCount_region5)
-growthSeason_vec = c(growthSeasonMountCount_region1, growthSeasonMountCount_region2, growthSeasonMountCount_region3, growthSeasonMountCount_region4, growthSeasonMountCount_region5)
-
-# Create normal period and current period for each region
-diff_vec = list()
-for(i in 1:5){
-  norm_growthSeason = growthSeason_vec[[i]][[5:34]] # normal period
-  curr_growthSeason = growthSeason_vec[[i]][[60:64]] # current period
-  temp_vec = c()
-  
-  for(j in 1:10000){
-    norm_samp = sample(c(1:30), 1)
-    curr_samp = sample(c(1:5), 1)
-    
-    temp_norm = median(values(norm_growthSeason[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
-    temp_curr = median(values(curr_growthSeason[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
-    
-    temp_diff = temp_curr - temp_norm
-    temp_vec = append(temp_vec, temp_diff)
-  }
-  diff_vec[[i]] = temp_vec
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(growthSeasonMountCount_region5[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
 }
-growthSeason_r1 = diff_vec[[1]]
-growthSeason_r2 = diff_vec[[2]]
-growthSeason_r3 = diff_vec[[3]]
-growthSeason_r4 = diff_vec[[4]]
-growthSeason_r5 = diff_vec[[5]]
-growthSeason_df = cbind(growthSeason_r1, growthSeason_r2, growthSeason_r3, growthSeason_r4, growthSeason_r5)
-growthSeason_df = data.frame(growthSeason_df)
-growthSeason_df = as_tibble(growthSeason_df) %&gt;% rename(&quot;nord-norge&quot; = growthSeason_r1, &quot;midt-norge&quot; = growthSeason_r2, &quot;østlandet&quot; = growthSeason_r3, &quot;vestlandet&quot; = growthSeason_r4, &quot;sørlandet&quot; = growthSeason_r5) %&gt;% mutate(variable = &quot;growthSeason&quot;)
-#write_xlsx(growthSeason_df, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/growthSeason_diff.xlsx&quot;)</code></pre>
+growthSeason_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 63), rep(&quot;vekstsesong&quot;, 63), rep(&quot;dager&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(growthSeason_val_region5) = columnNames
+growthSeason_val = rbind(growthSeason_val, growthSeason_val_region5)
+
+write_xlsx(growthSeason_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/growthSeason_med.xlsx&quot;)
+
+# # Load data
+# growthSeasonMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+# growthSeasonMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+# growthSeasonMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+# growthSeasonMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+# growthSeasonMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+# 
+# # Stack the rasters
+# growthSeasonMountCount_region1 = stack(growthSeasonMountCount_region1)
+# growthSeasonMountCount_region2 = stack(growthSeasonMountCount_region2)
+# growthSeasonMountCount_region3 = stack(growthSeasonMountCount_region3)
+# growthSeasonMountCount_region4 = stack(growthSeasonMountCount_region4)
+# growthSeasonMountCount_region5 = stack(growthSeasonMountCount_region5)
+# growthSeason_vec = c(growthSeasonMountCount_region1, growthSeasonMountCount_region2, growthSeasonMountCount_region3, growthSeasonMountCount_region4, growthSeasonMountCount_region5)
+# 
+# # Create normal period and current period for each region
+# diff_vec = list()
+# for(i in 1:5){
+#   norm_growthSeason = growthSeason_vec[[i]][[5:34]] # normal period
+#   curr_growthSeason = growthSeason_vec[[i]][[60:64]] # current period
+#   temp_vec = c()
+#   
+#   for(j in 1:10000){
+#     norm_samp = sample(c(1:30), 1)
+#     curr_samp = sample(c(1:5), 1)
+#     
+#     temp_norm = median(values(norm_growthSeason[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
+#     temp_curr = median(values(curr_growthSeason[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
+#     
+#     temp_diff = temp_curr - temp_norm
+#     temp_vec = append(temp_vec, temp_diff)
+#   }
+#   diff_vec[[i]] = temp_vec
+# }
+# growthSeason_r1 = diff_vec[[1]]
+# growthSeason_r2 = diff_vec[[2]]
+# growthSeason_r3 = diff_vec[[3]]
+# growthSeason_r4 = diff_vec[[4]]
+# growthSeason_r5 = diff_vec[[5]]
+# growthSeason_df = cbind(growthSeason_r1, growthSeason_r2, growthSeason_r3, growthSeason_r4, growthSeason_r5)
+# growthSeason_df = data.frame(growthSeason_df)
+# growthSeason_df = as_tibble(growthSeason_df) %&gt;% rename(&quot;nord-norge&quot; = growthSeason_r1, &quot;midt-norge&quot; = growthSeason_r2, &quot;østlandet&quot; = growthSeason_r3, &quot;vestlandet&quot; = growthSeason_r4, &quot;sørlandet&quot; = growthSeason_r5) %&gt;% mutate(variable = &quot;growthSeason&quot;)
+# #write_xlsx(growthSeason_df, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/growthSeason_diff.xlsx&quot;)</code></pre>
 </div>
-<div id="bootstrapping-for-å-finne-variasjonen-i-differansen-mellom-nåværende-periode-og-normalperioden-for-vinterregn" class="section level3">
-<h3>6.7 Bootstrapping for å finne variasjonen i differansen mellom nåværende periode og normalperioden for vinterregn</h3>
-<p>Det trekkes ut et tilfeldig år i normalperioden og et tilfeldig år i nåværende periode (2016-2020), finner medianen for hver, og trekker medianen i normalperioden fra medianen i nåværende periode. Dette gjentas så 10 000 ganger.</p>
-<pre class="r"><code># Load data
+<div id="beregne-medianen-for-hvert-år-for-vinterregn" class="section level3">
+<h3>6.7 Beregne medianen for hvert år for vinterregn</h3>
+<pre class="r"><code># Region 1
 winterRainMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
-winterRainMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
-winterRainMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
-winterRainMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
-winterRainMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
-
-# Stack the rasters
 winterRainMountCount_region1 = stack(winterRainMountCount_region1)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(winterRainMountCount_region1[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+winterRain_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 63), rep(&quot;vinterregn&quot;, 63), rep(&quot;mm&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(winterRain_val) = columnNames
+
+# Region 2
+winterRainMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
 winterRainMountCount_region2 = stack(winterRainMountCount_region2)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(winterRainMountCount_region2[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+winterRain_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 63), rep(&quot;Vinterregn&quot;, 63), rep(&quot;mm&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(winterRain_val_region2) = columnNames
+winterRain_val = rbind(winterRain_val, winterRain_val_region2)
+
+# Region 3
+winterRainMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
 winterRainMountCount_region3 = stack(winterRainMountCount_region3)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(winterRainMountCount_region3[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+winterRain_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 63), rep(&quot;Vinterregn&quot;, 63), rep(&quot;mm&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(winterRain_val_region3) = columnNames
+winterRain_val = rbind(winterRain_val, winterRain_val_region3)
+
+# Region 4
+winterRainMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
 winterRainMountCount_region4 = stack(winterRainMountCount_region4)
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(winterRainMountCount_region4[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+winterRain_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 63), rep(&quot;Vinterregn&quot;, 63), rep(&quot;mm&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(winterRain_val_region4) = columnNames
+winterRain_val = rbind(winterRain_val, winterRain_val_region4)
+
+# Region 5
+winterRainMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
 winterRainMountCount_region5 = stack(winterRainMountCount_region5)
-
-# Set condition of &gt; 0mm precipitation and &gt; 2 degrees centigrade
-for(i in 1:64){
-  vals = values(winterRainMountCount_region1[[i]])
-  vals_rows = which(vals == 0)
-  vals[vals_rows] = NA
-  values(winterRainMountCount_region1[[i]]) = vals
+years = c(1:64)
+med = c()
+for(i in 2:length(years)){
+  temp_med = median(values(winterRainMountCount_region5[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
 }
+winterRain_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 63), rep(&quot;Vinterregn&quot;, 63), rep(&quot;mm&quot;, 63), 1958:2020, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(winterRain_val_region5) = columnNames
+winterRain_val = rbind(winterRain_val, winterRain_val_region5)
 
-for(i in 1:64){
-  vals = values(winterRainMountCount_region2[[i]])
-  vals_rows = which(vals == 0)
-  vals[vals_rows] = NA
-  values(winterRainMountCount_region2[[i]]) = vals
-}
+winterRain_val$value = as.numeric(winterRain_val$value) / 10 
+write_xlsx(winterRain_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/winterRain_med.xlsx&quot;)
 
-for(i in 1:64){
-  vals = values(winterRainMountCount_region3[[i]])
-  vals_rows = which(vals == 0)
-  vals[vals_rows] = NA
-  values(winterRainMountCount_region3[[i]]) = vals
-}
-
-for(i in 1:64){
-  vals = values(winterRainMountCount_region4[[i]])
-  vals_rows = which(vals == 0)
-  vals[vals_rows] = NA
-  values(winterRainMountCount_region4[[i]]) = vals
-}
-
-for(i in 1:64){
-  vals = values(winterRainMountCount_region5[[i]])
-  vals_rows = which(vals == 0)
-  vals[vals_rows] = NA
-  values(winterRainMountCount_region5[[i]]) = vals
-}
-
-
-winterRain_vec = c(winterRainMountCount_region1, winterRainMountCount_region2, winterRainMountCount_region3, winterRainMountCount_region4, winterRainMountCount_region5)
-
-# Create normal period and current period for each region
-diff_vec = list()
-for(i in 1:5){
-  norm_winterRain = winterRain_vec[[i]][[5:34]] # normal period
-  curr_winterRain = winterRain_vec[[i]][[60:64]] # current period
-  temp_vec = c()
-  
-  for(j in 1:10000){
-    norm_samp = sample(c(1:30), 1)
-    curr_samp = sample(c(1:5), 1)
-    
-    temp_norm = median(values(norm_winterRain[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
-    temp_curr = median(values(curr_winterRain[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
-    
-    temp_diff = temp_curr - temp_norm
-    temp_vec = append(temp_vec, temp_diff)
-  }
-  diff_vec[[i]] = temp_vec
-}
-winterRain_r1 = diff_vec[[1]]
-winterRain_r2 = diff_vec[[2]]
-winterRain_r3 = diff_vec[[3]]
-winterRain_r4 = diff_vec[[4]]
-winterRain_r5 = diff_vec[[5]]
-winterRain_df = cbind(winterRain_r1, winterRain_r2, winterRain_r3, winterRain_r4, winterRain_r5)
-winterRain_df = data.frame(winterRain_df)
-winterRain_df = as_tibble(winterRain_df) %&gt;% rename(&quot;nord-norge&quot; = winterRain_r1, &quot;midt-norge&quot; = winterRain_r2, &quot;østlandet&quot; = winterRain_r3, &quot;vestlandet&quot; = winterRain_r4, &quot;sørlandet&quot; = winterRain_r5) %&gt;% mutate(variable = &quot;winterRain&quot;)
+# # Load data
+# winterRainMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+# winterRainMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+# winterRainMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+# winterRainMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+# winterRainMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+# 
+# # Stack the rasters
+# winterRainMountCount_region1 = stack(winterRainMountCount_region1)
+# winterRainMountCount_region2 = stack(winterRainMountCount_region2)
+# winterRainMountCount_region3 = stack(winterRainMountCount_region3)
+# winterRainMountCount_region4 = stack(winterRainMountCount_region4)
+# winterRainMountCount_region5 = stack(winterRainMountCount_region5)
+# 
+# # Set condition of &gt; 0mm precipitation and &gt; 2 degrees centigrade
+# for(i in 1:64){
+#   vals = values(winterRainMountCount_region1[[i]])
+#   vals_rows = which(vals == 0)
+#   vals[vals_rows] = NA
+#   values(winterRainMountCount_region1[[i]]) = vals
+# }
+# 
+# for(i in 1:64){
+#   vals = values(winterRainMountCount_region2[[i]])
+#   vals_rows = which(vals == 0)
+#   vals[vals_rows] = NA
+#   values(winterRainMountCount_region2[[i]]) = vals
+# }
+# 
+# for(i in 1:64){
+#   vals = values(winterRainMountCount_region3[[i]])
+#   vals_rows = which(vals == 0)
+#   vals[vals_rows] = NA
+#   values(winterRainMountCount_region3[[i]]) = vals
+# }
+# 
+# for(i in 1:64){
+#   vals = values(winterRainMountCount_region4[[i]])
+#   vals_rows = which(vals == 0)
+#   vals[vals_rows] = NA
+#   values(winterRainMountCount_region4[[i]]) = vals
+# }
+# 
+# for(i in 1:64){
+#   vals = values(winterRainMountCount_region5[[i]])
+#   vals_rows = which(vals == 0)
+#   vals[vals_rows] = NA
+#   values(winterRainMountCount_region5[[i]]) = vals
+# }
+# 
+# 
+# winterRain_vec = c(winterRainMountCount_region1, winterRainMountCount_region2, winterRainMountCount_region3, winterRainMountCount_region4, winterRainMountCount_region5)
+# 
+# # Create normal period and current period for each region
+# diff_vec = list()
+# for(i in 1:5){
+#   norm_winterRain = winterRain_vec[[i]][[5:34]] # normal period
+#   curr_winterRain = winterRain_vec[[i]][[60:64]] # current period
+#   temp_vec = c()
+#   
+#   for(j in 1:10000){
+#     norm_samp = sample(c(1:30), 1)
+#     curr_samp = sample(c(1:5), 1)
+#     
+#     temp_norm = median(values(norm_winterRain[[norm_samp]]), na.rm = TRUE) # median for random year in the normal period 
+#     temp_curr = median(values(curr_winterRain[[curr_samp]]), na.rm = TRUE) # median for random year in the current period
+#     
+#     temp_diff = temp_curr - temp_norm
+#     temp_vec = append(temp_vec, temp_diff)
+#   }
+#   diff_vec[[i]] = temp_vec
+# }
+# winterRain_r1 = diff_vec[[1]]
+# winterRain_r2 = diff_vec[[2]]
+# winterRain_r3 = diff_vec[[3]]
+# winterRain_r4 = diff_vec[[4]]
+# winterRain_r5 = diff_vec[[5]]
+# winterRain_df = cbind(winterRain_r1, winterRain_r2, winterRain_r3, winterRain_r4, winterRain_r5)
+# winterRain_df = data.frame(winterRain_df)
+# winterRain_df = as_tibble(winterRain_df) %&gt;% rename(&quot;nord-norge&quot; = winterRain_r1, &quot;midt-norge&quot; = winterRain_r2, &quot;østlandet&quot; = winterRain_r3, &quot;vestlandet&quot; = winterRain_r4, &quot;sørlandet&quot; = winterRain_r5) %&gt;% mutate(variable = &quot;winterRain&quot;)
 #write_xlsx(winterRain_df, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/winterRain_diff.xlsx&quot;)</code></pre>
+</div>
+<div id="beregne-medianen-for-hvert-år-for-snødybde" class="section level3">
+<h3>6.8 Beregne medianen for hvert år for snødybde</h3>
+<pre class="r"><code># Region 1
+snowDepthMountCount_region1 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region1_1957_2020.grd&quot;)[1]
+snowDepthMountCount_region1 = stack(snowDepthMountCount_region1)
+years = c(1:63)
+winterSeason = c(1957:2020)
+ws = c()
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region1[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+  ws = append(ws, paste(winterSeason[i], winterSeason[i+1], sep = &quot;-&quot;))
+}
+snowDepth_val = data.frame(matrix(c(rep(&quot;Nord-Norge&quot;, 63), rep(&quot;Snødybde&quot;, 63), rep(&quot;mm&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowDepth_val) = columnNames
+
+# Region 2
+snowDepthMountCount_region2 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region2_1957_2020.grd&quot;)[1]
+snowDepthMountCount_region2 = stack(snowDepthMountCount_region2)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region2[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region2 = data.frame(matrix(c(rep(&quot;Midt-Norge&quot;, 63), rep(&quot;Snødybde&quot;, 63), rep(&quot;mm&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowDepth_val_region2) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region2)
+
+# Region 3
+snowDepthMountCount_region3 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region3_1957_2020.grd&quot;)[1]
+snowDepthMountCount_region3 = stack(snowDepthMountCount_region3)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region3[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region3 = data.frame(matrix(c(rep(&quot;Østlandet&quot;, 63), rep(&quot;Snødybde&quot;, 63), rep(&quot;mm&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowDepth_val_region3) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region3)
+
+# Region 4
+snowDepthMountCount_region4 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region4_1957_2020.grd&quot;)[1]
+snowDepthMountCount_region4 = stack(snowDepthMountCount_region4)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region4[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region4 = data.frame(matrix(c(rep(&quot;Vestlandet&quot;, 63), rep(&quot;Snødybde&quot;, 63), rep(&quot;mm&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowDepth_val_region4) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region4)
+
+# Region 5
+snowDepthMountCount_region5 = list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/&quot;, full.names = TRUE, pattern = &quot;region5_1957_2020.grd&quot;)[1]
+snowDepthMountCount_region5 = stack(snowDepthMountCount_region5)
+med = c()
+for(i in years){
+  temp_med = median(values(snowDepthMountCount_region5[[i]]), na.rm = TRUE)
+  med = append(med, temp_med)
+}
+snowDepth_val_region5 = data.frame(matrix(c(rep(&quot;Sørlandet&quot;, 63), rep(&quot;Snødybde&quot;, 63), rep(&quot;mm&quot;, 63), ws, med), nrow = 63, ncol = 5))
+columnNames = c(&quot;reg&quot;, &quot;variable&quot;, &quot;unit&quot;, &quot;year&quot;, &quot;value&quot;)
+colnames(snowDepth_val_region5) = columnNames
+snowDepth_val = rbind(snowDepth_val, snowDepth_val_region5)
+
+write_xlsx(snowDepth_val, &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snødybde/snowDepth_med.xlsx&quot;)</code></pre>
 </div>
 </div>
 
