@@ -86,6 +86,7 @@ dat$diff <- dat$value-dat$ref
 dat$col <- ifelse(dat$diff<0, "one", "two")
 ```
 
+
 ```{r}
 brk <- dat$year2[seq(5, 60, 5)] 
 lab <- dat$year[seq(5, 60, 5)] 
@@ -128,7 +129,11 @@ Stipplalinja er 2sd under forrige normalperioden.
 Bootstrapping (60% uten tilbakelegging) av gjennomsnittlig vinterregn siset 5 år. 
 ```{r}
 new <- dat[dat$year2 %between% c(2016, 2020),]
+round(tapply(new$diff, new$reg, FUN = mean), 1)
+```
+Tabellen over viser gjennomsnittlig reduksjon i snødekkets varighet siste 5 år.
 
+```{r}
 sno <- data.frame(
   reg = rep(levels(dat$reg), each = 10000),
   year = 2020,
