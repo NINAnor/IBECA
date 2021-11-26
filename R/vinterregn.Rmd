@@ -220,7 +220,7 @@ regn <- rbind(regn, norge)
 # Plotting
 
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, eval=F}
 regOrder2 <- c(regOrder, "Norge")
 myPlot <- ggplot(data = regn, 
       aes(x = factor(reg, levels = regOrder2), 
@@ -234,12 +234,12 @@ myPlot <- ggplot(data = regn,
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
   )
 
-png("../output/indicatorPlots/vinterregn_boxplot.png", 
-    units="in", width=10, height=7, res=300)
+png("../output/indicatorPlots/skalert/vinterregn_boxplot.png", 
+    units="in", width=5, height=7, res=300)
 myPlot
 dev.off()
 ```
-![](../output/indicatorPlots/vinterregn_boxplot.png)
+![](../output/indicatorPlots/skalert/vinterregn_boxplot.png)
 ```{r}
 
 myPlot2 <- ggplot(data = winterRain,
@@ -258,12 +258,129 @@ myPlot2 <- ggplot(data = winterRain,
   
  
 
-png("../output/indicatorPlots/vinterregn_normalisert_barplot.png", 
+png("../output/indicatorPlots/supporting figures/vinterregn_normalisert_barplot.png", 
     units="in", width=5, height=12, res=300)
 myPlot2
 dev.off()
 ```
-![](../output/indicatorPlots/vinterregn_normalisert_barplot.png)
+![](../output/indicatorPlots/supporting figures/vinterregn_normalisert_barplot.png)
+# Forenkel figur i ØT-stil
+
+```{r, echo=F}
+
+Tbl <- aggregate(data=winterRain,
+          diff~year+reg,
+          FUN= function(x) round(
+            quantile(x, c(.025, .5, .975)), 2))
+
+Tbl <- do.call(data.frame, Tbl)
+names(Tbl) <- c("year", "reg", "low", "diff", "upp")
+```
+
+```{r}
+regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
+Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 160
+lowYlimit   <- -20
+yStep <- 20
+move <- 0.2
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+# Create loop factors
+  uniq1 <- unique(unlist(Tbl$year))
+  uniq2 <- unique(unlist(Tbl$reg))
+  
+  
+  ### PLOT first Norway
+  
+  # Subset for region 'E'
+  Norge <- subset(Tbl, reg=="Østlandet")
+
+png("../output/indicatorPlots/uskalert/vinterregn.png", 
+    units="in", width=12, height=7, res=300)  
+  
+ # Plot for region = 'Norge'
+  plot(
+    Norge$diff~Norge$year, 
+    ylab="Vinterregn (mm) avvik fra 1961-1990",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Norge$year, med = Norge$diff)
+  
+  
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    quants <- subset(Tbl, reg==uniq2[n])
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = c(regOrder), col = c(colours), 
+         #bg = c(colours), 
+         pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  # add reference line
+  abline(h=0, col="black", lwd=2, lty=2)
+
+dev.off()
+  
+```
+
 # Tabell
 
 ```{r, echo=F}

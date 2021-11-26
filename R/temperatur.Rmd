@@ -18,6 +18,9 @@ library(knitr)
 library(DT)
 library(dplyr)
 library(ggplot2)
+library(readxl)
+library(data.table)
+library(plyr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -26,7 +29,7 @@ Klimadata er prossesert av Markus F. Isaksen og dokumenteres i på [en annen](kl
 
 Disse dataene er klippet slik at det bare kommer fra fjellarealer. 
 
-# Gjennomsnittlig årstemperatur
+# Gjennomsnittlig sommertemperatur
 
 ```{r}
 aar_err <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/meanSummer_med.xlsx")
@@ -62,79 +65,350 @@ aar <- melt(aar,
             variable.name = "Region")
 ```
 
+```{r}
+levels(aar$Region)
+```
 
 ```{r}
-fig_temp <- ggplot(data = aar,
+aar$Region <- plyr::revalue(aar$Region,
+      c("midt-norge"="Midt-Norge", 
+        "nord-norge"="Nord-Norge",
+        "østlandet"="Østlandet",
+        "sørlandet"="Sørlandet",
+        "vestlandet"="Vestlandet"))
+
+aar_err$Region <- plyr::revalue(aar_err$Region,
+      c("midt-norge"="Midt-Norge", 
+        "nord-norge"="Nord-Norge",
+        "østlandet"="Østlandet",
+        "sørlandet"="Sørlandet",
+        "vestlandet"="Vestlandet"))
+```
+
+```{r}
+(fig_temp <- ggplot(data = aar,
                    aes(x  = year, 
                        y  = value))+
   geom_line()+
   geom_smooth()+
-  ylab("Gj. årstemperatur (\u00B0C)")+
+  ylab("Gj. sommertemperatur (\u00B0C)\navvik fra 1961-1990")+
+  xlab("År")+
   geom_hline(yintercept=0)+
   geom_hline(data = aar_err, aes(yintercept=low), linetype=2)+
   geom_hline(data = aar_err, aes(yintercept=upp), linetype=2)+
   facet_wrap(.~Region)+
-  theme_bw(base_size = 20)
+  theme_bw(base_size = 20))
   
 ```
-![](../output/paavirkningsindikatorer/årsnedbør_tidsserie.png)
 
-# Dager med nedbør
 
-```{r}
-dager_err <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_med.xlsx")
+
+# Eksporter figurer
+```{r, eval=F}
+png("../output/paavirkningsindikatorer/facet plot/sommertemperatur.png", 
+    units="in", width=10, height=7, res=300)
+fig_temp
+dev.off()
 ```
 
+
+
+```{r, eval=F}
+Tbl <- aar
+names(Tbl) <- c("year", "reg", "diff")
+regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
+Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 6
+lowYlimit   <- -3
+yStep <- 3
+move <- 0.2
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+# Create loop factors
+  uniq1 <- unique(unlist(Tbl$year))
+  uniq2 <- unique(unlist(Tbl$reg))
+  
+  
+  ### PLOT first Norway
+  
+  # Subset for region 'E'
+  Norge <- subset(Tbl, reg=="Østlandet")
+
+png("../output/paavirkningsindikatorer/enkel stil/sommertemperatur.png", 
+    units="in", width=12, height=7, res=300)  
+  
+ # Plot for region = 'Norge'
+  plot(
+    Norge$diff~Norge$year, 
+    ylab="Gj. sommertemperatur (\u00B0C) avvik fra 1961-1990",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Norge$year, med = Norge$diff)
+  
+  
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    quants <- subset(Tbl, reg==uniq2[n])
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = c(regOrder), col = c(colours), 
+         #bg = c(colours), 
+         pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  # add reference line
+  abline(h=0, col="black", lwd=2, lty=2)
+
+dev.off()
+  
+```
+![](../output/paavirkningsindikatorer/enkel stil/sommertemperatur.png)
+
+
+# Gjennomsnittlig vintertemperatur
+
 ```{r}
-names(dager_err) <- c("Region", "variable", "median", "low", "upp")
-
-dager_err$low     <- as.numeric(dager_err$low)
-dager_err$upp     <- as.numeric(dager_err$upp)
-dager_err$median  <- as.numeric(dager_err$median)
-
-dager_err$low <- 
-  dager_err$low - dager_err$median
-dager_err$upp <- 
-  dager_err$upp - dager_err$median
+aar_err <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/meanWinter_med.xlsx")
+head(aar_err)
 ```
 
-```{r}
-dager <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_diff.xlsx")
-```
 
 ```{r}
-setDT(dager)
-dager <- melt(dager,
-            measure.vars = names(dager)[2:6],
+names(aar_err) <- c("Region", "variable", "median", "low", "upp")
+
+aar_err$low     <- as.numeric(aar_err$low)
+aar_err$upp     <- as.numeric(aar_err$upp)
+aar_err$median  <- as.numeric(aar_err$median)
+
+aar_err$low <- 
+  aar_err$low - aar_err$median
+aar_err$upp <- 
+  aar_err$upp - aar_err$median
+```
+
+
+```{r}
+aar <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/meanWinter_diff.xlsx")
+head(aar)
+```
+Her ser vi gjennomsnittlig årsnedbør siste 5 år minus gjennomsnittet i normalperioden.
+
+```{r}
+setDT(aar)
+aar <- melt(aar,
+            measure.vars = names(aar)[2:6],
             id.vars = "year",
             variable.name = "Region")
 ```
 
 ```{r}
-fig_dager <- ggplot(data = dager)+
-  geom_line(aes(x         = year, 
-                y         = value))+
-  ylab("Antall dager med nedbør")+
-  geom_hline(yintercept=0)+
-  geom_hline(data = dager_err, aes(yintercept=low), linetype=2)+
-  geom_hline(data = dager_err, aes(yintercept=upp), linetype=2)+
-  facet_wrap(.~Region)+
-  theme_bw(base_size = 20)
+levels(aar$Region)
 ```
-![](../output/paavirkningsindikatorer/dagerMedNedbør_tidsserie.png)
 
-Det er tydelig at antall dager med nedbør har økt, såpass mye at gjennomsnittet de siste fem årene på sør- og østlandet vill blitt kalt ekstremår i forrige normalperiode (over 2 standardavvik fra normalen.)
+```{r}
+aar$Region <- plyr::revalue(aar$Region,
+      c("midt-norge"="Midt-Norge", 
+        "nord-norge"="Nord-Norge",
+        "østlandet"="Østlandet",
+        "sørlandet"="Sørlandet",
+        "vestlandet"="Vestlandet"))
+
+aar_err$Region <- plyr::revalue(aar_err$Region,
+      c("midt-norge"="Midt-Norge", 
+        "nord-norge"="Nord-Norge",
+        "østlandet"="Østlandet",
+        "sørlandet"="Sørlandet",
+        "vestlandet"="Vestlandet"))
+```
+
+```{r}
+(fig_temp <- ggplot(data = aar,
+                   aes(x  = year, 
+                       y  = value))+
+  geom_line()+
+  geom_smooth()+
+  ylab("Gj. vintertemperatur (\u00B0C)\navvik fra 1961-1990")+
+  xlab("År")+
+  geom_hline(yintercept=0)+
+  geom_hline(data = aar_err, aes(yintercept=low), linetype=2)+
+  geom_hline(data = aar_err, aes(yintercept=upp), linetype=2)+
+  facet_wrap(.~Region)+
+  theme_bw(base_size = 20))
+  
+```
+
+
 
 # Eksporter figurer
-```{r}
-png("../output/paavirkningsindikatorer/årsnedbør_tidsserie.png", 
+```{r, eval=F}
+png("../output/paavirkningsindikatorer/facet plot/vintertemperatur.png", 
     units="in", width=10, height=7, res=300)
-fig_nedbør
+fig_temp
 dev.off()
 ```
-```{r}
-png("../output/paavirkningsindikatorer/dagerMedNedbør_tidsserie.png", 
-    units="in", width=10, height=7, res=300)
-fig_dager
+
+
+
+```{r, eval=F}
+Tbl <- aar
+names(Tbl) <- c("year", "reg", "diff")
+regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
+Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 12
+lowYlimit   <- -6
+yStep <- 6
+move <- 0.2
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+# Create loop factors
+  uniq1 <- unique(unlist(Tbl$year))
+  uniq2 <- unique(unlist(Tbl$reg))
+  
+  
+  ### PLOT first Norway
+  
+  # Subset for region 'E'
+  Norge <- subset(Tbl, reg=="Østlandet")
+
+png("../output/paavirkningsindikatorer/enkel stil/vintertemperatur.png", 
+    units="in", width=12, height=7, res=300)  
+  
+ # Plot for region = 'Norge'
+  plot(
+    Norge$diff~Norge$year, 
+    ylab="Gj. vintertemperatur (\u00B0C) avvik fra 1961-1990",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Norge$year, med = Norge$diff)
+  
+  
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    quants <- subset(Tbl, reg==uniq2[n])
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = c(regOrder), col = c(colours), 
+         #bg = c(colours), 
+         pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  # add reference line
+  abline(h=0, col="black", lwd=2, lty=2)
+
 dev.off()
+  
 ```
+
+![](../output/paavirkningsindikatorer/enkel stil/vintertemperatur.png)

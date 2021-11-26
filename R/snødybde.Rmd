@@ -105,7 +105,7 @@ gg <- ggplot(data = dat,
        aes(x = year2, y = diff))+
   scale_fill_hue(l=70, c=60)+
   theme_bw(base_size = 20)+
-  ylab("Snødekkets varighet\ndagers avvik fra 1961-1990")+
+  ylab("Snødybde (mm)\n avvik fra 1961-1990")+
   xlab("")+
   theme(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
@@ -116,12 +116,12 @@ gg <- ggplot(data = dat,
 ```
 
 ```{r}
-png("../output/indicatorPlots/snødybde tiddserie.png", 
+png("../output/indicatorPlots/supporting figures/snødybde normalisert tiddserie med barplot.png", 
     units="in", width=5, height=12, res=300)
 gg
 dev.off()
 ```
-![](../output/indicatorPlots/snødybde tiddserie.png)
+![](../output/indicatorPlots/supporting figures/snødybde normalisert tiddserie med barplot.png)
 
 Stiplalinja er 2sd under forrige normalperioden.
 Her er det ikke så mye å spore i form av trender.
@@ -157,13 +157,13 @@ colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
   # Subset for region 'Norge'
   Norge <- subset(dat, reg=="Norge")
 
-png("../output/indicatorPlots/snødybde tiddserie versjon 2.png", 
+png("../output/indicatorPlots/uskalert/snødybde.png", 
     units="in", width=12, height=7, res=300)  
   
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Snødekkets varighet (dagers avvik fra 1961-1990)",
+    ylab="Snødybde (mm) som avvik fra 1961-1990",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -177,7 +177,7 @@ png("../output/indicatorPlots/snødybde tiddserie versjon 2.png",
   )
   
   # Axis 1 options
-  axis(side=1, at=c(minyear, Norge$year, maxyear), labels=c("",Norge$year, ""), cex.axis=1.5) 
+  axis(side=1, at=seq(1960, 2020, by=10), cex.axis=1.5) 
   
   
   # Axis 2 options
@@ -231,12 +231,12 @@ png("../output/indicatorPlots/snødybde tiddserie versjon 2.png",
          cex=legendTextSize)
   
   # add reference line
-  abline(h=0, col="black", lwd=2)
+  abline(h=0, col="black", lwd=2, lty=2)
 
 dev.off()
   
 ```
-
+![](../output/indicatorPlots/uskalert/snødybde.png)
 
 
 Bootstrapping (60% uten tilbakelegging) av gjennomsnittlig vinterregn siste 5 år. 
@@ -347,12 +347,12 @@ myPlot <- ggplot(data = sno2,
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
   )
 
-png("../output/indicatorPlots/snødybde_boxplot.png", 
+png("../output/indicatorPlots/skalert/snødybde_boxplot.png", 
     units="in", width=5, height=7, res=300)
 myPlot
 dev.off()
 ```
-![](../output/indicatorPlots/snødybde_boxplot.png)
+![](../output/indicatorPlots/skalert/snødybde_boxplot.png)
 
 # Tabell
 

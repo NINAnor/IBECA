@@ -70,6 +70,10 @@ plot(dat$value)
 
 Det er mange høye verdier. En verdi på 2 tilsier 2x så mange ryper som i 2010.
 
+
+
+
+
 ```{r}
 dat$year <- as.numeric(as.character(dat$year))
 ggplot(data=dat, aes(x = year, y = value, group= reg, colour = reg))+
