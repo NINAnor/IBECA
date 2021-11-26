@@ -22,13 +22,12 @@ NDVI sample locations
 ØT fjell regions
 
 ```{r include = FALSE}
-setwd("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/projects/økol tilst fjell 2021")
 
 theme_set(theme_bw()+ 
             theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
             theme(strip.background =element_rect(fill="white")))
 
-ndviTS <- read_csv('input/NDVI/NDVI_annual_randomSample.csv') %>%
+ndviTS <- read_csv('data/NDVI/NDVI_annual_randomSample.csv') %>%
   mutate(ndvi = mean) %>%
   dplyr::select(ID, year, ndvi) %>%
   # drop NA values
@@ -40,9 +39,9 @@ ndviTS <- read_csv('input/NDVI/NDVI_annual_randomSample.csv') %>%
   ungroup() %>% dplyr::select(-n)
 
 
-locations<- st_read('input/NDVI/randomSample_locations.shp')
+locations<- st_read('data/NDVI/randomSample_locations.shp')
 
-regions<- st_read('input/regions/regNorway_wgs84 - MERGED.shp')
+regions<- st_read('regioner_2010/regNorway_wgs84 - MERGED.shp')
 ```
 
 ndviTS is a simple tibble with the variables ID, year and NDVI
