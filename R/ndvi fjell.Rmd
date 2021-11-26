@@ -1,0 +1,320 @@
+---
+title: "NDVI trend fjell"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries needed
+```{r message = FALSE, warning = FALSE}
+library(tidyverse)
+library(broom)
+library(sf)
+library(RColorBrewer)
+library("gridExtra") 
+```
+
+## Data
+NDVI samples
+NDVI sample locations
+ØT fjell regions
+
+```{r include = FALSE}
+setwd("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/projects/økol tilst fjell 2021")
+
+theme_set(theme_bw()+ 
+            theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+            theme(strip.background =element_rect(fill="white")))
+
+ndviTS <- read_csv('input/NDVI/NDVI_annual_randomSample.csv') %>%
+  mutate(ndvi = mean) %>%
+  dplyr::select(ID, year, ndvi) %>%
+  # drop NA values
+  drop_na(ndvi) %>%
+  # exclude points with missing years
+  group_by(ID) %>%
+  mutate(n = n()) %>%
+  filter(n == 20) %>%
+  ungroup() %>% dplyr::select(-n)
+
+
+locations<- st_read('input/NDVI/randomSample_locations.shp')
+
+regions<- st_read('input/regions/regNorway_wgs84 - MERGED.shp')
+```
+
+ndviTS is a simple tibble with the variables ID, year and NDVI
+```{r}
+ndviTS
+```
+
+locations is a spatial object with the same ID's as in ndviTS and the corresponding point geometry
+```{r}
+locations
+```
+
+regions is a spatial object with a polygon geometry for the regions in ØT fjell
+```{r}
+regions
+```
+
+## Analysis
+we run a linear model (ndvi~year) for every sample in ndviTS, and for every sample where  years have been randomized
+```{r}
+# calculate linear regressions for each pixel
+ndviTrends <- ndviTS  %>% 
+  group_by(ID) %>% 
+  nest()%>% 
+  mutate(model = map(data, ~lm(ndvi ~ year, data = .x))) %>%
+  mutate(tidy = map(model, tidy),
+           glance = map(model, glance),
+           augment = map(model, augment),
+           rsq = glance %>% map_dbl('r.squared'),
+           pvalue = glance %>% map_dbl('p.value'),
+           intercept = tidy %>% map_dbl(~ filter(.x, term == "(Intercept)") %>% pull(estimate)),
+           slope = tidy %>% map_dbl(~ filter(.x, term == "year") %>% pull(estimate))) %>%
+  dplyr::select(ID, intercept, slope, rsq, pvalue)
+
+ndviTrends
+
+# randomize years and calculate linear regressions
+ndviTrends_ran <- ndviTS %>%
+  group_by(ID) %>%
+  mutate(year_ran = sample(year,20)) %>%
+  nest()%>% 
+  mutate(model = map(data, ~lm(ndvi ~ year_ran, data = .x))) %>%
+  mutate(tidy = map(model, tidy),
+         glance = map(model, glance),
+         augment = map(model, augment),
+         rsq = glance %>% map_dbl('r.squared'),
+         pvalue = glance %>% map_dbl('p.value'),
+         intercept = tidy %>% map_dbl(~ filter(.x, term == "(Intercept)") %>% pull(estimate)),
+         slope = tidy %>% map_dbl(~ filter(.x, term == "year_ran") %>% pull(estimate))) %>%
+  dplyr::select(ID, intercept, slope, rsq, pvalue)
+```
+
+We can plot the slopes in histograms (original=blue, randomized=red)
+```{r echo = FALSE}
+plot1<-ggplot(data = ndviTrends_ran, mapping =aes(x = slope)) +
+  geom_histogram(bins = 100, alpha=0.5, fill = "red",aes(y=..density..)) +
+  geom_vline(xintercept = 0, linetype=2) +
+  xlim(-0.005,0.012) +
+  ylim(0,500)
+plot2<-ggplot(data = ndviTrends, mapping =aes(x = slope)) +
+  geom_histogram(bins = 100, alpha=0.5, fill = "blue",aes(y=..density..)) +
+  geom_vline(xintercept = 0, linetype=2) +
+  xlim(-0.005,0.012) +
+  ylim(0,500)
+grid.arrange(plot1, plot2, ncol=2)
+```
+
+Original: Most slopes are clearly positive, fewer are negative.
+Randomized: Slopes are centered around zero and with similar variability.
+We derive the 0.025 and 0.975 quantiles from the 'randomized' slopes to define the limit values for good ecological condition under the reference condition.
+
+```{r}
+# derive quantiles
+ndviTrend_percent_ran <- ndviTrends_ran %>% ungroup() %>%
+  summarise(t_025 = quantile(slope,0.025)[[1]],
+            t_975 = quantile(slope,0.975)[[1]])
+```
+
+On the very left we see the result of this operation with the scaling values on the 'randomized' slopes
+To the right we see the original slopes with the same scaling and limit values
+```{r echo=FALSE}
+plot1_update<-ggplot(data = ndviTrends_ran, mapping =aes(x = slope)) +
+  geom_histogram(bins = 100, alpha=0.5, fill = "red",aes(y=..density..)) +
+  geom_vline(xintercept = 0, linetype=2) +
+  geom_vline( data = ndviTrend_percent_ran %>% gather(percentile, val), aes(xintercept = val)) +
+  xlim(-0.005,0.012) +
+  ylim(0,500)
+
+plot2_update<-ggplot(data = ndviTrends, mapping =aes(x = slope)) +
+  geom_histogram(bins = 100, alpha=0.5, fill = "blue",aes(y=..density..)) +
+  geom_vline(xintercept = 0, linetype=2) +
+  geom_vline( data = ndviTrend_percent_ran %>% gather(percentile, val), aes(xintercept = val)) +
+  xlim(-0.005,0.012) +
+  ylim(0,500)
+
+grid.arrange(plot1_update, plot2_update, ncol=2)
+
+```
+
+## Scaling
+We define the scaling as well as the scaled values and create NDVI indices. Note that we scale twice:
+- the values lower than the reference value against the lower limit value and the minimum value
+- the values larger than the reference value against the upper limit value and the maximum value
+```{r}
+# scaling values
+ref <- 0
+lim.l <- as.numeric(ndviTrend_percent_ran[1])
+lim.u <- as.numeric(ndviTrend_percent_ran[2])
+maxmin.l <- as.numeric(ndviTrends_ran %>% ungroup() %>%
+  summarise(min(slope)))
+maxmin.u <- as.numeric(ndviTrends_ran %>% ungroup() %>%
+  summarise(max(slope)))
+
+# scaled values
+r.s <- 1    # reference value
+l.s <- 0.6  # limit value
+a.s <- 0    # abscence of indicator, or indicator at maximum
+
+ndviTrends2 <- ndviTrends
+# scaling against upper limit
+ndviTrends2$ndvi.index.u <- ifelse(ndviTrends2$slope>lim.u,
+                                   ( l.s - (l.s * (ndviTrends2$slope - lim.u) / (maxmin.u - lim.u) ) ),
+                                   ( r.s - ( (r.s - l.s) * (ndviTrends2$slope - ref) / (lim.u - ref) ) )
+)
+ndviTrends2$ndvi.index.u[ndviTrends2$ndvi.index.u > 1] <- NA
+ndviTrends2$ndvi.index.u[ndviTrends2$ndvi.index.u < 0] <- 0
+# scaling to lower limit
+ndviTrends2$ndvi.index.l <- ifelse(ndviTrends2$slope<lim.l,
+                                   (a.s + (ndviTrends2$slope-maxmin.l) * ( (l.s-a.s) / (lim.l-maxmin.l) ) ),
+                                   (l.s + (ndviTrends2$slope-lim.l) * ( (r.s-l.s) / (ref-lim.l) ) )
+)
+ndviTrends2$ndvi.index.l[ndviTrends2$ndvi.index.l > 1] <- NA
+ndviTrends2$ndvi.index.l[ndviTrends2$ndvi.index.l < 0] <- 0
+
+summary(ndviTrends2$ndvi.index.l)
+summary(ndviTrends2$ndvi.index.u)
+```
+
+Here is the result, the dashed line indicates the limit for good ecological condition.
+```{r echo=FALSE}
+plot_index.u <- ggplot(data = ndviTrends2, mapping =aes(x = ndvi.index.u)) +
+  geom_histogram(bins = 100, alpha=0.5, fill = "orange",aes(y=..density..)) +
+  geom_vline(xintercept = 0.6, linetype=2)
+plot_index.l <- ggplot(data = ndviTrends2, mapping =aes(x = ndvi.index.l)) +
+  geom_histogram(bins = 100, alpha=0.5, fill = "green",aes(y=..density..)) +
+  geom_vline(xintercept = 0.6, linetype=2)
+grid.arrange(plot_index.l, plot_index.u, ncol=2)
+
+```
+
+Finally, we merge the indices with the geometry and drop the geometry before bootstrapping the results.
+```{r}
+# join indices with region information
+ndviTrends2 = left_join(locations, ndviTrends2, by = "ID")
+ndviTrends2 <- ndviTrends2[!is.na(ndviTrends2$slope),]
+# getting region info into ndviTrends2
+ndviTrends2 <- st_intersection(ndviTrends2, regions)
+ndviTrends2 <- ndviTrends2 %>%
+  rename(pixel.id = ID, region.id = id) 
+
+# drop geometry
+ndviTrends3 <- st_drop_geometry(ndviTrends2)
+head(ndviTrends3)
+summary(ndviTrends3)
+ndviTrends3$region <- as.factor(ndviTrends3$region)
+levels(ndviTrends3$region)
+levels(ndviTrends3$region)[c(1,4)] <- c("Austlandet","Soerlandet")
+levels(ndviTrends3$region)
+
+```
+
+## Bootstrapping
+We bootstrap the indices 10000 times for each region and calculate the mean
+```{r}
+# Empty dataframes for bootstrapping results
+ndvi.fjell.boot.tot <- data.frame(region = factor(),
+                              slope = numeric(),
+                              ndvi.index.l = numeric(),
+                              ndvi.index.u = numeric()
+                              )
+ndvi.fjell.boot.N <- ndvi.fjell.boot.M <- ndvi.fjell.boot.A <- ndvi.fjell.boot.V <- ndvi.fjell.boot.S <- ndvi.fjell.boot.tot
+
+
+# number of bootstraps
+nsim <- 10000
+
+
+
+# Norge total bootstrap
+for (k in 1:nsim){
+  
+  ### Sample data
+  ## total
+  temp.t <- ndviTrends3[sample(nrow(ndviTrends3), replace=T),]
+  ## Nord-Norge (1)
+  ndviTrends3.N <- ndviTrends3[ndviTrends3$region.id == 1,]
+  temp.N <- ndviTrends3.N[sample(nrow(ndviTrends3.N), replace=T),]
+  ## Midt-Norge (2)
+  ndviTrends3.M <- ndviTrends3[ndviTrends3$region.id == 2,]
+  temp.M <- ndviTrends3.M[sample(nrow(ndviTrends3.M), replace=T),]
+  ## Østlandet (3)
+  ndviTrends3.A <- ndviTrends3[ndviTrends3$region.id == 3,]
+  temp.A <- ndviTrends3.A[sample(nrow(ndviTrends3.A), replace=T),]
+  ## Vestlandet (4)
+  ndviTrends3.V <- ndviTrends3[ndviTrends3$region.id == 4,]
+  temp.V <- ndviTrends3.V[sample(nrow(ndviTrends3.V), replace=T),]
+  # Sørlandet (5)
+  ndviTrends3.S <- ndviTrends3[ndviTrends3$region.id == 5,]
+  temp.S <- ndviTrends3.S[sample(nrow(ndviTrends3.S), replace=T),]
+  
+  ### Estimates
+  ## Norge total
+  # Mean values
+  ndvi.fjell.boot.tot[k,"slope"] <- mean(temp.t$slope,na.rm=T)
+  ndvi.fjell.boot.tot[k,"ndvi.index.l"] <- mean(temp.t$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.tot[k,"ndvi.index.u"] <- mean(temp.t$ndvi.index.u,na.rm=T)
+
+  ## Nord-Norge (N)
+  # Mean values
+  ndvi.fjell.boot.N[k,"slope"] <- mean(temp.N$slope,na.rm=T)
+  ndvi.fjell.boot.N[k,"ndvi.index.l"] <- mean(temp.N$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.N[k,"ndvi.index.u"] <- mean(temp.N$ndvi.index.u,na.rm=T)
+
+  ## Midt-Norge (M)
+  # Mean values
+  ndvi.fjell.boot.M[k,"slope"] <- mean(temp.M$slope,na.rm=T)
+  ndvi.fjell.boot.M[k,"ndvi.index.l"] <- mean(temp.M$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.M[k,"ndvi.index.u"] <- mean(temp.M$ndvi.index.u,na.rm=T)
+
+  ## Østlandet (A)
+  # Mean values
+  ndvi.fjell.boot.A[k,"slope"] <- mean(temp.A$slope,na.rm=T)
+  ndvi.fjell.boot.A[k,"ndvi.index.l"] <- mean(temp.A$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.A[k,"ndvi.index.u"] <- mean(temp.A$ndvi.index.u,na.rm=T)
+
+  ## Vestlandet (V)
+  # Mean values
+  ndvi.fjell.boot.V[k,"slope"] <- mean(temp.V$slope,na.rm=T)
+  ndvi.fjell.boot.V[k,"ndvi.index.l"] <- mean(temp.V$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.V[k,"ndvi.index.u"] <- mean(temp.V$ndvi.index.u,na.rm=T)
+
+  ## Sørlandet (S)
+  # Mean values
+  ndvi.fjell.boot.S[k,"slope"] <- mean(temp.S$slope,na.rm=T)
+  ndvi.fjell.boot.S[k,"ndvi.index.l"] <- mean(temp.S$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.S[k,"ndvi.index.u"] <- mean(temp.S$ndvi.index.u,na.rm=T)
+
+}
+
+ndvi.fjell.boot.tot$region <- "t"
+ndvi.fjell.boot.N$region <- "N"
+ndvi.fjell.boot.M$region <- "M"
+ndvi.fjell.boot.A$region <- "A"
+ndvi.fjell.boot.V$region <- "V"
+ndvi.fjell.boot.S$region <- "S"
+```
+## Results
+```{r}
+# Norge total
+summary(ndvi.fjell.boot.tot)[,c(3,4)]
+
+# Nord Norge
+summary(ndvi.fjell.boot.N)[,c(3,4)]
+
+# Midt-Norge
+summary(ndvi.fjell.boot.M)[,c(3,4)]
+
+# Østlandet
+summary(ndvi.fjell.boot.A)[,c(3,4)]
+
+# Vestlandet
+summary(ndvi.fjell.boot.V)[,c(3,4)]
+
+# Sørlandet
+summary(ndvi.fjell.boot.S)[,c(3,4)]
