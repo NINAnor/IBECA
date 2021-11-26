@@ -111,7 +111,7 @@ EllNN <- read.csv("../output/indicator_values/ell_N_low.csv", header=T)
 EllNN$period <- 
   periods$period[match(EllNN$year, periods$year)]
 
-EllNN$X <- "EllLH"
+EllNN$X <- "EllNN"
 
 ```
 
@@ -751,18 +751,18 @@ names(tot_ind_w) <- c("ind", "reg",  "low", "med", "upp")
 temp_names <- data.frame(c(unique(allind$X), names(ind_char[,-1]),
                            "Total", "Total_w"))
 names(temp_names) <- "work"
-temp_names$plot <- c("alien",
-                     "breareal",
-                     "EllLH",
-                     "fjellindeks",
-                     "fjellrev",
-                     "INON",
-                     "jerv",
-                     "kongeørn",
-                     "ndvi",
-                     "snodekke",
-                     "smaagnagere",				
-                     "vinterregn",
+temp_names$plot <- c("Fravær av fremmede arter",
+                     "Areal av isbreer",
+                     "Ellenberg L (øvre)",
+                     "Naturindeks for fjell (mod.)",
+                     "Fjellrev",
+                     "Areal uten tekniske inngrep",
+                     "Jerv",
+                     "Kongeørn",
+                     "NDVI (øvre)",
+                     "Snødekke",
+                     "Smågnagere",				
+                     "Vinterregn",
                      "Primærproduksjon",
                      "Funksjonelt viktige arter og biofysiske strukturer", 
                      "Fordeling av biomasse i ulike trofiske nivå",
@@ -830,9 +830,9 @@ for (j in 1:length(regions)){
          type="n", ylim=c(0,1.15), cex.lab=1.2)
     abline(h=1, col="blue", lwd=2)
     abline(h=0.6, col="red", lwd=2, lty=2)
-    abline(v=(length(unique(allind$X))-3)+0.5, col="black", lwd=2)
-    abline(v=(length(unique(allind$X))-3)+1.5, col="grey", lwd=1, lty=2)
-    abline(v=(length(unique(allind$X))-3)+2.5, col="black", lwd=2)
+    abline(v=length(unique(allind$X))+0.5, col="black", lwd=2)
+    abline(v=length(unique(allind$X))+1.5, col="grey", lwd=1, lty=2)
+    abline(v=length(unique(allind$X))+2.5, col="black", lwd=2)
     
     pex <- 1.8 # median point cex
     lar <- 0.0 # length of CI arrows
@@ -887,11 +887,11 @@ for (j in 1:length(regions)){
 }
 
 
-rm(list=ls())
-# tempdir()
-dir(tempdir())
-unlink(paste0(normalizePath(tempdir()), "/", dir(tempdir())), recursive = TRUE)
-dir(tempdir())
+#rm(list=ls())
+## tempdir()
+#dir(tempdir())
+#unlink(paste0(normalizePath(tempdir()), "/", dir(tempdir())), recursive = TRUE)
+#dir(tempdir())
 
 ```
 

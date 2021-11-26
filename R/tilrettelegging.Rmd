@@ -1,5 +1,5 @@
 ---
-title: "Plotting og tilrettelegging av data for indikatorer på NDVI, ANO-data, og fremmede arter"
+title: "Tilrettelegging og plotting av data for indikatorer på NDVI, ANO-data, fremmede arter og varmekravsindikatoren"
 output:
   html_document:
     toc: true
@@ -19,6 +19,7 @@ library(DT)
 library(ggplot2)
 library(ggpubr)
 library(dplyr)
+library(plyr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -328,10 +329,9 @@ rm(ell, ell_L_high, ell_L_low, ell_N_high, ell_N_low, finalTbl, finalTbl2, temp,
 # NDVI
 
 ```{r}
-ndvi <- read.csv("../output/indicator_values/ndvi.csv", header=T)
+ndvi <- read.csv("../data/ndvi.fjell.boot.csv", header=T)
 head(ndvi)
 ```
-
 
 
 ```{r}
@@ -355,6 +355,19 @@ Indikatorverdiene er også produsert ved boostrapping av pixseler og fordelingen
 
 Den øvre- og nedre-skalerte indikatoren bør vektes utifra antall pixler som inngår. En pixel kan bare brukes i en av indikatorene. Det er stor overvekt av pixsler som viser en positiv utvikling i NDVI slik at jeg bruker kun den øvre-skalerte indikatoren nå i førtse omgang til jeg får vektingstallene fra Joackim. 
 
+Regionene har rare navn.
+
+```{r}
+unique(ndvi$region)
+```
+```{r}
+ndvi$region <- plyr::revalue(ndvi$region,
+                             c("M" = "C",
+                               "V" = "W",
+                               "A" = "E"))
+```
+
+
 ```{r}
 ndvi2 <- aggregate(data=ndvi,
                    ndvi.index.u~region,
@@ -365,15 +378,132 @@ ndvi2
 ```
 
 ```{r}
-ggplot(data = ndvi2, aes(x = reg, y = val))+
-  geom_bar(stat="identity", alpha=.7)+
+ndvi2$reg <- plyr::revalue(ndvi2$reg,
+      c("C" = "Midt-Norge", 
+        "N" = "Nord-Norge",
+        "Norge" = "Norge",
+        "E" = "Østlandet",
+        "S" = "Sørlandet",
+        "W" = "Vestlandet"))
+
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Vestlandet",
+  "Østlandet",
+  "Sørlandet",
+  "Norge"
+             )
+```
+
+```{r}
+ggndvi <- ggplot(data = ndvi2, aes(x = factor(reg, levels=regOrder), y = val))+
+  geom_bar(stat="identity", alpha=.7, colour = "black")+
   ylim(c(0,1))+
   theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )+
+  geom_hline(yintercept = 0.6, size=1.2, linetype=2)+
   geom_hline(yintercept = 0.6, size=2)+
   ylab("NDVI-indikator (øvre)")+
   xlab("")
 ```
-```{r}
+
+```{r, eval=F}
+png("../output/indicatorPlots/ndvi_barplot.png", 
+    units="in", width=5, height=7, res=300)
+ggndvi
+dev.off()
+```
+![](../output/indicatorPlots/ndvi_barplot.png)
+
+```{r, eval=F}
 write.csv(ndvi2, "../output/indicator_values/ndvi.csv")
 ```
 
+
+
+
+# Varmekrav
+
+```{r}
+heat <- read.csv("../output/indicator_values/heat_req.csv", header=T)
+head(heat)
+```
+
+```{r}
+heat$year <- 2020
+heat <- select(heat, reg, year, val)
+heat$X <- "vamrmekrav"
+```
+
+```{r, echo=F}
+
+finalTbl <- aggregate(data=heat,
+          val~year+reg,
+          FUN= function(x) round(
+            quantile(x, c(.025, .5, .975)), 2))
+
+finalTbl <- do.call(data.frame, finalTbl)
+
+names(finalTbl) <- c("year", "reg", "low", "med", "upp")
+
+DT::datatable(
+  finalTbl, 
+  extensions = "FixedColumns",
+  options = list(
+    scrollX = TRUE,
+    scrollY=T,
+    pageLength = 10
+  ))
+```
+Her var det store avvik.
+```{r}
+finalTbl$reg <- plyr::revalue(finalTbl$reg,
+      c("C" = "Midt-Norge", 
+        "N" = "Nord-Norge",
+        "Norge" = "Norge",
+        "E" = "Østlandet",
+        "S" = "Sørlandet",
+        "W" = "Vestlandet"))
+
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Vestlandet",
+  "Østlandet",
+  "Sørlandet",
+  "Norge"
+             )
+```
+
+
+```{r}
+ggheat <- ggplot(data = finalTbl, aes(x = factor(reg, levels=regOrder), y = med))+
+  geom_bar(stat="identity", alpha=.7, colour="black")+
+  geom_errorbar(aes(ymin=low, ymax=upp),
+                width=0.5, size=1.2)+
+  ylim(c(0,1))+
+  theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )+
+  geom_hline(yintercept = 0.6, size=1.2, linetype=2)+
+  ylab("Skalert indikatorverdi\nfor vegetasjonens varmekrav")+
+  xlab("")
+
+```
+```{r, eval=F}
+png("../output/indicatorPlots/varmekrav_barplot.png", 
+    units="in", width=5, height=7, res=300)
+ggheat
+dev.off()
+```
+
+
+![](../output/indicatorPlots/varmekrav_barplot.png)
+
+```{r, eval=F}
+write.csv(heat, "../output/indicator_values/varmekrav.csv")
+```
