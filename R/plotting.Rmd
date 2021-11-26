@@ -25,7 +25,7 @@ Her viser jeg hvordan vi aggreggerer indikatorverdiene til en verdi for økologi
 
 ```{r}
 # Number of simulations
-nsim <- 10000
+#nsim <- 10000 # should be run with 10 000 as the end
 
 # Short names for ecosystem characteristics
 characteristics <- c("ppr", "isf", "bmb", "fgw", "bio", "lsp", "abf")
@@ -52,9 +52,8 @@ periods <- data.frame(period = c(1,1,1,1,1,1,1,1,
 ```
 
 Save periods file
-```{r}
-
-write.csv(periods, "../output/periods.csv")
+```{r, eval=F}
+#write.csv(periods, "../output/periods.csv")
 ```
 
 # Step 2: 
@@ -140,16 +139,13 @@ table(fjellrev$reg, fjellrev$period)
 ### Fjellrype
 Her må jeg skjekke litt. 
 ```{r}
-#fjellrype <- read.csv("../output/indicator_values/fjellrype.csv", header=T)
+fjellrype <- read.csv("../output/indicator_values/fjellrype.csv", header=T)
+fjellrype$X <- "fjellrype"
+fjellrype$period <- periods$period[match(fjellrype$year, periods$year)]
 
 ```
 
-### Heat req
-Her må jeg skjekke litt. 
-```{r}
-#heat <- read.csv("../output/indicator_values/heat_req.csv", header=T)
 
-```
 
 ### INON
 [INON](inon.html) har ingen usikkerhet knyttet til seg. 
@@ -201,6 +197,14 @@ snodekke$period <-
   periods$period[match(snodekke$year, periods$year)]
 table(snodekke$reg, snodekke$period)
 ```
+### Snødybde
+```{r}
+snodybde <- read.csv("../output/indicator_values/snodybde.csv", header=T)
+snodybde$period <- 
+  periods$period[match(snodybde$year, periods$year)]
+table(snodybde$reg, snodybde$period)
+```
+
 
 ### Smågnagere
 ```{r}
@@ -210,6 +214,17 @@ smaagnagere$period <-
   periods$period[match(smaagnagere$year, periods$year)]
 table(smaagnagere$reg, smaagnagere$period)
 ```
+### Vegetasjonen varmekrav
+
+```{r}
+varmekrav <- read.csv("../output/indicator_values/varmekrav.csv", header=T)
+varmekrav <- select(varmekrav, -X.1)
+varmekrav$X <- "varmekrav"
+varmekrav$period <- 
+  periods$period[match(varmekrav$year, periods$year)]
+
+```
+
 ### Vinterregn
 ```{r}
 vinterregn <- read.csv("../output/indicator_values/vinterregn.csv", header=T)
@@ -246,12 +261,15 @@ EllLH        <- EllLH[EllLH$period%in%periods_use,]
 EllNN        <- EllNN[EllNN$period%in%periods_use,]
 fjellindeks  <- fjellindeks[fjellindeks$period%in%periods_use,]
 fjellrev     <- fjellrev[fjellrev$period%in%periods_use,]
+fjellrype    <- fjellrype[fjellrype$period%in%periods_use,]
 inon         <- inon[inon$period%in%periods_use,]
 jerv         <- jerv[jerv$period%in%periods_use,]
 kongeorn     <- kongeorn[kongeorn$period%in%periods_use,]
 ndvi         <- ndvi[ndvi$period%in%periods_use,]
 smaagnagere  <- smaagnagere[smaagnagere$period%in%periods_use,]
 snodekke     <- snodekke[snodekke$period%in%periods_use,]
+snodybde     <- snodybde[snodybde$period%in%periods_use,]
+varmekrav    <- varmekrav[varmekrav$period%in%periods_use,]
 vinterregn   <- vinterregn[vinterregn$period%in%periods_use,]
 ```
 
@@ -297,9 +315,9 @@ fjellrev <- fjellrev %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
-# fjellrype
-
-# heat req
+fjellrype <- fjellrype %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
 
 inon <- inon %>%
   arrange(match(reg, regOrder), desc(period))%>%
@@ -321,7 +339,15 @@ snodekke <- snodekke %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
+snodybde <- snodybde %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
 smaagnagere <- smaagnagere %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+varmekrav <- varmekrav %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
@@ -340,14 +366,15 @@ allind <- rbind(
   EllNN,
   fjellindeks,
   fjellrev,
-  #fjellrype,
-  #heat,
+  fjellrype,
   inon,
   jerv,
   kongeorn,
   ndvi,
   snodekke,
+  snodybde,
   smaagnagere,
+  varmekrav,
   vinterregn)
 table(allind$X)
 ```
@@ -355,12 +382,12 @@ table(allind$X)
 The number of re-samplings differs.
 
 ## Save allind file
-```{r}
+```{r, eval=F}
 write.csv(allind, "../output/allind_temp.csv")
 ```
 
 
-Here Simon added reduced weighting to indiactors with both high and low scaling methods. I will do this only if neccessary.
+Here Simon added reduced weighting to indicators with both high and low scaling methods. I will do this only if neccessary.
 
 # Step 4: Fill indicator <-> characteristics matrix
 
@@ -438,16 +465,17 @@ ind_char$abf <- ifelse(
   ind_char$IND=="EllNN"|
   ind_char$IND=="EllLH"|
   ind_char$IND=="breareal"|
-  ind_char$IND=="snømengde"|
+  ind_char$IND=="snodybde"|
   ind_char$IND=="snodekke"|
-  ind_char$IND=="vinterregn"
+  ind_char$IND=="vinterregn"|
+  ind_char$IND=="varmekrav"  
     ,
                        1,0)
 
 ```
 
 Write indicator-characteristic matrix
-```{r}
+```{r, eval=F}
 write.csv(ind_char, "../output/ind_char.csv")
 ```
 
@@ -462,7 +490,7 @@ regions <- unlist(unique(allind$reg))
 per_reg <- length(periods)*length(regions)
 ```
 
-```{r}
+```{r, eval=F}
 all_Q <- data.frame()
 
 for(n in unique(allind$X)){
@@ -484,10 +512,10 @@ for(n in unique(allind$X)){
 ```{r}
 agg_ind <- data.frame()
 w_boot <- data.frame()
-nsim<- 100
+nsim<- 100 # må skrus opp til 10 000 til slutt
 ```
 
-```{r}
+```{r, eval=F}
 for (n in 1:length(characteristics)){
   
   
@@ -596,7 +624,7 @@ names(w_boot)[3] <- c("val")
 # Step 7: Aggregated total calculations
 
 
-```{r}
+```{r, eval=F}
 
 nsim <- 100
 regions <- unlist(unique(allind$reg))
@@ -716,7 +744,7 @@ weights_all <- data.frame()
     
     # Info data
     tot <- "Total"
-    #totw <- "Total_w"
+    totw <- "Total_w"
     reg <- regions[k]
     #per <- periods[j]
 
@@ -747,21 +775,25 @@ names(tot_ind_w) <- c("ind", "reg",  "low", "med", "upp")
 
 # Step 8: Rename indicator labels key 
 
-```{r}
+```{r, eval=F}
 temp_names <- data.frame(c(unique(allind$X), names(ind_char[,-1]),
                            "Total", "Total_w"))
 names(temp_names) <- "work"
 temp_names$plot <- c("Fravær av fremmede arter",
                      "Areal av isbreer",
                      "Ellenberg L (øvre)",
+                     "Ellenberg N (nedre)",
                      "Naturindeks for fjell (mod.)",
                      "Fjellrev",
+                     "Fjellrype",
                      "Areal uten tekniske inngrep",
                      "Jerv",
                      "Kongeørn",
                      "NDVI (øvre)",
                      "Snødekke",
-                     "Smågnagere",				
+                     "Snødybde",
+                     "Smågnagere",
+                     "Vegetasjonens varmekrav",
                      "Vinterregn",
                      "Primærproduksjon",
                      "Funksjonelt viktige arter og biofysiske strukturer", 
@@ -774,14 +806,14 @@ temp_names$plot <- c("Fravær av fremmede arter",
                      "Total (vektet pr. egenskap)")
 ```
 
-# SAVING 
+# Saving 
 
 Extra column for name, matched from temp_names
-```{r}
+```{r, eval=F}
 all_Q$names_plot <- temp_names$plot[match(all_Q$ind, temp_names$work)]
 ```
 
-```{r}
+```{r, eval=F}
 
 write.csv(all_Q,        "../output/tables/all_Q.csv")
 write.csv(tot_ind,      "../output/tables/tot_ind.csv")
@@ -792,18 +824,19 @@ write.csv(agg_ind,      "../output/tables/agg_ind.csv")
 
 
  Omit the extra name column (only for better understanding of backup csv file)
-```{r}
+```{r, eval=F}
 all_Q <- all_Q[,-7]
 ```
 
 
 # Step 9: Plotting
 
-```{r}
+Ignorer per(iodene)
+```{r, eval=F}
 all_Q <- select(all_Q, -per)
 ```
 
-```{r}
+```{r, eval=F}
 
 regions <- unlist(unique(allind$reg))
 
@@ -895,5 +928,5 @@ for (j in 1:length(regions)){
 
 ```
 
-
+![](../output/aggregated_plots/region_Norge_.png)
 

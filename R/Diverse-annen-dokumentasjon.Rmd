@@ -68,6 +68,15 @@ Dette er en supplerende indikator som viser tilstanden/utviklingen til syv alpin
 <br><br>
 
 
+
+
+## Plotting
+[Her](plotting.html) er skriptet som produserer de aggregerte figurene og tabellene.
+<br>
+
+
+
+
 ## Metadata og rutiner
 
 Figuren under viser den grunnleggende arbeidsflyten rundt fremskaffelsen av tilstandsindikatorer:

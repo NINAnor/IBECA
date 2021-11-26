@@ -187,13 +187,13 @@ tbl
 ```
 
 
-## Snømengde
+## Snødybde
 
-Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/snoemengde.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/snodybde.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 
 ```{r, echo=FALSE}
-tbl <- get("Snømengde")
+tbl <- get("Snødybde")
 tbl
 ```
 
