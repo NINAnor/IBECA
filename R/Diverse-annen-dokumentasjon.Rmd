@@ -54,7 +54,13 @@ Klimadata hentes fra SeNorge datasettet. Noen av disse variblene brukes som tils
 [Klikk her](nedbor.html) for mer informasjon
 <br>
 
+### Temperatur
+[Klikk her](temperatur.html) for mer informasjon
+<br>
 
+### Vekstsesong
+[Klikk her](vekstsesong.html) for mer informasjon
+<br>
 
 
 ## Supplerende indikatorer

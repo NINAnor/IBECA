@@ -92,7 +92,116 @@ fig_nedbør <- ggplot(data = dat,
   facet_wrap(.~Region)+
   theme_bw(base_size = 20)
 ```
-![](../output/paavirkningsindikatorer/årsnedbør_tidsserie.png)
+![](../output/paavirkningsindikatorer/facet plot/årsnedbør_tidsserie.png)
+
+
+
+```{r, eval=F}
+Tbl <- dat
+names(Tbl) <- c("year", "reg", "diff")
+regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
+Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 420
+lowYlimit   <- -400
+yStep <- 200
+move <- 0.2
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+# Create loop factors
+  uniq1 <- unique(unlist(Tbl$year))
+  uniq2 <- unique(unlist(Tbl$reg))
+  
+  
+  ### PLOT first Norway
+  
+  # Subset for region 'E'
+  Norge <- subset(Tbl, reg=="Østlandet")
+
+png("../output/paavirkningsindikatorer/enkel stil/årsnedbør.png", 
+    units="in", width=12, height=7, res=300)  
+  
+ # Plot for region = 'Norge'
+  plot(
+    Norge$diff~Norge$year, 
+    ylab="Årsnedbør (mm) avvik fra 1961-1990",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Norge$year, med = Norge$diff)
+  
+  
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    quants <- subset(Tbl, reg==uniq2[n])
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = c(regOrder), col = c(colours), 
+         #bg = c(colours), 
+         pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  # add reference line
+  abline(h=0, col="black", lwd=2, lty=2)
+
+dev.off()
+  
+```
+![](../output/paavirkningsindikatorer/enkel stil/årsnedbør.png)
 
 # Dager med nedbør
 
@@ -152,19 +261,129 @@ fig_dager <- ggplot(data = dager,
   facet_wrap(.~Region)+
   theme_bw(base_size = 20)
 ```
-![](../output/paavirkningsindikatorer/dagerMedNedbør_tidsserie.png)
+![](../output/paavirkningsindikatorer/facet plot/dagerMedNedbør_tidsserie.png)
 
 Det er tydelig at antall dager med nedbør har økt, såpass mye at gjennomsnittet de siste fem årene på sør- og østlandet vill blitt kalt ekstremår i forrige normalperiode (over 2 standardavvik fra normalen.)
 
+
+
+```{r, eval=F}
+Tbl <- dager
+names(Tbl) <- c("year", "reg", "diff")
+regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
+Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 50
+lowYlimit   <- -40
+yStep <- 20
+move <- 0.2
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+# Create loop factors
+  uniq1 <- unique(unlist(Tbl$year))
+  uniq2 <- unique(unlist(Tbl$reg))
+  
+  
+  ### PLOT first Norway
+  
+  # Subset for region 'E'
+  Norge <- subset(Tbl, reg=="Østlandet")
+
+png("../output/paavirkningsindikatorer/enkel stil/dager med nedbør.png", 
+    units="in", width=12, height=7, res=300)  
+  
+ # Plot for region = 'Norge'
+  plot(
+    Norge$diff~Norge$year, 
+    ylab="Antall dager med nebør avvik fra 1961-1990",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Norge$year, med = Norge$diff)
+  
+  
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    quants <- subset(Tbl, reg==uniq2[n])
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = c(regOrder), col = c(colours), 
+         #bg = c(colours), 
+         pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  # add reference line
+  abline(h=0, col="black", lwd=2, lty=2)
+
+dev.off()
+  
+```
+![](../output/paavirkningsindikatorer/enkel stil/dager med nedbør.png)
+
+
 # Eksporter figurer
-```{r}
-png("../output/paavirkningsindikatorer/årsnedbør_tidsserie.png", 
+```{r, eval=F}
+png("../output/paavirkningsindikatorer/facet plot/årsnedbør_tidsserie.png", 
     units="in", width=10, height=7, res=300)
 fig_nedbør
 dev.off()
 ```
-```{r}
-png("../output/paavirkningsindikatorer/dagerMedNedbør_tidsserie.png", 
+```{r, eval=F}
+png("../output/paavirkningsindikatorer/facet plot/dagerMedNedbør_tidsserie.png", 
     units="in", width=10, height=7, res=300)
 fig_dager
 dev.off()
