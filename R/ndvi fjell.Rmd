@@ -328,3 +328,25 @@ summary(ndvi.fjell.boot.V)[,c(3,4)]
 
 # Sørlandet
 summary(ndvi.fjell.boot.S)[,c(3,4)]
+```
+
+The lower and upper indicators for NDVI should have a joint weight of 1 in the assessment of ecological condition. Both indicators should thus receive a weight directly dependent of the number of pixels they represent. This may vary between regions and compared to the entire country.
+``` {r}
+# number of pixels for lower and upper indicator - by region
+# lower
+summary(ndviTrends3[!is.na(ndviTrends3$ndvi.index.l),])
+
+# upper
+summary(ndviTrends3[!is.na(ndviTrends3$ndvi.index.u),])
+
+# e.g. weights for lower and upper indicator - Norge total
+# lower
+nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])/
+  (nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])+
+     nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),]))
+
+# upper
+nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),])/
+  (nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])+
+     nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),]))
+```
