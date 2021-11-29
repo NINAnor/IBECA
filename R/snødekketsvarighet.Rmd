@@ -126,6 +126,112 @@ Stiplalinja er 2sd under forrige normalperioden.
 
 
 
+```{r, eval=F}
+regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
+dat <- dat[order(match(dat$reg,regOrder),dat$year),]
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 60
+lowYlimit   <- -60
+yStep <- 30
+move <- 0.2
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+# Create loop factors
+  uniq1 <- unique(unlist(dat$year))
+  uniq2 <- unique(unlist(dat$reg))
+  
+  
+  ### PLOT first Norway
+  
+  # Subset for region 'Norge'
+  Norge <- subset(dat, reg=="Østlandet")
+
+png("../output/indicatorPlots/uskalert/snødekketsvarighet.png", 
+    units="in", width=12, height=7, res=300)  
+  
+ # Plot for region = 'Norge'
+  plot(
+    Norge$diff~Norge$year2, 
+    ylab="Snødekkets varighet (dagers avvik fra 1961-1990)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=seq(1960, 2020, by=10), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Norge$year2+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Norge$year2, med = Norge$diff)
+  
+  
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    quants <- subset(dat, reg==uniq2[n])
+    
+    # Add lines
+    lines(quants$year2+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year2, med = quants$diff, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year2+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year2+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = c(regOrder[6], regOrder[1:5]), col = c(colours[6], colours[1:5]), 
+         #bg = c(colours), 
+         pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  # add reference line
+  abline(h=0, col="black", lwd=2, lty=2)
+
+dev.off()
+  
+```
+![](../output/indicatorPlots/uskalert/snødekketsvarighet.png)
+
+
 Bootstrapping (60% uten tilbakelegging) av gjennomsnittlig vinterregn siste 5 år. 
 ```{r}
 new <- dat[dat$year2 %between% c(2016, 2020),]
@@ -240,7 +346,7 @@ png("../output/indicatorPlots/snødekke_boxplot.png",
 myPlot
 dev.off()
 ```
-![](../output/indicatorPlots/snødekke_boxplot.png)
+![](../output/indicatorPlots/supporting figures/snødekke_boxplot.png)
 
 # Tabell
 
