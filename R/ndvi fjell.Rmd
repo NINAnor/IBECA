@@ -22,12 +22,11 @@ NDVI sample locations
 ØT fjell regions
 
 ```{r include = FALSE}
-
 theme_set(theme_bw()+ 
             theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
             theme(strip.background =element_rect(fill="white")))
 
-ndviTS <- read_csv('data/NDVI/NDVI_annual_randomSample.csv') %>%
+ndviTS <- read_csv('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_annual_randomSample.csv') %>%
   mutate(ndvi = mean) %>%
   dplyr::select(ID, year, ndvi) %>%
   # drop NA values
@@ -39,9 +38,9 @@ ndviTS <- read_csv('data/NDVI/NDVI_annual_randomSample.csv') %>%
   ungroup() %>% dplyr::select(-n)
 
 
-locations<- st_read('data/NDVI/randomSample_locations.shp')
+locations<- st_read('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/randomSample_locations.shp')
 
-regions<- st_read('regioner_2010/regNorway_wgs84 - MERGED.shp')
+regions<- st_read('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/regioner_2010/regNorway_wgs84 - MERGED.shp')
 ```
 
 ndviTS is a simple tibble with the variables ID, year and NDVI
@@ -61,7 +60,7 @@ regions
 
 ## Analysis
 we run a linear model (ndvi~year) for every sample in ndviTS, and for every sample where  years have been randomized
-```{r}
+```{r eval=FALSE}
 # calculate linear regressions for each pixel
 ndviTrends <- ndviTS  %>% 
   group_by(ID) %>% 
@@ -94,7 +93,19 @@ ndviTrends_ran <- ndviTS %>%
   dplyr::select(ID, intercept, slope, rsq, pvalue)
 ```
 
-We can plot the slopes in histograms (original=blue, randomized=red)
+``` {r include = FALSE}
+# save the result of the regressions and rather load it from the workspace rather than running the reg's all over again as the reg's take time
+#save.image('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_regressions')
+load('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_regressions')
+
+```
+
+``` {r}
+ndviTrends
+ndviTrends_ran
+```
+
+We can plot the slopes as histograms (original=blue, randomized=red)
 ```{r echo = FALSE}
 plot1<-ggplot(data = ndviTrends_ran, mapping =aes(x = slope)) +
   geom_histogram(bins = 100, alpha=0.5, fill = "red",aes(y=..density..)) +
@@ -317,3 +328,25 @@ summary(ndvi.fjell.boot.V)[,c(3,4)]
 
 # Sørlandet
 summary(ndvi.fjell.boot.S)[,c(3,4)]
+```
+
+The lower and upper indicators for NDVI should have a joint weight of 1 in the assessment of ecological condition. Both indicators should thus receive a weight directly dependent of the number of pixels they represent. This may vary between regions and compared to the entire country.
+``` {r}
+# number of pixels for lower and upper indicator - by region
+# lower
+summary(ndviTrends3[!is.na(ndviTrends3$ndvi.index.l),])
+
+# upper
+summary(ndviTrends3[!is.na(ndviTrends3$ndvi.index.u),])
+
+# e.g. weights for lower and upper indicator - Norge total
+# lower
+nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])/
+  (nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])+
+     nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),]))
+
+# upper
+nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),])/
+  (nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])+
+     nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),]))
+```
