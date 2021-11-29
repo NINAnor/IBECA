@@ -91,26 +91,36 @@ breareal$X <- "breareal"
 ```
 
 ### Ellenberg L
-Her bruker jeg for nå bare den øvre-skalerte indikatoren siden denne har flest ruter, [se her](tilrettelegge.html).
+Denne indikatoren er tosidig [(se her)](tilrettelegge.html).
 ```{r}
-EllLH <- read.csv("../output/indicator_values/ell_L_high.csv", header=T)
+EllLHigh <- read.csv("../output/indicator_values/ell_L_high.csv", header=T)
+EllLLow <- read.csv("../output/indicator_values/ell_L_low.csv", header=T)
 
-EllLH$period <- 
-  periods$period[match(EllLH$year, periods$year)]
+EllLHigh$period <- 
+  periods$period[match(EllLHigh$year, periods$year)]
+EllLLow$period <- 
+  periods$period[match(EllLLow$year, periods$year)]
 
-EllLH$X <- "EllLH"
+
+EllLHigh$X <- "EllLHigh"
+EllLLow$X <- "EllLLow"
+
 
 ```
 
 ### Ellenberg N
-Her bruker jeg for nå bare den nedre-skalerte indikatoren siden denne har flest ruter, [se her](tilrettelegge.html).
+Denne indikatoren er også tosidig [(se her)](tilrettelegge.html).
 ```{r}
-EllNN <- read.csv("../output/indicator_values/ell_N_low.csv", header=T)
+EllNHigh <- read.csv("../output/indicator_values/ell_N_high.csv", header=T)
+EllNLow <- read.csv("../output/indicator_values/ell_N_low.csv", header=T)
 
-EllNN$period <- 
-  periods$period[match(EllNN$year, periods$year)]
+EllNHigh$period <- 
+  periods$period[match(EllNHigh$year, periods$year)]
+EllNLow$period <- 
+  periods$period[match(EllNLow$year, periods$year)]
 
-EllNN$X <- "EllNN"
+EllNHigh$X <- "EllNHigh"
+EllNLow$X <- "EllNLow"
 
 ```
 
@@ -257,8 +267,10 @@ Subset additional data
 ```{r}
 alien        <- alien[alien$period%in%periods_use,]
 breareal     <- breareal[breareal$period%in%periods_use,]
-EllLH        <- EllLH[EllLH$period%in%periods_use,]
-EllNN        <- EllNN[EllNN$period%in%periods_use,]
+EllLHigh     <- EllLHigh[EllLHigh$period%in%periods_use,]
+EllLLow      <- EllLLow[EllLLow$period%in%periods_use,]
+EllNHigh     <- EllNHigh[EllNHigh$period%in%periods_use,]
+EllNLow      <- EllNLow[EllNLow$period%in%periods_use,]
 fjellindeks  <- fjellindeks[fjellindeks$period%in%periods_use,]
 fjellrev     <- fjellrev[fjellrev$period%in%periods_use,]
 fjellrype    <- fjellrype[fjellrype$period%in%periods_use,]
@@ -272,11 +284,6 @@ snodybde     <- snodybde[snodybde$period%in%periods_use,]
 varmekrav    <- varmekrav[varmekrav$period%in%periods_use,]
 vinterregn   <- vinterregn[vinterregn$period%in%periods_use,]
 ```
-
-## Weights
-
-adding later
-
 
 
 ## Order data
@@ -299,13 +306,22 @@ breareal <- breareal %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
-EllLH <- EllLH %>%
+EllLHigh <- EllLHigh %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
-EllNN <- EllNN %>%
+EllLLow <- EllLLow %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
+
+EllNHigh <- EllNHigh %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+EllNLow <- EllNLow %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
 
 fjellindeks <- fjellindeks %>%
   arrange(match(reg, regOrder), desc(period))%>%
@@ -362,8 +378,10 @@ vinterregn <- vinterregn %>%
 allind <- rbind( 
   alien,
   breareal,
-  EllLH,
-  EllNN,
+  EllLHigh,
+  EllLLow,
+  EllNHigh,
+  EllNLow,
   fjellindeks,
   fjellrev,
   fjellrype,
@@ -387,14 +405,74 @@ write.csv(allind, "../output/allind_temp.csv")
 ```
 
 
-Here Simon added reduced weighting to indicators with both high and low scaling methods. I will do this only if neccessary.
+## Weights
+
+### Ellenberg L
+```{r}
+Lhigh <- read.csv("../output/indicator_values/ell_L_high.csv", header=T)
+Llow <- read.csv("../output/indicator_values/ell_L_low.csv", header=T)
+
+Lhigh <- aggregate(data = Lhigh,
+               plotsL2_tot~reg,
+               FUN = mean) #  a bit dangerous to use mean here, but I've cheched that all values are the same
+Llow <- aggregate(data = Llow,
+               plotsL1_tot~reg,
+               FUN = mean)
+L <- cbind(Lhigh, Llow$plotsL1_tot)
+L$total <- L$plotsL2_tot+L$`Llow$plotsL1_tot`
+L$wLow <- L$`Llow$plotsL1_tot`/L$total
+L$wHigh <- L$plotsL2_tot/L$total
+L <- select(L, reg, wLow, wHigh)
+L
+```
+
+### Ellenberg N
+```{r}
+Nhigh <- read.csv("../output/indicator_values/ell_N_high.csv", header=T)
+Nlow <- read.csv("../output/indicator_values/ell_N_low.csv", header=T)
+
+Nhigh <- aggregate(data = Nhigh,
+               plotsN2_tot~reg,
+               FUN = mean) #  a bit dangerous to use mean here, but I've cheched that all values are the same
+Nlow <- aggregate(data = Nlow,
+               plotsN1_tot~reg,
+               FUN = mean)
+N <- cbind(Nhigh, Nlow$plotsN1_tot)
+N$total <- N$plotsN2_tot+N$`Nlow$plotsN1_tot`
+N$wLow <- N$`Nlow$plotsN1_tot`/N$total
+N$wHigh <- N$plotsN2_tot/N$total
+N <- select(N, reg, wLow, wHigh)
+N
+```
+
+Creating a data frame for the weight and setting all weight equal to 1 as defult 
+```{r}
+weights <- aggregate(data = allind,
+                     val~X+reg,
+                     FUN = length)
+weights$val <- 1
+```
+Then changing the weight for the two-sided indicators
+```{r}
+weights$val[weights$X=="EllLHigh"] <- L$wHigh[match(weights$reg[weights$X=="EllLHigh"], L$reg)]
+weights$val[weights$X=="EllLLow"] <- L$wLow[match(weights$reg[weights$X=="EllLLow"], L$reg)]
+weights$val[weights$X=="EllNHigh"] <- N$wHigh[match(weights$reg[weights$X=="EllNHigh"], L$reg)]
+weights$val[weights$X=="EllNLow"] <- N$wLow[match(weights$reg[weights$X=="EllNLow"], L$reg)]
+```
+
+Write weights file
+```{r, eval=F}
+write.csv(weights, "../output/weights_temp.csv")
+```
+
+
 
 # Step 4: Fill indicator <-> characteristics matrix
 
 Empty indicator <-> character matrix 
 ```{r}
 # Specify total number of indicators (incl. double counting of two-sided)
-nind <- length(unique(allind$X))
+(nind <- length(unique(allind$X)))
 ``` 
 
 ```{r}
@@ -462,8 +540,10 @@ ind_char$lsp <- ifelse(
 
 # Abiotic factors
 ind_char$abf <- ifelse(
-  ind_char$IND=="EllNN"|
-  ind_char$IND=="EllLH"|
+  ind_char$IND=="EllNHigh"|
+  ind_char$IND=="EllNLow"|
+  ind_char$IND=="EllLHigh"|
+  ind_char$IND=="EllLLow"|
   ind_char$IND=="breareal"|
   ind_char$IND=="snodybde"|
   ind_char$IND=="snodekke"|
@@ -538,24 +618,13 @@ for (n in 1:length(characteristics)){
 
       
       # weights
-      #temp_weights <- weights[weights$a_reg==regions[k],]
-      #temp_weights <- temp_weights[temp_weights$a_period==periods[j],]
-      #temp_weights <- temp_weights[,names(temp_weights)%in%names(temp_ind3)]
-      #temp_weights[is.na(temp_weights)] <- 0
-      #temp_weights <- decostand(temp_weights, method="total", margin =1)
+      temp_weights <- weights[weights$reg==regions[k],]
+      temp_weights <- temp_weights[temp_weights$X %in% unique(temp_ind3$X),]
+      #temp_weights2 <- decostand(temp_weights$val, method="max", margin =2)[,1]
       
       # check?
       #(names(temp_ind3)==names(temp_weights))
       
-      # Truncate values
-      #temp_ind3[temp_ind3>1] <- 1
-      
-      
-      # Empty sample mean vector
-      #temp_x_boot <- NULL
-      
-      #for (m in 1:nsim){ # make 10 000
-        
         # Empty sample values vector  
         temp_x <- NULL
         temp_x2 <- NULL
@@ -591,8 +660,8 @@ for (n in 1:length(characteristics)){
                                     sim~ind,
                                     value.var="val")
        
-        x_boot <- rowMeans(temp_x3[,-1])
-        #x_boot2 <- ifelse(is.null(x_boot), NA, x_boot)
+        mat <- as.matrix(temp_x3[,-1])
+        x_boot <- rowWeightedMeans(mat, temp_weights$val)
         
       
       
@@ -646,18 +715,12 @@ weights_all <- data.frame()
     
   #  temp_ind3 <- temp_ind3[,-(1:3)]
     
-   # # weights
-   # temp_weights <- weights[weights$a_reg==regions[k],]
-   # temp_weights <- temp_weights[temp_weights$a_period==periods[j],]
-   # temp_weights <- temp_weights[,names(temp_weights)%in%names(temp_ind3)]
-   # temp_weights[is.na(temp_weights)] <- 0
-   # temp_weights <- decostand(temp_weights, method="total", margin =1)
+   # weights
+    temp_weights <- weights[weights$reg==regions[k],]
+    #temp_weights <- temp_weights[temp_weights$X %in% unique(temp_ind3$X),]
+    #temp_weights2 <- decostand(temp_weights$val, method="max", margin =2)[,1]
 #
-   # # check?
-   # (names(temp_ind3)==names(temp_weights))
-    
    
-    
     # Empty sample mean vector
     temp_x_boot <- NULL
     temp_chr_boot <- NULL
@@ -694,12 +757,9 @@ weights_all <- data.frame()
                                     sim~ind,
                                     value.var="val")
        
-        x_boot <- rowMeans(temp_x3[,-1])
+       mat <- as.matrix(temp_x3[,-1])
         
-    # Mean of all indicators (weighted)
-      #x_boot <- tryCatch(weighted.mean(x=na.omit(temp_x), w=temp_weights[temp_weights!=0]), error=function(e){})
-      #x_boot <- ifelse(is.null(x_boot), NA, x_boot)
-      #temp_x_boot[m] <- x_boot
+       x_boot <- rowWeightedMeans(mat, temp_weights$val)
       
       # Empty sample values vector  
       temp_chr <- NULL
@@ -707,10 +767,6 @@ weights_all <- data.frame()
 
       for (n in 1:length(char_w)) {
         temp_chr4 <- subset(temp_chr3, chr==char_w[n])
-        
-        # Sample from indicator i
-        #temp_chr[n] <- tryCatch(sample(temp_chr4$val, 1), error=function(e){})
-        
         
          start2 <- length(temp_chr)
           
@@ -735,7 +791,8 @@ weights_all <- data.frame()
                                     sim~chr,
                                     value.var="val")
        
-        temp_chr_boot <- rowMeans(temp_chr3[,-1])
+       
+       temp_chr_boot <- rowMeans(temp_chr3[,-1])
      
       
       # Characteristic mean (unweighted)
@@ -748,7 +805,7 @@ weights_all <- data.frame()
     reg <- regions[k]
     #per <- periods[j]
 
-    #weights_all <- rbind(weights_all, data.frame(reg, per, temp_weights))
+    weights_all <- rbind(weights_all, data.frame(reg, temp_weights))
     
     # Quantiles
     temp_Q <- tryCatch(quantile(x_boot,c(0.025, 0.5, 0.975)), error=function(e){})
@@ -782,6 +839,8 @@ names(temp_names) <- "work"
 temp_names$plot <- c("Fravær av fremmede arter",
                      "Areal av isbreer",
                      "Ellenberg L (øvre)",
+                     "Ellenberg L (nedre)",
+                     "Ellenberg N (øvre)",
                      "Ellenberg N (nedre)",
                      "Naturindeks for fjell (mod.)",
                      "Fjellrev",
