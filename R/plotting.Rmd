@@ -18,6 +18,7 @@ library(knitr)
 library(DT)
 library(dplyr)
 library(plyr)
+library(matrixStats)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 

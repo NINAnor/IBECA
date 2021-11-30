@@ -1,0 +1,349 @@
+---
+title: "Påvirkningsfigurer"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'paavirkninger.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(DT)
+library(dplyr)
+library(plyr)
+library(matrixStats)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Her reger jeg ut og plotter de aggregerte tilstandsverdiene for hver generelle påvirkningskategori. Skriptet følger etter det skriptet som heter [plotting.R](plotting.html).
+
+Skriptet er modifisert fra det som Simon Jakobsson skrev for skograpporten i 2021.
+
+# Step 1: Basics & load data
+
+Indicator and weights files from aggregation script
+```{r}
+allind  <- read.csv("../output/allind_temp.csv", row.names=1)
+weights <- read.csv("../output/weights_temp.csv", row.names=1)
+```
+
+Number of simulations to run
+```{r}
+nsim <- 100 # bør kjøres på 10 000 til slutt
+```
+
+Total number of indicators
+```{r}
+(nind <- length(unique(allind$X)))
+```
+
+Short names for ecosystem characteristics
+```{r}
+pressures <- c("are", "kli", "fef", "bes", "fre")
+```
+
+```{r}
+pressures2 <- c("Arealinngrep", "Klima", "Forurensing",
+                     "Beskatning", "Fremmede arter")
+```
+
+
+Empty indicator <-> pressures matrix
+```{r}
+ind_press <- data.frame(matrix(nrow=nind, ncol=6))
+names(ind_press) <- c("IND", pressures)
+ind_press$IND <- unique(allind$X)
+```
+
+```{r}
+ind_press$are <- 
+  ifelse(
+    ind_press$IND=="alien"|
+    ind_press$IND=="breareal"|
+    ind_press$IND=="EllLHigh"|
+    ind_press$IND=="EllLow"|
+    #ind_press$IND=="EllNHigh"|
+    #ind_press$IND=="EllNLow"|
+    ind_press$IND=="fjellindeks"|
+    ind_press$IND=="fjellrev"|
+    #ind_press$IND=="fjellrype"|
+    ind_press$IND=="INON"|
+    ind_press$IND=="jerv"|
+    ind_press$IND=="kongeørn"|
+    ind_press$IND=="ndvi"
+    #ind_press$IND=="snodekke"|
+    #ind_press$IND=="snodybde"|
+    #ind_press$IND=="smaagnagere"|
+    #ind_press$IND=="varmekrav"|
+    #ind_press$IND=="vinterregn"
+    ,
+    1,0)
+
+
+ind_press$kli  <- 
+  ifelse(
+    ind_press$IND=="alien"|
+    ind_press$IND=="breareal"|
+    ind_press$IND=="EllLHigh"|
+    ind_press$IND=="EllLow"|
+    ind_press$IND=="EllNHigh"|
+    ind_press$IND=="EllNLow"|
+    ind_press$IND=="fjellindeks"|
+    ind_press$IND=="fjellrev"|
+    ind_press$IND=="fjellrype"|
+    #ind_press$IND=="INON"|
+    #ind_press$IND=="jerv"|
+    ind_press$IND=="kongeørn"|
+    ind_press$IND=="ndvi"|
+    ind_press$IND=="snodekke"|
+    ind_press$IND=="snodybde"|
+    ind_press$IND=="smaagnagere"|
+    ind_press$IND=="varmekrav"|
+    ind_press$IND=="vinterregn"
+    ,
+    1,0)
+ind_press$fef  <- 
+  ifelse(
+    #ind_press$IND=="alien"|
+    #ind_press$IND=="breareal"|
+    #ind_press$IND=="EllLHigh"|
+    #ind_press$IND=="EllLow"|
+    #ind_press$IND=="EllNHigh"|
+    ind_press$IND=="EllNLow"|
+    #ind_press$IND=="fjellindeks"|
+    #ind_press$IND=="fjellrev"|
+    #ind_press$IND=="fjellrype"|
+    #ind_press$IND=="INON"|
+    #ind_press$IND=="jerv"|
+    #ind_press$IND=="kongeørn"|
+    ind_press$IND=="ndvi"
+    #ind_press$IND=="snodekke"|
+    #ind_press$IND=="snodybde"|
+    #ind_press$IND=="smaagnagere"|
+    #ind_press$IND=="varmekrav"|
+    #ind_press$IND=="vinterregn"
+    ,
+    1,0)
+
+
+ind_press$bes <- 
+  ifelse(
+    #ind_press$IND=="alien"|
+    #ind_press$IND=="breareal"|
+    #ind_press$IND=="EllLHigh"|
+    #ind_press$IND=="EllLow"|
+    #ind_press$IND=="EllNHigh"|
+    #ind_press$IND=="EllNLow"|
+    ind_press$IND=="fjellindeks"|
+    ind_press$IND=="fjellrev"|
+    ind_press$IND=="fjellrype"|
+    #ind_press$IND=="INON"|
+    ind_press$IND=="jerv"
+    #ind_press$IND=="kongeørn"|
+    #ind_press$IND=="ndvi"|
+    #ind_press$IND=="snodekke"|
+    #ind_press$IND=="snodybde"|
+    #ind_press$IND=="smaagnagere"|
+    #ind_press$IND=="varmekrav"|
+    #ind_press$IND=="vinterregn"
+    ,
+    1,0)
+
+ind_press$fre <- ifelse(
+    ind_press$IND=="alien"
+    ,
+    1,0)
+```
+
+
+```{r, eval=F}
+write.csv(ind_press, "../output/ind_press.csv")
+```
+
+# Step 2: Aggregated pressure calculations
+
+Loop factors
+```{r}
+#periods <- unlist(unique(allind$a_period))
+regions <- unlist(unique(allind$reg))
+```
+Empty aggregation data frame
+```{r}
+agg_ind <- data.frame()
+w_boot <- data.frame()
+```
+
+```{r}
+for (n in 1:length(pressures)){
+  
+  # Select by ind_press data frame
+  temp_press <- 
+    cbind(
+      ind_press$IND, 
+      ind_press[names(ind_press)%in%pressures[n]])
+  
+  temp_press <- temp_press[temp_press[,2]==1,]
+  
+  temp_ind <- allind[allind$X %in% temp_press$`ind_press$IND`,]
+
+
+  for (k in 1:length(regions)){
+      
+    print(paste(pressures[n], regions[k]))
+# Subset region
+    temp_ind3 <- subset(temp_ind, reg==regions[k])
+    #temp_ind3 <- data.frame(temp_ind3[,-(1:3)])
+    #names(temp_ind3) <- names(temp_ind2)[-(1:3)]
+      
+# weights
+    temp_weights <- weights[weights$reg==regions[k],]
+    temp_weights <- temp_weights[temp_weights$X %in%
+                                   unique(temp_ind3$X),]
+    
+# Empty sample mean vector
+    temp_x_boot <- NULL
+# Empty sample values vector  
+    temp_x <- NULL
+    temp_x2 <- NULL
+        
+ for (i in 1:length(unique(temp_ind3$X))) {
+          
+          print(paste(
+            pressures[n], 
+            regions[k],
+            unique(temp_ind3$X)[i]))
+          
+# Sample from indicator i
+    start <- length(temp_x)
+   
+    temp_x[(start+1):(start+nsim)] <- 
+      tryCatch(
+      sample(
+       temp_ind3$val[temp_ind3$X ==
+                       unique(temp_ind3$X)[i]], 
+                        nsim, replace = T), 
+                        error=function(e){})
+          
+    temp_x2[(start+1):(start+nsim)] <- unique(temp_ind3$X)[i]
+        } 
+        
+    temp_x3 <- as.data.frame(cbind(val=temp_x, 
+                                      ind =temp_x2))
+    setDT(temp_x3)
+    temp_x3$sim <- rep(1:nsim, 
+                       times=length(unique(temp_ind3$X)))
+    temp_x3$val <- as.numeric(temp_x3$val)
+    temp_x3 <- data.table::dcast(temp_x3,
+                                    sim~ind,
+                                    value.var="val")
+       
+    mat <- as.matrix(temp_x3[,-1])
+    x_boot <- rowWeightedMeans(mat, temp_weights$val)
+      
+# Info data
+    pres <- pressures[n]
+    reg <- regions[k]
+      
+    w_boot <- rbind(w_boot, data.frame(pres, reg, x_boot))
+      
+# Quantiles
+    temp_Q <- tryCatch(quantile(
+      x_boot,c(0.025, 0.5, 0.975)), 
+      error=function(e){})
+      
+      # Compile data
+    agg_ind <- rbind(
+      agg_ind, 
+      data.frame(pres, 
+                 reg,
+                 ifelse(is.null(temp_Q), NA, temp_Q[1]),
+                 ifelse(is.null(temp_Q), NA, temp_Q[2]),
+                 ifelse(is.null(temp_Q), NA, temp_Q[3]))) 
+    
+  }
+}
+
+# Rename columns
+names(agg_ind) <- c("ind", "reg",  "low", "med", "upp")
+```
+
+## Names
+```{r}
+temp_names <- data.frame(names(ind_press[,-1]))
+names(temp_names) <- "work"
+temp_names$plot <- pressures2
+```
+
+
+# Step 9: Plotting separate     
+
+```{r}
+
+for (j in 1:length(regions)){
+
+  TEMP_Q <- agg_ind[
+    agg_ind$reg==regions[j],]
+    
+  TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+  
+  TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
+  
+    
+    temp_per <- 2021
+    
+    write.csv(TEMP_Q, paste("../output/tables/TEMP_Q_", regions[j], "_", temp_per, ".csv", sep=""))
+    
+    png(paste("../output/aggregated_plots/pressure plots/region_", regions[j],"_", ".png", sep=""), units="in", width=4, height=11, res=600)
+    
+    par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
+    plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Skalerte indikatorverdier", xlab="",
+         type="n", ylim=c(0,1.1), xlim=c(0.5,5.5), cex.lab=1.2)
+    abline(h=1, col="blue", lwd=2)
+    abline(h=0.6, col="red", lwd=2, lty=2)
+    
+    # add values and CI's
+  arrs <- data.frame(
+           x  = TEMP_Q$ind_2[1:nrow(TEMP_Q)],
+           y = TEMP_Q$med[1:nrow(TEMP_Q)],
+           high = TEMP_Q$upp[1:nrow(TEMP_Q)],
+           low = TEMP_Q$low[1:nrow(TEMP_Q)]
+  )   
+  arrs$diff <- arrs$y-arrs$high
+  arrs$diff2 <- arrs$y-arrs$low
+  arrs2 <- arrs
+  arrs <- arrs[arrs$diff != 0,]    
+  arrs <- arrs[arrs$diff2 != 0,]    
+  
+  arrows(arrs$x, arrs$y,
+        arrs$x, arrs$high, 
+            angle=90, length=0.05, col="grey")
+    
+  arrows(arrs$x, arrs$y,
+        arrs$x, arrs$low, 
+            angle=90, length=0.05, col="grey")
+    
+  points(
+    arrs2$x, arrs2$y, 
+           pch=21, bg="dark grey", cex=1.5)
+    
+    # Name axes #
+    lablist.x<-as.vector(TEMP_Q$ind)
+    
+    axis(1, at=seq(1,  nrow(TEMP_Q), by=1), labels = FALSE)
+    
+    # Change first command number to align labels
+    text(TEMP_Q$ind_2+0.2, par("usr")[3]-0.02, labels = lablist.x,pos=2,srt = 90,  xpd = TRUE, cex=1.2)
+    
+    dev.off()
+  
+}
+
+```
+
