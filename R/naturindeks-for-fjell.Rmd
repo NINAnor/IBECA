@@ -357,7 +357,7 @@ imputations = fjell_imputes_v2)
 -----------------------------------------------------
 
 # Kalulerer indeksen
-```{r nyFjellindeks, message=FALSE}
+```{r nyFjellindeks, message=FALSE, eval=F}
 
 fjellIndex2 <- NIcalc::calculateIndex(
   x       = fjell_assemeble_red,
@@ -371,7 +371,14 @@ fjellIndex2 <- NIcalc::calculateIndex(
   keys     = "ignore",
   awbs=TRUE # arealvekting basert på fjellareal i hver kommune
 )
+
+saveRDS(fjellIndex2, "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellindeks2.rds")
 ```
+
+```{r}
+fjellIndex2 <- readRDS("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/naturindeks/NIfjellindeks2.rds")
+```
+
 
 Så lager jeg er dataframe med resultatene og eksporterer csv. 
 ```{r, eval=F}
@@ -515,32 +522,14 @@ barplot(rein, ylab = "Indikatorvekt")
 
 ```{r}
 source("indicator_plots.R")
-```
-
-```{r plotting}
-
-indicator_plot(dataset = NIfjellTbl,
-               yAxisTitle = "Naturindeks for fjell",
-               lowYlimit = 0,
-               upperYlimit = 1,
-               yStep = .2,
-               minyear = 1988,
-               maxyear = 2021,
-               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
-               legendPosition = "top",
-               legendInset = 0,
-               move = 0,
-               horizontal = T,
-               legendTextSize = 1.25)
+eval(parse("indicator_plots.R", encoding="UTF-8"))
 
 ```
-
-Figuren er eksportert til output/indicatorPlots
 
 
 ```{r, eval=F, include=FALSE }
 
-png("../output/indicatorPlots/NIfjell.png", units="in", width=12, height=7, res=resout)
+png("../output/indicatorPlots/skalert/NIfjell.png", units="in", width=12, height=7, res=300)
 
 # Plot windows par
 par(mfrow=c(1,1), mar=c(4.5,
@@ -559,13 +548,13 @@ indicator_plot(dataset = NIfjellTbl,
                colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
                legendPosition = "top",
                legendInset = 0,
-               move = 0,
+               move = 0.2,
                horizontal = T,
                legendTextSize = 1.25)
 
 dev.off()
 ```
-
+![](../output/indicatorPlots/skalert/NIfjell.png)
 
 -----------------------------------------------
 
