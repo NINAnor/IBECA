@@ -133,8 +133,8 @@ dat$year <- dat$year2
 ```
 
 
-```{r}
-regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge","Norge")
+```{r, eval=F}
+regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
 dat <- dat[order(match(dat$reg,regOrder),dat$year),]
 minyear <- 1958
 maxyear <- 2021
@@ -146,7 +146,7 @@ legendPosition <- "top"
 legendInset = 0
 horizontal = TRUE
 legendTextSize = 1.25
-colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 # Create loop factors
   uniq1 <- unique(unlist(dat$year))
   uniq2 <- unique(unlist(dat$reg))
@@ -155,7 +155,7 @@ colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
   ### PLOT first Norway
   
   # Subset for region 'Norge'
-  Norge <- subset(dat, reg=="Norge")
+  Norge <- subset(dat, reg=="Østlandet")
 
 png("../output/indicatorPlots/uskalert/snødybde.png", 
     units="in", width=12, height=7, res=300)  
@@ -187,7 +187,7 @@ png("../output/indicatorPlots/uskalert/snødybde.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -224,7 +224,7 @@ png("../output/indicatorPlots/uskalert/snødybde.png",
   points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
   
   # Add legend to plot
-  legend(legendPosition, legendPositionY, legend = c(regOrder[6], regOrder[1:5]), col = c(colours[6], colours[1:5]), 
+  legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 
          #bg = c(colours), 
          pch=16, lty=2,
          lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,

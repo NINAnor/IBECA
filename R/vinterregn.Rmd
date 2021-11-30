@@ -277,7 +277,7 @@ Tbl <- do.call(data.frame, Tbl)
 names(Tbl) <- c("year", "reg", "low", "diff", "upp")
 ```
 
-```{r}
+```{r, eval=F}
 regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
 Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
 minyear <- 1958
@@ -290,7 +290,7 @@ legendPosition <- "top"
 legendInset = 0
 horizontal = TRUE
 legendTextSize = 1.25
-colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 # Create loop factors
   uniq1 <- unique(unlist(Tbl$year))
   uniq2 <- unique(unlist(Tbl$reg))
@@ -331,7 +331,7 @@ png("../output/indicatorPlots/uskalert/vinterregn.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -368,7 +368,7 @@ png("../output/indicatorPlots/uskalert/vinterregn.png",
   points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
   
   # Add legend to plot
-  legend(legendPosition, legendPositionY, legend = c(regOrder), col = c(colours), 
+  legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 
          #bg = c(colours), 
          pch=16, lty=2,
          lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
@@ -380,6 +380,7 @@ png("../output/indicatorPlots/uskalert/vinterregn.png",
 dev.off()
   
 ```
+![](../output/indicatorPlots/uskalert/vinterregn.png)
 
 # Tabell
 

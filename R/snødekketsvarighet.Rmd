@@ -120,7 +120,7 @@ png("../output/indicatorPlots/snødekkets varighet tiddserie.png",
 gg
 dev.off()
 ```
-![](../output/indicatorPlots/snødekkets varighet tiddserie.png)
+![](../output/indicatorPlots/supporting figures/snødekkets varighet tiddserie.png)
 
 Stiplalinja er 2sd under forrige normalperioden.
 
@@ -139,7 +139,7 @@ legendPosition <- "top"
 legendInset = 0
 horizontal = TRUE
 legendTextSize = 1.25
-colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 # Create loop factors
   uniq1 <- unique(unlist(dat$year))
   uniq2 <- unique(unlist(dat$reg))
@@ -180,7 +180,7 @@ png("../output/indicatorPlots/uskalert/snødekketsvarighet.png",
   
   
   # Add lines
-  lines(Norge$year2+(move*(-2.5)), Norge$diff, col=colours[6], lwd=2, lty=3) 
+  lines(Norge$year2+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year2, med = Norge$diff)
@@ -217,7 +217,7 @@ png("../output/indicatorPlots/uskalert/snødekketsvarighet.png",
   points(temppoints$year2+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
   
   # Add legend to plot
-  legend(legendPosition, legendPositionY, legend = c(regOrder[6], regOrder[1:5]), col = c(colours[6], colours[1:5]), 
+  legend(legendPosition, legendPositionY, legend = c(regOrder), col = c(colours[5], colours[1:4]), 
          #bg = c(colours), 
          pch=16, lty=2,
          lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
