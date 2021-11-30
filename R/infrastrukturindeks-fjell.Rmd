@@ -1,0 +1,370 @@
+---
+title: "Infrastrukturindeks fjell"
+author: "Markus Fjellstad Israelsen"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'infrastrukturindeks.html'))})
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = FALSE}
+
+library(dplyr)
+library(raster)
+library(writexl)
+library(readxl)
+library(readr)
+library(rgeos)
+library(rgdal)
+library(spatial)
+
+```
+
+
+## Google Earth Engine (GEE)
+Ta ut infrastrukturindeksen for fjellområder i Norge. OBS, må kjøres i GEE.
+```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = FALSE}
+
+var orig_eco_map = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_5m"),
+    ecosystem_map = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m"),
+    regnorway_wgs84 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/regNorway_wgs84"),
+    norway_wgs84 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/Norway_wgs84"),
+    infra = ee.Image("users/tsimonjakobsson/ecocond_2020-2021/NY_INFRA_IND"),
+    orig_eco_map2 = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_5m"),
+    ecosystem_map2 = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m"),
+    regnorway_wgs842 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/regNorway_wgs84"),
+    norway_wgs842 = ee.FeatureCollection("users/tsimonjakobsson/ecocond_2020-2021/Norway_wgs84"),
+    geometry = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[7.581073322611367, 64.75311150402966],
+          [7.581073322611367, 64.4159867749142],
+          [8.965350666361367, 64.4159867749142],
+          [8.965350666361367, 64.75311150402966]]], null, false),
+    infra2 = ee.Image("users/tsimonjakobsson/ecocond_2020-2021/NY_INFRA_IND");
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Author: Simon Jakobsson (t.simon.jakobsson@gmail.com)
+  // Inspired by Markus Fjellstad Israelsen (NINA) and assistance from Zander Venter (NINA)
+  // Date: 11 April 2021
+
+// Aim: Extract the Infrastructure Index raster for forested areas at 50x50 m resolution, 
+  // with the ecosystem map projection. Extracted rasters are for visualisation and summary 
+  // statistics purposes (via QGIS and R).
+  
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Can be converted to 'Imports'
+var orig_eco_map = orig_eco_map2, ecosystem_map = ecosystem_map2, regnorway_wgs84 = regnorway_wgs842, norway_wgs84 = norway_wgs842, infra = infra2;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// To show the different ecotypes in different colours:
+  var ecoViz = {
+  min: 100,
+  max: 900,
+  palette: [
+    '#00911d', //skog 1
+    '#bcbcbc', //fjell 2
+    '#f2e341', // semi-natural 3
+    '#eb56ff', // apent 4
+    '#c2efff', // vatmark 5
+    '#75b3ff', // water 6
+    '#2163ff', // kyst 7
+    '#3252a8', // hav 8
+    '#ff0000'// other 9
+    ]
+};
+
+// To show the different infrastructure index values as a colour gradient
+var infraViz = {min: 0, max: 15, palette: ['00bbbb', '0000bb']};
+
+Map.addLayer(infra, infraViz, 'infra_orig'); // Add infra to map.
+
+/*
+// To reduce the resolution before export you need to use a mode reducer
+  // otherwise if you specify a scale >5 in Export.image.toDrive()
+  // GEE will use bilinear resampling as a default. this will give nonsense output
+*/
+
+//First define an output projection scale in meters
+var outScale = 50; // existing
+
+// Define output projection
+var outProj = ecosystem_map.projection().atScale(outScale);
+
+// Define export aoi
+var aoi = norway_wgs84.geometry().bounds();
+
+Map.addLayer(aoi, {}, 'aoi', 0);
+
+// Define the reduce resolution for 
+var out_eco = ecosystem_map.reduceResolution({
+  reducer: ee.Reducer.mode(),
+  maxPixels: 256 // originally 256
+});
+
+// and then reproject
+out_eco = out_eco.reproject(outProj);
+
+// Regions
+var region1 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 1));
+var region2 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 2));
+var region3 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 3));
+var region4 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 4));
+var region5 = regnorway_wgs84.filter(ee.Filter.eq("Region_1", 5));
+
+var aoi1 = region1.geometry().bounds();
+var aoi2 = region2.geometry().bounds();
+var aoi3 = region3.geometry().bounds();
+var aoi4 = region4.geometry().bounds();
+var aoi5 = region5.geometry().bounds();
+
+
+//Make an image out of the clip geometry
+var region1_geo = region1
+  .reduceToImage({
+    properties: ['Region_1'],
+    reducer: ee.Reducer.first()
+});
+var region2_geo = region2
+  .reduceToImage({
+    properties: ['Region_1'],
+    reducer: ee.Reducer.first()
+});
+var region3_geo = region3
+  .reduceToImage({
+    properties: ['Region_1'],
+    reducer: ee.Reducer.first()
+});
+var region4_geo = region4
+  .reduceToImage({
+    properties: ['Region_1'],
+    reducer: ee.Reducer.first()
+});
+var region5_geo = region5
+  .reduceToImage({
+    properties: ['Region_1'],
+    reducer: ee.Reducer.first()
+});
+
+// Reproject region images (at 50x50 m)
+region1_geo = region1_geo.reproject(outProj);
+region2_geo = region2_geo.reproject(outProj);
+region3_geo = region3_geo.reproject(outProj);
+region4_geo = region4_geo.reproject(outProj);
+region5_geo = region5_geo.reproject(outProj);
+
+// Reproject infra (incl. change resolution to 50x50 m)
+var out_infra = infra.reproject(outProj)
+
+/// Adding map layers if of interest
+//Map.addLayer(out_eco, ecoViz, '50x50 ecosystem')
+//Map.addLayer(out_infra, infraViz, '50x50 infra')
+
+// Center map on a smaller area otherwise GEE will be trying to reduce resolution
+  // for the whole country on-the-fly leading to computation limits
+
+Map.centerObject(norway_wgs84, 14)
+
+// Reclassify ecosystem map to mountain only (forest = 101 & 102; alpine = 201 & 202)
+var reclassified = out_eco.eq(201).or(out_eco.eq(202)).selfMask();
+
+// For Norway: infra masked by mountain layer ('reclassified')
+var out_infra_clip = out_infra.mask(reclassified);
+
+var mountain_float = reclassified.float(); // Convert the mountain count layer to float to be identical to the infra raster 
+
+var mount_infra_out = out_infra_clip.rename('infra')
+  .addBands(mountain_float.rename('mountain'));
+
+/*
+// For Regions: infra masked by 1) region(s), 2) forest layer ('reclassified')
+// This is done by the above clipping by forest mask and then the below clipping 
+// by regions, hence the between *'s [script] part here NOT run. 
+var out_infra_clip_R1 = out_infra.mask(region1_geo);
+out_infra_clip_R1 = out_infra_clip_R1.updateMask(reclassified);
+var out_infra_clip_R2 = out_infra.mask(region2_geo);
+out_infra_clip_R2 = out_infra_clip_R2.updateMask(reclassified);
+var out_infra_clip_R3 = out_infra.mask(region3_geo);
+out_infra_clip_R3 = out_infra_clip_R3.updateMask(reclassified);
+var out_infra_clip_R4 = out_infra.mask(region4_geo);
+out_infra_clip_R4 = out_infra_clip_R4.updateMask(reclassified);
+var out_infra_clip_R5 = out_infra.mask(region5_geo);
+out_infra_clip_R5 = out_infra_clip_R5.updateMask(reclassified);
+*/
+
+var out_infra_clip_R1 = mount_infra_out.mask(region1_geo);
+var out_infra_clip_R2 = mount_infra_out.mask(region2_geo);
+var out_infra_clip_R3 = mount_infra_out.mask(region3_geo);
+var out_infra_clip_R4 = mount_infra_out.mask(region4_geo);
+var out_infra_clip_R5 = mount_infra_out.mask(region5_geo);
+
+// Adding map layers if of interest
+//Map.addLayer(reclassified, ecoViz, '50x50 forest only'); // checking forest reclass
+//Map.addLayer(region2_geo);
+//Map.addLayer(out_infra_clip, infraViz, '50x50 clipped infra'); // checking forest clip
+//Map.addLayer(out_infra_clip_R2, infraViz, '50x50 clipped infra R2'); // checking regional clip
+
+
+// Before export, convert to unsigned integer so that it reducers file size
+  // here we choose unsigned (values >0) and integer 8  (values range x*** to y***)
+    // see here for int-type value ranges: http://www.ece.northwestern.edu/local-apps/matlabhelp/techdoc/ref/int8.html
+
+// Norway
+var output99 = out_infra_clip.uint8()
+
+// 0-6
+var output_0_6 = output99.updateMask(
+  output99.gt(0).and(output99.lt(6)));
+
+// multiply to avoid zeros identical with NULL values
+output_0_6 = output_0_6.multiply(10);
+
+// 6-12
+var output_6_12 = output99.updateMask(
+  output99.gt(6).and(output99.lt(12)));
+
+// 12+
+var output_12 = output99.updateMask(
+  output99.gt(12));
+  
+output_0_6 = output_0_6.uint8()
+output_6_12 = output_6_12.uint8()
+output_12 = output_12.uint8()
+
+var output = mount_infra_out.uint8()
+
+// Each region, without integer adjustment (small enough regions, and raw data 
+// needed for calculations)
+var output1 = out_infra_clip_R1
+var output2 = out_infra_clip_R2
+var output3 = out_infra_clip_R3
+var output4 = out_infra_clip_R4
+var output5 = out_infra_clip_R5
+//Map.addLayer(output2);
+// NB - note that NULL values will be coded as 0 in the exported tiff using .int16()
+
+// Export -note GEE will automaticaly split an image into smaller tiles on export
+  // if the image is too large
+  // therefore the "grid" approach is only necessary if you want to control this 
+  // splitting up. Otherwise you can also play with the fileDimensions parameter
+  // in the export function (not included here). Look up explanation in Docs
+
+// Export Norway scale data; with uint8 data
+
+Export.image.toDrive({
+  image: output_0_6,
+  description: 'mount_infraMap_clipped__0_6_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output_6_12,
+  description: 'mount_infraMap_clipped_6_12_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output_12,
+  description: 'mount_infraMap_clipped_12_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output99,
+  description: 'mount_infraMap_clipped_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output,
+  description: 'infraMap_mount_clipped_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+// Export mountain + infra data per region; with raw data
+
+  Export.image.toDrive({
+  image: output1,
+  description: 'infraMap_mount_clipped_R1_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi1,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+  Export.image.toDrive({
+  image: output2,
+  description: 'infraMap_mount_clipped_R2_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi2,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+  Export.image.toDrive({
+  image: output3,
+  description: 'infraMap_mount_clipped_R3_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi3,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+  
+})
+
+  Export.image.toDrive({
+  image: output4,
+  description: 'infraMap_mount_clipped_R4_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi4,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+  Export.image.toDrive({
+  image: output5,
+  description: 'infraMap_mount_clipped_R5_'+String(outScale)+'m',
+  scale:outScale,
+  region: aoi5,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+```
+
+## Infrastruktur - Gjennomsnittstabeller
+Bruk regioninndelte fjellområder til å beregne gjennomsnittlig/median infrastrukturindeks-verdi og eksporter tabellen.
+```{r}
+
+```
+
