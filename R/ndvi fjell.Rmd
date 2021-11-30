@@ -206,7 +206,7 @@ grid.arrange(plot_index.l, plot_index.u, ncol=2)
 Finally, we merge the indices with the geometry and drop the geometry before bootstrapping the results.
 ```{r}
 # join indices with region information
-ndviTrends2 = left_join(locations, ndviTrends2, by = "ID")
+ndviTrends2 = left_join(locations,ndviTrends2, left=TRUE, by = "ID")
 ndviTrends2 <- ndviTrends2[!is.na(ndviTrends2$slope),]
 # getting region info into ndviTrends2
 ndviTrends2 <- st_intersection(ndviTrends2, regions)
@@ -226,7 +226,7 @@ levels(ndviTrends3$region)
 
 ## Bootstrapping
 We bootstrap the indices 10000 times for each region and calculate the mean
-```{r}
+```{r eval=FALSE}
 # Empty dataframes for bootstrapping results
 ndvi.fjell.boot.tot <- data.frame(region = factor(),
                               slope = numeric(),
@@ -334,10 +334,22 @@ The lower and upper indicators for NDVI should have a joint weight of 1 in the a
 ``` {r}
 # number of pixels for lower and upper indicator - by region
 # lower
-summary(ndviTrends3[!is.na(ndviTrends3$ndvi.index.l),])
-
+ndviTrends3 %>% 
+  group_by(region) %>%
+  drop_na(ndvi.index.l) %>%
+  summarise(no_rows = length(ndvi.index.l))
 # upper
-summary(ndviTrends3[!is.na(ndviTrends3$ndvi.index.u),])
+ndviTrends3 %>% 
+  group_by(region) %>%
+  drop_na(ndvi.index.u) %>%
+  summarise(no_rows = length(ndvi.index.u))
+
+# number of pixels for lower and upper indicator - Norge total
+# lower
+nrow(ndviTrends2[!is.na(ndviTrends3$ndvi.index.l),])
+# upper
+nrow(ndviTrends2[!is.na(ndviTrends3$ndvi.index.u),])
+
 
 # e.g. weights for lower and upper indicator - Norge total
 # lower
