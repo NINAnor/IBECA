@@ -147,6 +147,7 @@ ref2$reg[ref2$ICunitName == "Nordland" |
            ref2$ICunitName == "Finnmark"] <- "N"
 
 ```
+
 ```{r}
 ref3 <- aggregate(data=ref2,
                   expectedValue~reg,
@@ -199,7 +200,6 @@ for(n in myYears){
 ```
 
 ```{r}
-
 dat <- rbind(select(dat, reg, year, val), datNorge)
 ```
 
@@ -210,7 +210,7 @@ eval(parse("indicator_plots2.R", encoding="UTF-8"))
 
 
 ```{r, eval=F}
-png("../output/indicatorPlots/fjellrype.png", 
+png("../output/indicatorPlots/skalert/fjellrype.png", 
     units="in", width=12, height=7, res=300)
 
 par(mfrow=c(1,1), mar=c(4.5,
@@ -228,14 +228,14 @@ indicator_plot2(dataset = dat,
                colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
                legendPosition = "top",
                legendInset = 0,
-               move = 0.2,
+               move = 0.05,
                horizontal = T,
                legendTextSize = 1.25)
 
 dev.off()
 ```
 Det blir så stor variasjon her at det er vanskelig å lese figuren:
-![](../output/indicatorPlots/fjellrype.png)
+![](../output/indicatorPlots/skalert/fjellrype.png)
 
 
 ```{r}
@@ -292,7 +292,7 @@ gg
 
 dev.off()
 ```
-![](../output/indicatorPlots/fjellrype_facet.png)
+![](../output/indicatorPlots/supporting figures/fjellrype_facet.png)
 
 Som alltid, errorbars er 95%CI.
 
