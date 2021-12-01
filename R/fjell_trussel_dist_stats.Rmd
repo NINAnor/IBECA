@@ -1,0 +1,64 @@
+---
+title: "Avstand til boreal og meneskellig innflytelse"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'fjell_trussel_dist.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(DT)
+library(NIcalc)
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Beregn univariat statistikk for avstand til boreal (f.eks. skog) og menneskelig innflytelse
+
+```{r}
+# Forutsetter at IBECA er arbeidsmappen setwd("~/IBECA/R")
+system("grass --tmp-location EPSG:25833 --exec bash ../data/fjell_trussel_dist_stats.sh")
+library(readr)
+fjell_trussel_dist_stats <- read_csv("../data/fjell_trussel_dist_stats.csv", 
+    col_types = cols(zone = col_integer(), 
+        non_null_cells = col_integer(), null_cells = col_integer()))
+fjell_trussel_dist_referanse_stats <- read_csv("../data/fjell_trussel_dist_referanse_stats.csv", 
+    col_types = cols(zone = col_integer(), 
+        non_null_cells = col_integer(), null_cells = col_integer()))
+
+# Lenk opp regions kode
+fjell_trussel_dist <- merge(data.frame(reg=c("N", "C", "E", "W", "S"), zone=c(1, 2, 3, 4, 5)),
+                            rbind(data.frame(zone=fjell_trussel_dist_stats$zone,
+                                             val=fjell_trussel_dist_stats$mean,
+                                             x="avstand til boreal og menneskelig innflytelse"),
+                                  data.frame(zone=fjell_trussel_dist_referanse_stats$zone,
+                                             val=fjell_trussel_dist_referanse_stats$mean,
+                                             x="avstand til boreal og menneskelig innflytelse (referanse)")),
+                                  all.y=TRUE)
+fjell_trussel_dist$zone <- NULL
+```
+
+# Veiing
+Regner ut nasjonale indikatorverdier som et veid (etter total fjellareal) gjennomsnitt av verdien i regionene. Veiingen gjøres ved å samle større antall verdier for de regionene som har mest fjell i seg.
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+```
+
+# Eksporter csv
+
+```{r, eval=F}
+write.csv(fjell_trussel_dist, "../output/indicator_values/fjell_trussel_dist.csv", row.names = F)
+```
