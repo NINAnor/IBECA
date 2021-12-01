@@ -4,7 +4,9 @@
 r.external input=data/fjellmasken.tif output=fjellmasken --o --v
 
 # Importer filen med fjell regionene
-v.import input="data/regioner_2010/regNorway_wgs84 - MERGED.shp" layer="regNorway_wgs84 - MERGED" output="regNorway_wgs84___MERGED"
+v.import input="data/regioner_2010/regNorway_wgs84 - MERGED.shp" \
+    layer="regNorway_wgs84 - MERGED" output="regNorway_wgs84___MERGED" \
+    encoding="UTF8" --o --v
 
 # Definer griddet for analysen (følg fjellmasken)
 eval `g.region -g raster=fjellmasken vector="regNorway_wgs84___MERGED" align=fjellmasken`
@@ -63,10 +65,10 @@ echo "0 = NULL
 * = 1" | r.reclass input=fjellmasken output=MASK rules=- --o --v
 
 # Lagre univariat raster statistikk i en CSV fil
-r.univar -t --overwrite --verbose map=n50_fjell_trussler_dist \
-    zones=regNorway_wgs84___MERGED output=data/fjell_trussel_dist_stats.csv separator=comma
-r.univar -t --overwrite --verbose map=n50_fjell_trussler_dist_referanse \
-    zones=regNorway_wgs84___MERGED output=data/fjell_trussel_dist_referanse_stats.csv separator=comma
+r.univar -t map=n50_fjell_trussler_dist zones=regNorway_wgs84___MERGED \
+    output=data/fjell_trussel_dist_stats.csv separator=comma
+r.univar -t map=n50_fjell_trussler_dist_referanse zones=regNorway_wgs84___MERGED \
+    output=data/fjell_trussel_dist_referanse_stats.csv separator=comma
 
 # Rydde opp
 rm data/n50_fjell_trussler.tif

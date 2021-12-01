@@ -26,9 +26,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Beregn univariat statistikk for avstand til boreal (f.eks. skog) og menneskelig innflytelse
 
-```{r}
+```{r, eval=F}
 # Forutsetter at IBECA er arbeidsmappen setwd("~/IBECA/R")
 system("grass --tmp-location EPSG:25833 --exec bash ../data/fjell_trussel_dist_stats.sh")
+```
+
+# Formater resulterende data
+```{r}
 library(readr)
 fjell_trussel_dist_stats <- read_csv("../data/fjell_trussel_dist_stats.csv", 
     col_types = cols(zone = col_integer(), 
