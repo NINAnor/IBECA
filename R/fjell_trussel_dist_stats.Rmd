@@ -1,0 +1,200 @@
+---
+title: "Avstand til boreal og meneskellig innflytelse"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'jerv.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(DT)
+library(NIcalc)
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+# Beregn univariat statistikk for avstand til boreal (f.eks. skog) og menneskelig innflytelse
+
+```{r}
+# Forutsettet at IBECA er arbeidsmappen setwd("~/IBECA")
+system("grass --tmp-location EPSG:25833 --exec bash data/fjell_trussel_dist_stats.sh")
+library(readr)
+fjell_trussel_dist_stats <- read_csv("~/IBECA/data/fjell_trussel_dist_stats.csv", 
+    col_types = cols(zone = col_integer(), 
+        non_null_cells = col_integer(), null_cells = col_integer()))
+```
+
+# Veiing
+Regner ut nasjonale indikatorverdier som et veid (etter total fjellareal) gjennomsnitt av verdien i regionene. Veiingen gjøres ved å samle større antall verdier for de regionene som har mest fjell i seg.
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+```
+
+
+
+```{r}
+regions <- c("N", "C", "W", "S", "E")
+
+jervNorge <- data.frame(
+  reg = rep("Norge", 5000),
+  year = rep(myYears, each = 200, times=length(regions)),
+  val = NA
+)
+
+for(n in myYears){
+    temp <- jervTbl2[jervTbl2$year == n,]
+
+    temp2 <- c(
+      sample(temp$val[temp$reg == "N"], wgt$Fjellareal2[wgt$reg == "N"]*1000, replace =T),
+      sample(temp$val[temp$reg == "E"], wgt$Fjellareal2[wgt$reg == "E"]*1000, replace =T),
+      sample(temp$val[temp$reg == "W"], wgt$Fjellareal2[wgt$reg == "W"]*1000, replace =T),
+      sample(temp$val[temp$reg == "S"], wgt$Fjellareal2[wgt$reg == "S"]*1000, replace =T),
+      sample(temp$val[temp$reg == "C"], wgt$Fjellareal2[wgt$reg == "C"]*1000, replace =T)
+    )
+
+    jervNorge$val[jervNorge$year == n] <- sample(temp2, 1000)
+}
+```
+
+Bind together
+```{r}
+jervTbl2 <- rbind(jervTbl2, jervNorge)
+```
+
+# Plotting
+```{r}
+#source("indicator_plots2.R")
+eval(parse("indicator_plots.R", encoding="UTF-8"))
+eval(parse("indicator_plots2.R", encoding="UTF-8"))
+```
+
+
+```{r, eval=F, include=FALSE}
+png("../output/indicatorPlots/fjell_trussel_dist_stats.png",
+    units="in", width=12, height=7, res=300)
+
+# Plot windows par
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+
+indicator_plot2(dataset = jervTbl2,
+               yAxisTitle = "Antall jerv skalert mot referanseverdi",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+
+
+png("../output/indicatorPlots/jerv_uskalert.png", units="in", width=12, height=7, res=300)
+
+# Plot windows par
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+
+indicator_plot(dataset = jervTbl_unscaled,
+               yAxisTitle = "Antall jerv",
+               lowYlimit = 0,
+               upperYlimit = 800,
+               yStep = 100,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+
+```
+
+
+Sammenligner de to metodene for å regne ut nasjonale verdier.
+```{r}
+sumMethod <- jervTbl[jervTbl$reg=="Norge",c("year", "med")]
+sumMethod$method <- "sum method"
+sumMethod
+```
+```{r}
+meanMethod <- aggregate(data=jervTbl2[jervTbl2$reg=="Norge",],
+          val~year,
+          FUN= mean)
+meanMethod$method <- "mean method"
+meanMethod          
+```
+
+```{r}
+names(sumMethod) <- names(meanMethod)
+comp <- rbind(sumMethod, meanMethod)
+ggplot(data=comp)+
+  geom_line(aes(x=year, y=val, linetype=method, group = method))+
+  geom_point(aes(x=year, y=val))
+```
+
+Metoden vi bruker (mean metoden) gir litt lavere skår.
+
+
+
+
+# Oppsummering
+
+![alt text](../output/indicatorPlots/jerv_uskalert.png)
+
+![alt text](../output/indicatorPlots/jerv.png)
+
+
+
+Under er tabellen med skalerte verdier for hvert år og region (med = median, og det er det som er 'tilstanden')
+
+```{r}
+
+finalTbl <- aggregate(data=jervTbl2,
+          val~year+reg,
+          FUN= function(x) round(
+            quantile(x, c(.025, .5, .975)), 2))
+
+finalTbl <- do.call(data.frame, finalTbl)
+names(finalTbl) <- c("year", "reg", "low", "med", "upp")
+
+DT::datatable(
+  finalTbl,
+  extensions = "FixedColumns",
+  options = list(
+    scrollX = TRUE,
+    scrollY=T,
+    pageLength = 10
+  ))
+```
+
+# Eksporter csv
+
+```{r, eval=F}
+write.csv(jervTbl2, "../output/indicator_values/jerv.csv", row.names = F)
+```
