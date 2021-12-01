@@ -1603,10 +1603,416 @@ div.tocify {
 <div id="google-earth-engine-gee" class="section level2">
 <h2>Google Earth Engine (GEE)</h2>
 <p>Ta ut infrastrukturindeksen for fjellområder i Norge. OBS, må kjøres i GEE.</p>
+<pre class="r"><code>var orig_eco_map = ee.Image(&quot;users/zandersamuel/NINA/Raster/Norway_ecosystem_types_5m&quot;),
+    ecosystem_map = ee.Image(&quot;users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m&quot;),
+    regnorway_wgs84 = ee.FeatureCollection(&quot;users/tsimonjakobsson/ecocond_2020-2021/regNorway_wgs84&quot;),
+    norway_wgs84 = ee.FeatureCollection(&quot;users/tsimonjakobsson/ecocond_2020-2021/Norway_wgs84&quot;),
+    infra = ee.Image(&quot;users/tsimonjakobsson/ecocond_2020-2021/NY_INFRA_IND&quot;),
+    orig_eco_map2 = ee.Image(&quot;users/zandersamuel/NINA/Raster/Norway_ecosystem_types_5m&quot;),
+    ecosystem_map2 = ee.Image(&quot;users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m&quot;),
+    regnorway_wgs842 = ee.FeatureCollection(&quot;users/tsimonjakobsson/ecocond_2020-2021/regNorway_wgs84&quot;),
+    norway_wgs842 = ee.FeatureCollection(&quot;users/tsimonjakobsson/ecocond_2020-2021/Norway_wgs84&quot;),
+    geometry = 
+    /* color: #d63000 */
+    /* displayProperties: [
+      {
+        &quot;type&quot;: &quot;rectangle&quot;
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[7.581073322611367, 64.75311150402966],
+          [7.581073322611367, 64.4159867749142],
+          [8.965350666361367, 64.4159867749142],
+          [8.965350666361367, 64.75311150402966]]], null, false),
+    infra2 = ee.Image(&quot;users/tsimonjakobsson/ecocond_2020-2021/NY_INFRA_IND&quot;);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Author: Simon Jakobsson (t.simon.jakobsson@gmail.com)
+  // Inspired by Markus Fjellstad Israelsen (NINA) and assistance from Zander Venter (NINA)
+  // Date: 11 April 2021
+
+// Aim: Extract the Infrastructure Index raster for forested areas at 50x50 m resolution, 
+  // with the ecosystem map projection. Extracted rasters are for visualisation and summary 
+  // statistics purposes (via QGIS and R).
+  
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// Can be converted to &#39;Imports&#39;
+var orig_eco_map = orig_eco_map2, ecosystem_map = ecosystem_map2, regnorway_wgs84 = regnorway_wgs842, norway_wgs84 = norway_wgs842, infra = infra2;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// To show the different ecotypes in different colours:
+  var ecoViz = {
+  min: 100,
+  max: 900,
+  palette: [
+    &#39;#00911d&#39;, //skog 1
+    &#39;#bcbcbc&#39;, //fjell 2
+    &#39;#f2e341&#39;, // semi-natural 3
+    &#39;#eb56ff&#39;, // apent 4
+    &#39;#c2efff&#39;, // vatmark 5
+    &#39;#75b3ff&#39;, // water 6
+    &#39;#2163ff&#39;, // kyst 7
+    &#39;#3252a8&#39;, // hav 8
+    &#39;#ff0000&#39;// other 9
+    ]
+};
+
+// To show the different infrastructure index values as a colour gradient
+var infraViz = {min: 0, max: 15, palette: [&#39;00bbbb&#39;, &#39;0000bb&#39;]};
+
+Map.addLayer(infra, infraViz, &#39;infra_orig&#39;); // Add infra to map.
+
+/*
+// To reduce the resolution before export you need to use a mode reducer
+  // otherwise if you specify a scale &gt;5 in Export.image.toDrive()
+  // GEE will use bilinear resampling as a default. this will give nonsense output
+*/
+
+//First define an output projection scale in meters
+var outScale = 50; // existing
+
+// Define output projection
+var outProj = ecosystem_map.projection().atScale(outScale);
+
+// Define export aoi
+var aoi = norway_wgs84.geometry().bounds();
+
+Map.addLayer(aoi, {}, &#39;aoi&#39;, 0);
+
+// Define the reduce resolution for 
+var out_eco = ecosystem_map.reduceResolution({
+  reducer: ee.Reducer.mode(),
+  maxPixels: 256 // originally 256
+});
+
+// and then reproject
+out_eco = out_eco.reproject(outProj);
+
+// Regions
+var region1 = regnorway_wgs84.filter(ee.Filter.eq(&quot;Region_1&quot;, 1));
+var region2 = regnorway_wgs84.filter(ee.Filter.eq(&quot;Region_1&quot;, 2));
+var region3 = regnorway_wgs84.filter(ee.Filter.eq(&quot;Region_1&quot;, 3));
+var region4 = regnorway_wgs84.filter(ee.Filter.eq(&quot;Region_1&quot;, 4));
+var region5 = regnorway_wgs84.filter(ee.Filter.eq(&quot;Region_1&quot;, 5));
+
+var aoi1 = region1.geometry().bounds();
+var aoi2 = region2.geometry().bounds();
+var aoi3 = region3.geometry().bounds();
+var aoi4 = region4.geometry().bounds();
+var aoi5 = region5.geometry().bounds();
+
+
+//Make an image out of the clip geometry
+var region1_geo = region1
+  .reduceToImage({
+    properties: [&#39;Region_1&#39;],
+    reducer: ee.Reducer.first()
+});
+var region2_geo = region2
+  .reduceToImage({
+    properties: [&#39;Region_1&#39;],
+    reducer: ee.Reducer.first()
+});
+var region3_geo = region3
+  .reduceToImage({
+    properties: [&#39;Region_1&#39;],
+    reducer: ee.Reducer.first()
+});
+var region4_geo = region4
+  .reduceToImage({
+    properties: [&#39;Region_1&#39;],
+    reducer: ee.Reducer.first()
+});
+var region5_geo = region5
+  .reduceToImage({
+    properties: [&#39;Region_1&#39;],
+    reducer: ee.Reducer.first()
+});
+
+// Reproject region images (at 50x50 m)
+region1_geo = region1_geo.reproject(outProj);
+region2_geo = region2_geo.reproject(outProj);
+region3_geo = region3_geo.reproject(outProj);
+region4_geo = region4_geo.reproject(outProj);
+region5_geo = region5_geo.reproject(outProj);
+
+// Reproject infra (incl. change resolution to 50x50 m)
+var out_infra = infra.reproject(outProj)
+
+/// Adding map layers if of interest
+//Map.addLayer(out_eco, ecoViz, &#39;50x50 ecosystem&#39;)
+//Map.addLayer(out_infra, infraViz, &#39;50x50 infra&#39;)
+
+// Center map on a smaller area otherwise GEE will be trying to reduce resolution
+  // for the whole country on-the-fly leading to computation limits
+
+Map.centerObject(norway_wgs84, 14)
+
+// Reclassify ecosystem map to mountain only (forest = 101 &amp; 102; alpine = 201 &amp; 202)
+var reclassified = out_eco.eq(201).or(out_eco.eq(202)).selfMask();
+
+// For Norway: infra masked by mountain layer (&#39;reclassified&#39;)
+var out_infra_clip = out_infra.mask(reclassified);
+
+var mountain_float = reclassified.float(); // Convert the mountain count layer to float to be identical to the infra raster 
+
+var mount_infra_out = out_infra_clip.rename(&#39;infra&#39;)
+  .addBands(mountain_float.rename(&#39;mountain&#39;));
+
+/*
+// For Regions: infra masked by 1) region(s), 2) forest layer (&#39;reclassified&#39;)
+// This is done by the above clipping by forest mask and then the below clipping 
+// by regions, hence the between *&#39;s [script] part here NOT run. 
+var out_infra_clip_R1 = out_infra.mask(region1_geo);
+out_infra_clip_R1 = out_infra_clip_R1.updateMask(reclassified);
+var out_infra_clip_R2 = out_infra.mask(region2_geo);
+out_infra_clip_R2 = out_infra_clip_R2.updateMask(reclassified);
+var out_infra_clip_R3 = out_infra.mask(region3_geo);
+out_infra_clip_R3 = out_infra_clip_R3.updateMask(reclassified);
+var out_infra_clip_R4 = out_infra.mask(region4_geo);
+out_infra_clip_R4 = out_infra_clip_R4.updateMask(reclassified);
+var out_infra_clip_R5 = out_infra.mask(region5_geo);
+out_infra_clip_R5 = out_infra_clip_R5.updateMask(reclassified);
+*/
+
+var out_infra_clip_R1 = mount_infra_out.mask(region1_geo);
+var out_infra_clip_R2 = mount_infra_out.mask(region2_geo);
+var out_infra_clip_R3 = mount_infra_out.mask(region3_geo);
+var out_infra_clip_R4 = mount_infra_out.mask(region4_geo);
+var out_infra_clip_R5 = mount_infra_out.mask(region5_geo);
+
+// Adding map layers if of interest
+//Map.addLayer(reclassified, ecoViz, &#39;50x50 forest only&#39;); // checking forest reclass
+//Map.addLayer(region2_geo);
+//Map.addLayer(out_infra_clip, infraViz, &#39;50x50 clipped infra&#39;); // checking forest clip
+//Map.addLayer(out_infra_clip_R2, infraViz, &#39;50x50 clipped infra R2&#39;); // checking regional clip
+
+
+// Before export, convert to unsigned integer so that it reducers file size
+  // here we choose unsigned (values &gt;0) and integer 8  (values range x*** to y***)
+    // see here for int-type value ranges: http://www.ece.northwestern.edu/local-apps/matlabhelp/techdoc/ref/int8.html
+
+// Norway
+var output99 = out_infra_clip.uint8()
+
+// 0-6
+var output_0_6 = output99.updateMask(
+  output99.gt(0).and(output99.lt(6)));
+
+// multiply to avoid zeros identical with NULL values
+output_0_6 = output_0_6.multiply(10);
+
+// 6-12
+var output_6_12 = output99.updateMask(
+  output99.gt(6).and(output99.lt(12)));
+
+// 12+
+var output_12 = output99.updateMask(
+  output99.gt(12));
+  
+output_0_6 = output_0_6.uint8()
+output_6_12 = output_6_12.uint8()
+output_12 = output_12.uint8()
+
+var output = mount_infra_out.uint8()
+
+// Each region, without integer adjustment (small enough regions, and raw data 
+// needed for calculations)
+var output1 = out_infra_clip_R1
+var output2 = out_infra_clip_R2
+var output3 = out_infra_clip_R3
+var output4 = out_infra_clip_R4
+var output5 = out_infra_clip_R5
+//Map.addLayer(output2);
+// NB - note that NULL values will be coded as 0 in the exported tiff using .int16()
+
+// Export -note GEE will automaticaly split an image into smaller tiles on export
+  // if the image is too large
+  // therefore the &quot;grid&quot; approach is only necessary if you want to control this 
+  // splitting up. Otherwise you can also play with the fileDimensions parameter
+  // in the export function (not included here). Look up explanation in Docs
+
+// Export Norway scale data; with uint8 data
+
+Export.image.toDrive({
+  image: output_0_6,
+  description: &#39;mount_infraMap_clipped__0_6_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output_6_12,
+  description: &#39;mount_infraMap_clipped_6_12_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output_12,
+  description: &#39;mount_infraMap_clipped_12_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output99,
+  description: &#39;mount_infraMap_clipped_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+Export.image.toDrive({
+  image: output,
+  description: &#39;infraMap_mount_clipped_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+// Export mountain + infra data per region; with raw data
+
+  Export.image.toDrive({
+  image: output1,
+  description: &#39;infraMap_mount_clipped_R1_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi1,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+  Export.image.toDrive({
+  image: output2,
+  description: &#39;infraMap_mount_clipped_R2_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi2,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+  Export.image.toDrive({
+  image: output3,
+  description: &#39;infraMap_mount_clipped_R3_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi3,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+  
+})
+
+  Export.image.toDrive({
+  image: output4,
+  description: &#39;infraMap_mount_clipped_R4_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi4,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})
+
+  Export.image.toDrive({
+  image: output5,
+  description: &#39;infraMap_mount_clipped_R5_&#39;+String(outScale)+&#39;m&#39;,
+  scale:outScale,
+  region: aoi5,
+  maxPixels: 10000000000000,
+  skipEmptyTiles: true
+})</code></pre>
 </div>
 <div id="infrastruktur---gjennomsnittstabeller" class="section level2">
 <h2>Infrastruktur - Gjennomsnittstabeller</h2>
 <p>Bruk regioninndelte fjellområder til å beregne gjennomsnittlig/median infrastrukturindeks-verdi og eksporter tabellen.</p>
+<pre class="r"><code># Load data
+infraMountRegion1 = raster(list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/&quot;, full.names = TRUE, pattern = &quot;clipped_R&quot;)[1])
+infraMountRegion2 = raster(list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/&quot;, full.names = TRUE, pattern = &quot;clipped_R&quot;)[2])
+infraMountRegion3 = raster(list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/&quot;, full.names = TRUE, pattern = &quot;clipped_R&quot;)[3])
+infraMountRegion4 = raster(list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/&quot;, full.names = TRUE, pattern = &quot;clipped_R&quot;)[4])
+infraMountRegion5 = raster(list.files(&quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/&quot;, full.names = TRUE, pattern = &quot;clipped_R&quot;)[5])
+
+infraValsR1 = values(infraMountRegion1)
+infraValsR2 = values(infraMountRegion2)
+infraValsR3 = values(infraMountRegion3)
+infraValsR4 = values(infraMountRegion4)
+infraValsR5 = values(infraMountRegion5)
+
+tmpDF = data.frame(matrix(c(
+  mean(infraValsR1, na.rm = TRUE), 
+  mean(infraValsR2, na.rm = TRUE), 
+  mean(infraValsR3, na.rm = TRUE), 
+  mean(infraValsR4, na.rm = TRUE), 
+  mean(infraValsR5, na.rm = TRUE),
+  median(infraValsR1, na.rm = TRUE), 
+  median(infraValsR2, na.rm = TRUE), 
+  median(infraValsR3, na.rm = TRUE), 
+  median(infraValsR4, na.rm = TRUE), 
+  median(infraValsR5, na.rm = TRUE),
+  sd(infraValsR1, na.rm = TRUE), 
+  sd(infraValsR2, na.rm = TRUE), 
+  sd(infraValsR3, na.rm = TRUE), 
+  sd(infraValsR4, na.rm = TRUE), 
+  sd(infraValsR5, na.rm = TRUE),
+  &quot;Nord-Norge&quot;,
+  &quot;Midt-Norge&quot;,
+  &quot;Østlandet&quot;,
+  &quot;Vestlandet&quot;,
+  &quot;Sørlandet&quot;), ncol = 4, dimnames = list(c(), c(&quot;Mean&quot;, &quot;Median&quot;, &quot;SD&quot;, &quot;Area&quot;))))
+
+kable(tmpDF)</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Mean</th>
+<th align="left">Median</th>
+<th align="left">SD</th>
+<th align="left">Area</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">0.0533803432030629</td>
+<td align="left">0</td>
+<td align="left">0.372643845480713</td>
+<td align="left">Nord-Norge</td>
+</tr>
+<tr class="even">
+<td align="left">0.0351604722585782</td>
+<td align="left">0</td>
+<td align="left">0.272027349258266</td>
+<td align="left">Midt-Norge</td>
+</tr>
+<tr class="odd">
+<td align="left">0.083603370102917</td>
+<td align="left">0</td>
+<td align="left">0.507997612709128</td>
+<td align="left">Østlandet</td>
+</tr>
+<tr class="even">
+<td align="left">0.112506526712389</td>
+<td align="left">0</td>
+<td align="left">0.529851216106447</td>
+<td align="left">Vestlandet</td>
+</tr>
+<tr class="odd">
+<td align="left">0.050800093535966</td>
+<td align="left">0</td>
+<td align="left">0.334238000831279</td>
+<td align="left">Sørlandet</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>write_xlsx(tmpDF, path = &quot;P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/infraMount.xlsx&quot;)</code></pre>
 </div>
 
 

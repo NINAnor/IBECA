@@ -14,7 +14,7 @@ knit: (function(input_file, encoding) {
  output_file=file.path(dirname(input_file), out_dir, 'infrastrukturindeks.html'))})
 ---
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = FALSE}
+```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = TRUE}
 
 library(dplyr)
 library(raster)
@@ -24,13 +24,14 @@ library(readr)
 library(rgeos)
 library(rgdal)
 library(spatial)
+library(tiff)
+library(knitr)
 
 ```
 
-
 ## Google Earth Engine (GEE)
 Ta ut infrastrukturindeksen for fjellområder i Norge. OBS, må kjøres i GEE.
-```{r, echo = FALSE, message = FALSE, warning = FALSE, eval = FALSE}
+```{r, echo = TRUE, message = FALSE, warning = FALSE, eval = FALSE}
 
 var orig_eco_map = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_5m"),
     ecosystem_map = ee.Image("users/zandersamuel/NINA/Raster/Norway_ecosystem_types_Simon_5m"),
@@ -364,7 +365,59 @@ Export.image.toDrive({
 
 ## Infrastruktur - Gjennomsnittstabeller
 Bruk regioninndelte fjellområder til å beregne gjennomsnittlig/median infrastrukturindeks-verdi og eksporter tabellen.
-```{r}
+```{r, echo = TRUE, message = FALSE, warning = FALSE, eval = TRUE}
+
+# Load data
+infraMountRegion1 = raster(list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/", full.names = TRUE, pattern = "clipped_R")[1])
+infraMountRegion2 = raster(list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/", full.names = TRUE, pattern = "clipped_R")[2])
+infraMountRegion3 = raster(list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/", full.names = TRUE, pattern = "clipped_R")[3])
+infraMountRegion4 = raster(list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/", full.names = TRUE, pattern = "clipped_R")[4])
+infraMountRegion5 = raster(list.files("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/", full.names = TRUE, pattern = "clipped_R")[5])
+
+infraValsR1 = values(infraMountRegion1)
+infraValsR2 = values(infraMountRegion2)
+infraValsR3 = values(infraMountRegion3)
+infraValsR4 = values(infraMountRegion4)
+infraValsR5 = values(infraMountRegion5)
+
+tmpDF = data.frame(matrix(c(
+  mean(infraValsR1, na.rm = TRUE), 
+  mean(infraValsR2, na.rm = TRUE), 
+  mean(infraValsR3, na.rm = TRUE), 
+  mean(infraValsR4, na.rm = TRUE), 
+  mean(infraValsR5, na.rm = TRUE),
+  median(infraValsR1, na.rm = TRUE), 
+  median(infraValsR2, na.rm = TRUE), 
+  median(infraValsR3, na.rm = TRUE), 
+  median(infraValsR4, na.rm = TRUE), 
+  median(infraValsR5, na.rm = TRUE),
+  sd(infraValsR1, na.rm = TRUE), 
+  sd(infraValsR2, na.rm = TRUE), 
+  sd(infraValsR3, na.rm = TRUE), 
+  sd(infraValsR4, na.rm = TRUE), 
+  sd(infraValsR5, na.rm = TRUE),
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+  "Sørlandet"), ncol = 4, dimnames = list(c(), c("Mean", "Median", "SD", "Area"))))
+
+kable(tmpDF)
+
+write_xlsx(tmpDF, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Infrastrukturindeks/infraMount.xlsx")
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
