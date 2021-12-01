@@ -1,0 +1,102 @@
+---
+title: "Rein"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'rein.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(DT)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(data.table)
+library(readxl)
+library(sf)
+library(raster)
+library(stars)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Start
+Dette er en felles indikator for villrein og tamreinsbestander
+Utarbeidelsen av metodikken er gjort av Erik Fremstad.
+
+# Import
+Datasett med bestandstall, areal, og TRIverdier. Topographic roughenss index brukes til å modellere referansetilstand.
+
+```{r}
+dat <- read_excel("../data/rein.xlsx")
+head(dat)
+```
+
+## Kart over Norge
+```{r}
+nor <- readRDS('../data/norway_outline.RDS')%>%
+  st_as_sf()
+
+```
+
+## Villreinområder
+
+```{r}
+vill <- sf::st_read(dsn = 'P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/rein/Natur_Villrein_norge_uten_svalbard_25833 ESRI/Natur_Villrein_norge_uten_svalbard_25833.gdb')%>%
+  st_transform(crs=crs(nor))
+```
+
+
+## Regioner
+```{r import4}
+reg <- st_read("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
+  st_transform(crs = crs(nor))
+```
+
+
+## Fjellmaske
+```{r}
+fjell <- raster("../output/fjell_1km.tif")
+
+fjell[fjell[]==0] <- NA
+
+```
+
+```{r}
+plot(nor$geometry, axes=T, main = "Fjellmasken, villreinområder og regioninndeling")
+  plot(fjell, add=T)
+  plot(vill$SHAPE, add=T)
+  plot(reg$geometry, add=T, border="red")
+```
+
+Jeg tenker at hver pixel i fjellmasken bør få en indikatorverdi og en referanseverdi.
+Først må jeg legge bestandstallene og refverdien inn i vill-datasettet
+
+```{r}
+unique(vill$omradenavn)
+```
+Her var det veldig mange. Jeg tror kanskje det gir mening å ekskudere trekkområder.
+
+```{r}
+table(vill$funksjon)
+```
+
+```{r}
+unique(vill$omradenavn[vill$funksjon!="trekkområde"])
+```
+Det er fortsatt alt for mange polygoner til at jeg kan manuelt mappe dat til vill.
+
+```{r}
+unique(vill$villreinnemd[vill$funksjon!="trekkområde"])
+
+```
+
+N
+

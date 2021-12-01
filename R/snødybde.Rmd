@@ -75,9 +75,9 @@ rm(upp)
 regOrder = c(
   "Nord-Norge",
   "Midt-Norge",
-  "Vestlandet",
   "Østlandet",
-  "Sørlandet"
+  "Vestlandet",
+   "Sørlandet"
              )
 ```
 
@@ -92,6 +92,7 @@ dat$col <- ifelse(dat$diff<0, "one", "two")
 brk <- dat$year2[seq(5, 60, 5)] 
 lab <- dat$year[seq(5, 60, 5)] 
 ```
+
 
 ```{r}
 gg <- ggplot(data = dat,
@@ -112,19 +113,18 @@ gg <- ggplot(data = dat,
   scale_x_continuous(breaks = brk, labels = lab)+
   guides(fill="none")+
   facet_wrap( .~ factor(reg, levels = regOrder),
-              ncol=1)
+              ncol=3)
 ```
 
-```{r}
+```{r, eval=F}
 png("../output/indicatorPlots/supporting figures/snødybde normalisert tiddserie med barplot.png", 
-    units="in", width=5, height=12, res=300)
+    units="in",  width=12, height=7, res=300)
 gg
 dev.off()
 ```
 ![](../output/indicatorPlots/supporting figures/snødybde normalisert tiddserie med barplot.png)
 
 Stiplalinja er 2sd under forrige normalperioden.
-Her er det ikke så mye å spore i form av trender.
 
 Her er en forenklet figur i ØT-stilen.
 ```{r}
@@ -159,11 +159,12 @@ colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 
 png("../output/indicatorPlots/uskalert/snødybde.png", 
     units="in", width=12, height=7, res=300)  
-  
+
+par(mar=c(4.5,6.5,2,2))
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Snødybde (mm) som avvik fra 1961-1990",
+    ylab="Snødybde (mm)\n avvik fra normalperioden (1961-1990)",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -187,7 +188,7 @@ png("../output/indicatorPlots/uskalert/snødybde.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=1) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -206,7 +207,7 @@ png("../output/indicatorPlots/uskalert/snødybde.png",
     quants <- subset(dat, reg==uniq2[n])
     
     # Add lines
-    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=1) 
     
     # Save temp points for later addition to plot
     temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
@@ -214,14 +215,14 @@ png("../output/indicatorPlots/uskalert/snødybde.png",
     
   }
   
-  # Add points for regions
-  for(n in 1:(length(uniq2)-1)){
-    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
-    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
-  }
-  
-  # Add points for Norge
-  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+ ## Add points for regions
+ #for(n in 1:(length(uniq2)-1)){
+ #  temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+ #  points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+ #}
+ #
+ ## Add points for Norge
+ #points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
   
   # Add legend to plot
   legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 

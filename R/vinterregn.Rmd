@@ -59,9 +59,9 @@ rm(upp)
 regOrder = c(
   "Nord-Norge",
   "Midt-Norge",
-  "Vestlandet",
   "Østlandet",
-  "Sørlandet"
+  "Vestlandet",
+   "Sørlandet"
              )
 ```
 
@@ -241,6 +241,15 @@ dev.off()
 ```
 ![](../output/indicatorPlots/skalert/vinterregn_boxplot.png)
 ```{r}
+ann_text <- data.frame(year = 1990,
+                       diff = 0,
+                       lab = "Vinterregn\nforekommer ikke",
+                       reg = factor("Østlandet", levels = regOrder),
+                       col = "one")
+```
+
+
+```{r, eval=F}
 
 myPlot2 <- ggplot(data = winterRain,
        aes(x = year, y = diff, fill = col))+
@@ -249,20 +258,23 @@ myPlot2 <- ggplot(data = winterRain,
         aes(yintercept = upp),
         linetype=2)+
   scale_fill_hue(l=70, c=60)+
-  theme_bw()+
-  ylab("Vinterregn avvik fra 1961-1990 (mm)")+
+  theme_bw(base_size = 20)+
+  ylab("Vinterregn (mm)\navvik fra 1961-1990")+
+  xlab("")+
   guides(fill="none")+
+  geom_text(data = ann_text, aes(label = lab), size=8)+
   facet_wrap( .~ factor(reg, levels = regOrder),
-              ncol=1,
+              ncol=3,
               scales = "free_y")
-  
- 
+```
 
+```{r, eval=F}
 png("../output/indicatorPlots/supporting figures/vinterregn_normalisert_barplot.png", 
-    units="in", width=5, height=12, res=300)
+    units="in", width=12, height=7, res=300)
 myPlot2
 dev.off()
 ```
+
 ![](../output/indicatorPlots/supporting figures/vinterregn_normalisert_barplot.png)
 # Forenkel figur i ØT-stil
 
@@ -303,11 +315,12 @@ colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 
 png("../output/indicatorPlots/uskalert/vinterregn.png", 
     units="in", width=12, height=7, res=300)  
-  
+    par(mar=c(4.5,6.5,2,2))
+
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Vinterregn (mm) avvik fra 1961-1990",
+    ylab="Vinterregn (mm)\navvik fra normalperioden (1961-1990)",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -331,7 +344,7 @@ png("../output/indicatorPlots/uskalert/vinterregn.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=1) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -350,7 +363,7 @@ png("../output/indicatorPlots/uskalert/vinterregn.png",
     quants <- subset(Tbl, reg==uniq2[n])
     
     # Add lines
-    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=1) 
     
     # Save temp points for later addition to plot
     temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
@@ -358,14 +371,14 @@ png("../output/indicatorPlots/uskalert/vinterregn.png",
     
   }
   
-  # Add points for regions
-  for(n in 1:(length(uniq2)-1)){
-    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
-    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
-  }
-  
-  # Add points for Norge
-  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
+ ## Add points for regions
+ #for(n in 1:(length(uniq2)-1)){
+ #  temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+ #  points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+ #}
+ #
+ ## Add points for Norge
+ #points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[6], cex=1.5)
   
   # Add legend to plot
   legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 

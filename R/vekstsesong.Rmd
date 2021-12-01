@@ -79,9 +79,9 @@ rm(upp)
 regOrder = c(
   "Nord-Norge",
   "Midt-Norge",
-  "Vestlandet",
   "Østlandet",
-  "Sørlandet"
+  "Vestlandet",
+   "Sørlandet"
              )
 ```
 
@@ -107,14 +107,14 @@ gg <- ggplot(data = dat,
        aes(x = year, y = diff))+
   scale_fill_hue(l=70, c=60)+
   theme_bw(base_size = 20)+
-  ylab("Vekstsesong (dager)\n avvik fra 1961-1990")+
+  ylab("Vekstsesong (antall dager)\n avvik fra 1961-1990")+
   xlab("")+
   theme(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
   #scale_x_continuous(breaks = brk, labels = lab)+
   guides(fill="none")+
   facet_wrap( .~ factor(reg, levels = regOrder),
-              ncol=1)
+              ncol=3)
 ```
 
 ```{r, eval=F}
@@ -157,11 +157,11 @@ colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 
 png("../output/paavirkningsindikatorer/enkel stil/vekstsesong.png", 
     units="in", width=12, height=7, res=300)  
-  
+  par(mar=c(4.5,6.5,2,2))
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Vekstsesong (dager) avvik fra 1961-1990",
+    ylab="Vekstsesong (antall dager)\navvik fra normalperioden (1961-1990)",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -185,7 +185,7 @@ png("../output/paavirkningsindikatorer/enkel stil/vekstsesong.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=1) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -204,7 +204,7 @@ png("../output/paavirkningsindikatorer/enkel stil/vekstsesong.png",
     quants <- subset(Tbl, reg==uniq2[n])
     
     # Add lines
-    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=1) 
     
     # Save temp points for later addition to plot
     temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
@@ -212,14 +212,14 @@ png("../output/paavirkningsindikatorer/enkel stil/vekstsesong.png",
     
   }
   
-  # Add points for regions
-  for(n in 1:(length(uniq2)-1)){
-    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
-    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
-  }
-  
-  # Add points for Norge
-  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[5], cex=1.5)
+ # # Add points for regions
+ # for(n in 1:(length(uniq2)-1)){
+ #   temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+ #   points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+ # }
+ # 
+ # # Add points for Norge
+ # points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[5], cex=1.5)
   
   # Add legend to plot
   legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 
