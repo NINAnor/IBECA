@@ -66,9 +66,9 @@ echo "0 = NULL
 
 # Lagre univariat raster statistikk i en CSV fil
 r.univar -t map=n50_fjell_trussler_dist zones=regNorway_wgs84___MERGED \
-    output=../data/fjell_trussel_dist_stats.csv separator=comma --o --v
+    output=../data/fragmentering.csv separator=comma --o --v
 r.univar -t map=n50_fjell_trussler_dist_referanse zones=regNorway_wgs84___MERGED \
-    output=../data/fjell_trussel_dist_referanse_stats.csv separator=comma --o --v
+    output=../data/fragmentering_referanse.csv separator=comma --o --v
 
 # Rydde opp
 rm $1/n50_fjell_trussler.tif
