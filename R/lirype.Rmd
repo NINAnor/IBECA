@@ -15,12 +15,113 @@ knit: (function(input_file, encoding) {
 
 
 ```{r}
-#dat <- readRDS("../data/lirype_jags.RData")
-dat <- load("~/Github/IBECA_NINA/data/lirype_jags.RData")
-dat <- readRDS()
+dat <- load("../data/lirype_jags.RData")
 ```
 
 ```{r}
-dat
+Five_years_mean <- as.data.frame(Five_years_mean)
+names(Five_years_mean) <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Sør-Norge")
+
+```
+
+```{r}
+dat <- data.table::melt(data = Five_years_mean,
+                        measure.vars=names(Five_years_mean),
+                        variable.name="reg",
+                        value.name="val")
+```
+# Skalering
+```{r}
+dat$scal <- dat$val/36
+```
+
+
+```{r}
+dat2 <- aggregate(data = dat,
+                  val~reg, FUN = mean)
+
+#dat2$sd <- aggregate(data = dat,
+#                  val~reg, FUN = sd)[,2]
+
+temp <- aggregate(data = dat,
+                  val~reg,
+                  FUN = function(x) c(quantile(x, c(0.025, 0.5, 0.975))))
+temp <- do.call(data.frame, temp)
+
+dat2 <- cbind(dat2, temp[,-1])
+```
+
+```{r}
+dat2$scal <- aggregate(data = dat,
+                  scal~reg, FUN = mean)[,2]
+#dat2$scalSD <- aggregate(data = dat,
+#                  scal~reg, FUN = sd)[,2]
+
+temp <- aggregate(data = dat,
+                  scal~reg,
+                  FUN = function(x) c(quantile(x, c(0.025, 0.5, 0.975))))
+temp <- do.call(data.frame, temp)
+
+dat2 <- cbind(dat2, temp[,-1])
+
+```
+
+
+```{r}
+(ggrype <- ggplot(data = dat2, aes(x = reg, y = val))+
+  geom_bar(stat="identity", colour="black", size=1.2,
+           fill="grey80")+
+  geom_errorbar(aes(ymax = val.2.5., ymin = val.97.5.),
+                width=0, size=2)+
+  #geom_violin(data = dat, aes(x = reg, y = val),
+  #            fill="black", trim=F, scale="width",
+  #         fill="grey80")+
+  theme_bw(base_size = 20)+
+  ylab(expression(paste("Lirypeindivider (km "^"-2"*")")))+
+  xlab("")+
+  geom_hline(yintercept = 36, size=1.2, linetype="dashed")+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )+
+  ylim(c(0,40)))
+```
+
+```{r}
+png("../output/indicatorPlots/uskalert/lirype_barplot.png", 
+    units="in", width=6, height=8, res=300)
+ggrype
+dev.off()
+```
+
+```{r}
+(ggrype2 <- ggplot(data = dat2, aes(x = reg, y = scal))+
+  geom_bar(stat="identity", colour="black", size=1.2,
+           fill="grey80")+
+   geom_errorbar(aes(ymax = scal.2.5., ymin = scal.97.5.),
+                width=0, size=2)+
+  #geom_violin(data = dat, aes(x = reg, y = scal),
+  #            fill="black", trim=F, scale="width",
+  #         fill="grey80")+
+  theme_bw(base_size = 20)+
+  ylab("Lirypetetthet skalert\nmot referansetilstand")+
+  xlab("")+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )+
+   ylim(c(0,1))
+)
+```
+
+```{r}
+png("../output/indicatorPlots/skalert/lirype.png", 
+    units="in", width=6, height=8, res=300)
+ggrype2
+dev.off()
+```
+
+```{r}
+ser <- Mean_density_region_year
+
+head(ser[,,1])
 ```
 

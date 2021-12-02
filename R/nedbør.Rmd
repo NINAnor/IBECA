@@ -77,6 +77,16 @@ dat$Region[dat$Region=="vestlandet"] <- "Vestlandet"
 dat$Region[dat$Region=="sørlandet"] <- "Sørlandet"
 ```
 
+```{r}
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+   "Sørlandet"
+             )
+```
+
 
 
 ```{r}
@@ -85,12 +95,23 @@ fig_nedbør <- ggplot(data = dat,
                         y = value))+
   geom_line()+
   geom_smooth()+
-  ylab("Årsnedbør (mm)")+
+  ylab("Årsnedbør (mm)\navvik fra 1960-1990")+
+  xlab("")+
   geom_hline(yintercept=0)+
   geom_hline(data = err, aes(yintercept=low), linetype=2)+
   geom_hline(data = err, aes(yintercept=upp), linetype=2)+
-  facet_wrap(.~Region)+
-  theme_bw(base_size = 20)
+  theme_bw(base_size = 20)+
+   theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+    facet_wrap(.~factor(Region, levels = regOrder), scales = "free_y")
+```
+
+
+```{r, eval=F}
+png("../output/paavirkningsindikatorer/facet plot/årsnedbør_tidsserie.png", 
+    units="in", width=10, height=7, res=300)
+fig_nedbør
+dev.off()
 ```
 ![](../output/paavirkningsindikatorer/facet plot/årsnedbør_tidsserie.png)
 
@@ -128,11 +149,11 @@ colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 
 png("../output/paavirkningsindikatorer/enkel stil/årsnedbør.png", 
     units="in", width=12, height=7, res=300)  
-  
+  par(mar=c(4.5,6.5,2,2))
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Årsnedbør (mm) avvik fra 1961-1990",
+    ylab="Årsnedbør (mm)\navvik fra normalperioden (1961-1990)",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -156,7 +177,7 @@ png("../output/paavirkningsindikatorer/enkel stil/årsnedbør.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=1) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -175,7 +196,7 @@ png("../output/paavirkningsindikatorer/enkel stil/årsnedbør.png",
     quants <- subset(Tbl, reg==uniq2[n])
     
     # Add lines
-    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=1) 
     
     # Save temp points for later addition to plot
     temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
@@ -183,14 +204,14 @@ png("../output/paavirkningsindikatorer/enkel stil/årsnedbør.png",
     
   }
   
-  # Add points for regions
-  for(n in 1:(length(uniq2)-1)){
-    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
-    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
-  }
-  
-  # Add points for Norge
-  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[5], cex=1.5)
+ # # Add points for regions
+ # for(n in 1:(length(uniq2)-1)){
+ #   temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+ #   points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
+ # }
+ # 
+ # # Add points for Norge
+ # points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[5], cex=1.5)
   
   # Add legend to plot
   legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 
@@ -379,13 +400,7 @@ dev.off()
 ![](../output/paavirkningsindikatorer/enkel stil/dager med nedbør.png)
 
 
-# Eksporter figurer
-```{r, eval=F}
-png("../output/paavirkningsindikatorer/facet plot/årsnedbør_tidsserie.png", 
-    units="in", width=10, height=7, res=300)
-fig_nedbør
-dev.off()
-```
+
 ```{r, eval=F}
 png("../output/paavirkningsindikatorer/facet plot/dagerMedNedbør_tidsserie.png", 
     units="in", width=10, height=7, res=300)

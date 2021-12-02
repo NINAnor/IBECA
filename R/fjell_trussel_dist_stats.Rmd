@@ -27,6 +27,7 @@ Her regner vi ut gjennomsnittlig avstand fra en fjellpiksel til menneskelig infr
 # Shell
 Skriptet under beregner univariat statistikk for avstand til boreal (f.eks. skog) og menneskelig innflytelse
 ```{r, eval=F}
+getwd()
 # Forutsetter at IBECA er arbeidsmappen setwd("~/IBECA/R")
 system("grass --tmp-location EPSG:25833 --exec bash ../data/fjell_trussel_dist_stats.sh")
 ```
