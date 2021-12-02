@@ -39,13 +39,13 @@ SELECT geom FROM \"Topography\".\"Norway_N50_ArealdekkeFlate\" WHERE \"OBJTYPE\"
 ,'TettBebyggelse'
 )" -burn 1 -of GTiff -a_srs EPSG:25833 -co COMPRESS=LZW -co PREDICTOR=2 \
     -a_nodata 0 -te $w $s $e $n -tr $ewres $nsres -ot Byte -optim AUTO \
-    "PG:host=gisdata-db.nina.no dbname=gisdata user=$USER" \
+    "PG:host=gisdata-db.nina.no dbname=gisdata user=postgjest" \
     data/n50_fjell_trussler.tif
 
 gdal_rasterize -at -sql "SELECT geom FROM \"Topography\".\"Norway_N50_ArealdekkeFlate\" WHERE \"OBJTYPE\" =  'Skog'" \
     -burn 1 -of GTiff -a_srs EPSG:25833 -co COMPRESS=LZW -co PREDICTOR=2 \
     -a_nodata 0 -te $w $s $e $n -tr $ewres $nsres -ot Byte -optim AUTO \
-    "PG:host=gisdata-db.nina.no dbname=gisdata user=$USER" \
+    "PG:host=gisdata-db.nina.no dbname=gisdata user=postgjest" \
     data/n50_fjell_trussler_referanse.tif
 
 # Lenke opp raster med menneskelig eller boreal innflytelse
