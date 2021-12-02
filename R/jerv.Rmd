@@ -251,7 +251,7 @@ wgt$reg <- c("N", "C", "E", "W", "S")
 ```
 
 
-
+# He er det vel en feil - jeg må ta gjennomsnitt for hver tversnitt i temp2...
 ```{r}
 regions <- c("N", "C", "W", "S", "E")
 

@@ -27,18 +27,13 @@ Her regner vi ut gjennomsnittlig avstand fra en fjellpiksel til menneskelig infr
 # Shell
 Skriptet under beregner univariat statistikk for avstand til boreal (f.eks. skog) og menneskelig innflytelse
 ```{r, eval=F}
-<<<<<<< HEAD:R/fjell_trussel_dist_stats.Rmd
-getwd()
-# Forutsetter at IBECA er arbeidsmappen setwd("~/IBECA/R")
-system("grass --tmp-location EPSG:25833 --exec bash ../data/fjell_trussel_dist_stats.sh")
-=======
+
 # Forutsetter at IBECA/R er arbeidsmappen setwd("~/IBECA/R")
 # GRASS GIS >= 7.8 må være installert på maskina og utførbart (på PATH)
 # Skriptet forutsetter videre tilgang til "gisdata" databasen med N50 data
 # Tilgang til denne databasen er satt opp for brukeren "postgjest"
 tmp_mappe <- "/data/scratch"
 system(paste0("grass -c EPSG:25833 ", tmp_mappe, "/tmplocation --exec bash ../data/fragmentering.sh ", tmp_mappe, "\nrm -rf ", tmp_mappe, "/tmplocation"))
->>>>>>> 51f3e1f8a6a55bd5b114599b2e19c8ac9b4a31ab:R/fragmentering.Rmd
 ```
 
 # Import CSV
