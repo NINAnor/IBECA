@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # Lenk opp fjellmasken
-r.external input=data/fjellmasken.tif output=fjellmasken --o --v
+r.external input=../data/fjellmasken.tif output=fjellmasken --o --v
 
 # Importer filen med fjell regionene
-v.import input="data/regioner_2010/regNorway_wgs84 - MERGED.shp" \
+v.import input="../data/regioner_2010/regNorway_wgs84 - MERGED.shp" \
     layer="regNorway_wgs84 - MERGED" output="regNorway_wgs84___MERGED" \
     encoding="UTF8" --o --v
 
@@ -40,17 +40,17 @@ SELECT geom FROM \"Topography\".\"Norway_N50_ArealdekkeFlate\" WHERE \"OBJTYPE\"
 )" -burn 1 -of GTiff -a_srs EPSG:25833 -co COMPRESS=LZW -co PREDICTOR=2 \
     -a_nodata 0 -te $w $s $e $n -tr $ewres $nsres -ot Byte -optim AUTO \
     "PG:host=gisdata-db.nina.no dbname=gisdata user=postgjest" \
-    data/n50_fjell_trussler.tif
+    $1/n50_fjell_trussler.tif
 
 gdal_rasterize -at -sql "SELECT geom FROM \"Topography\".\"Norway_N50_ArealdekkeFlate\" WHERE \"OBJTYPE\" =  'Skog'" \
     -burn 1 -of GTiff -a_srs EPSG:25833 -co COMPRESS=LZW -co PREDICTOR=2 \
     -a_nodata 0 -te $w $s $e $n -tr $ewres $nsres -ot Byte -optim AUTO \
     "PG:host=gisdata-db.nina.no dbname=gisdata user=postgjest" \
-    data/n50_fjell_trussler_referanse.tif
+    $1/n50_fjell_trussler_referanse.tif
 
 # Lenke opp raster med menneskelig eller boreal innflytelse
-r.external input=data/n50_fjell_trussler.tif output=n50_fjell_trussler --o --v
-r.external input=data/n50_fjell_trussler_referanse.tif output=n50_fjell_trussler_referanse --o --v
+r.external input=$1/n50_fjell_trussler.tif output=n50_fjell_trussler --o --v
+r.external input=$1/n50_fjell_trussler_referanse.tif output=n50_fjell_trussler_referanse --o --v
 
 # Beregn avstand til pikslene i innflytelses raster
 r.grow.distance input=n50_fjell_trussler distance=n50_fjell_trussler_dist --o --v
@@ -66,10 +66,10 @@ echo "0 = NULL
 
 # Lagre univariat raster statistikk i en CSV fil
 r.univar -t map=n50_fjell_trussler_dist zones=regNorway_wgs84___MERGED \
-    output=data/fjell_trussel_dist_stats.csv separator=comma --o --v
+    output=../data/fragmentering.csv separator=comma --o --v
 r.univar -t map=n50_fjell_trussler_dist_referanse zones=regNorway_wgs84___MERGED \
-    output=data/fjell_trussel_dist_referanse_stats.csv separator=comma --o --v
+    output=../data/fragmentering_referanse.csv separator=comma --o --v
 
 # Rydde opp
-rm data/n50_fjell_trussler.tif
-rm data/n50_fjell_trussler_referanse.tif
+rm $1/n50_fjell_trussler.tif
+rm $1/n50_fjell_trussler_referanse.tif
