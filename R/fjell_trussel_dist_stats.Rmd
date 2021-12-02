@@ -123,7 +123,7 @@ ggFrag <- ggplot(data = dat, aes(x = factor(label, levels = regOrder), y = val))
 
 ```{r, eval=F}
 png("../output/indicatorPlots/skalert/fragmentering barplot skalert.png", 
-    units="in", width=8, height=7, res=300)
+    units="in", width=5, height=8, res=300)
 ggFrag
 dev.off()
 ```
@@ -138,9 +138,11 @@ dat[nrow(dat), "ref"] <- weighted.mean(dat$ref, dat$wgt, na.rm=T)
 ```{r}
 gg <- ggplot()+
   geom_bar(data = dat, aes(x = factor(label, levels = regOrder), y = ref),
-           stat = "identity", alpha = .8, width=0.8)+
+           stat = "identity", alpha = .7, width=.8)+
   geom_bar(data = dat, aes(x = factor(label, levels = regOrder), y = mean),
-           stat = "identity", alpha = 1, colour="black")+
+           stat = "identity", alpha = 1, colour="black",
+           position = position_nudge(x=-0.1),
+           width=.8)+
   theme_bw(base_size = 20)+
   ylab("Gj. avstand til infrastruktur\neller fjellgrensen (m)")+
   xlab("")+
@@ -150,7 +152,7 @@ gg <- ggplot()+
 
 ```{r, eval=F}
 png("../output/indicatorPlots/supporting figures/fragmentering barplot.png", 
-    units="in", width=6, height=5, res=300)
+    units="in", width=7, height=8, res=300)
 gg
 dev.off()
 ```
