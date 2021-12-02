@@ -119,6 +119,16 @@ tbl
 ```
 
 
+## Fragmentering
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fragmentering.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+```{r, echo=FALSE}
+tbl <- get('Fragmentering')
+tbl
+
+```
+
+
 ## Jerv
 Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/jerv.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
