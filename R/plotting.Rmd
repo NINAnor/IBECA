@@ -156,6 +156,14 @@ fjellrype$period <- periods$period[match(fjellrype$year, periods$year)]
 
 ```
 
+### Fragmentering
+Her må jeg skjekke litt. 
+```{r}
+fragmentering <- read.csv("../output/indicator_values/fragmentering.csv", header=T)
+fragmentering$year <- 2020
+fragmentering$period <- periods$period[match(fragmentering$year, periods$year)]
+
+```
 
 
 ### INON
@@ -184,6 +192,17 @@ kongeorn$period <-
   periods$period[match(kongeorn$year, periods$year)]
 
 kongeorn$X <- "kongeørn"
+```
+
+
+### Lirype
+```{r}
+lirype <- read.csv("../output/indicator_values/lirype.csv", header=T)
+lirype$year <- 2020
+lirype$period <- 
+  periods$period[match(lirype$year, periods$year)]
+
+lirype$X <- "lirype"
 ```
 
 
@@ -226,7 +245,7 @@ smaagnagere$period <-
 table(smaagnagere$reg, smaagnagere$period)
 ```
 ### Vegetasjonen varmekrav
-
+Fjernes?
 ```{r}
 varmekrav <- read.csv("../output/indicator_values/varmekrav.csv", header=T)
 varmekrav <- select(varmekrav, -X.1)

@@ -116,7 +116,8 @@ regOrder = c(
 # Plot
 ```{r}
 ggFrag <- ggplot(data = dat, aes(x = factor(label, levels = regOrder), y = val))+
-  geom_bar(stat="identity", alpha=.8)+
+  geom_bar(stat="identity", colour="black", size=1.2,
+           fill="grey80")+
   ylim(0,1)+
   ylab("Gj. avstand til infrastruktur\neller fjellgrensen\n(skalert mot referansetilstand)")+
   xlab("")+
@@ -128,7 +129,7 @@ ggFrag <- ggplot(data = dat, aes(x = factor(label, levels = regOrder), y = val))
 
 ```{r, eval=F}
 png("../output/indicatorPlots/skalert/fragmentering barplot skalert.png", 
-    units="in", width=5, height=8, res=300)
+    units="in", width=7, height=8, res=300)
 ggFrag
 dev.off()
 ```
@@ -143,9 +144,12 @@ dat[nrow(dat), "ref"] <- weighted.mean(dat$ref, dat$wgt, na.rm=T)
 ```{r}
 gg <- ggplot()+
   geom_bar(data = dat, aes(x = factor(label, levels = regOrder), y = ref),
-           stat = "identity", alpha = .7, width=.8)+
+           stat = "identity", alpha = .7, width=.8,
+           colour="black", size=1.2,
+           fill="grey80")+
   geom_bar(data = dat, aes(x = factor(label, levels = regOrder), y = mean),
-           stat = "identity", alpha = 1, colour="black",
+           stat = "identity", alpha = 1, colour="black", size=1.2,
+           fill="grey60",
            position = position_nudge(x=-0.1),
            width=.8)+
   theme_bw(base_size = 20)+

@@ -33,70 +33,127 @@ Utarbeidelsen av metodikken er gjort av Erik Fremstad.
 
 # Import
 Datasett med bestandstall, areal, og TRIverdier. Topographic roughenss index brukes til å modellere referansetilstand.
+For hvert reinområde andgis areal per region. 
 
 ```{r}
 dat <- read_excel("../data/rein.xlsx")
 head(dat)
 ```
 
-## Kart over Norge
-```{r}
-nor <- readRDS('../data/norway_outline.RDS')%>%
-  st_as_sf()
+Kolonnen med total areal (helt til høyre) stemmer nesten med total fjellareal, så jeg kan bruke de vekselsvis.
 
-```
-
-## Villreinområder
 
 ```{r}
-vill <- sf::st_read(dsn = 'P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/rein/Natur_Villrein_norge_uten_svalbard_25833 ESRI/Natur_Villrein_norge_uten_svalbard_25833.gdb')%>%
-  st_transform(crs=crs(nor))
+dat <- dplyr::select(dat, -navn2)
 ```
 
-
-## Regioner
-```{r import4}
-reg <- st_read("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Geografisk_oppdeling/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
-  st_transform(crs = crs(nor))
-```
-
-
-## Fjellmaske
-```{r}
-fjell <- raster("../output/fjell_1km.tif")
-
-fjell[fjell[]==0] <- NA
-
-```
+Så setter jeg alle NA til 0. Dette inkluderer totalbestand for Trollheimen. Trollheimen har tom celle for totalbestand. Siden det er skrevet 0 i cellen for fjellbestand så antar jeg det skal være null i den andre også.
 
 ```{r}
-plot(nor$geometry, axes=T, main = "Fjellmasken, villreinområder og regioninndeling")
-  plot(fjell, add=T)
-  plot(vill$SHAPE, add=T)
-  plot(reg$geometry, add=T, border="red")
+dat[is.na(dat)] <- 0
 ```
 
-Jeg tenker at hver pixel i fjellmasken bør få en indikatorverdi og en referanseverdi.
-Først må jeg legge bestandstallene og refverdien inn i vill-datasettet
+Regner ut fjellbestanden. Fjellbestanden regnes ut ved å anta at tettheten er lik i fjell og ikke-fjell.
+```{r}
+#dat$fjellbestand <- dat$bestand*(dat$fjellareal/dat$Totalreal)
+```
+
+
+Før jeg smelter datasettet vil jeg dele fjellbestanden mellom delarealene basert på fordeling av areal mellom regioner.
+```{r}
+dat$propN <- dat$N/dat$totalt
+dat$propC <- dat$C/dat$totalt
+dat$propE <- dat$E/dat$totalt
+dat$propW <- dat$W/dat$totalt
+dat$propS <- dat$S/dat$totalt
+```
+
+
+
+# Melt
+Nå deler jeg opp villreinområdene i så mange regioner som de inngår i
 
 ```{r}
-unique(vill$omradenavn)
+setDT(dat)
+dat2 <- melt(dat,
+             measure.vars = c("N", "C", "E", "W", "S"),
+             value.name = "area",
+             variable.name= "reg",
+             na.rm=T)
 ```
-Her var det veldig mange. Jeg tror kanskje det gir mening å ekskudere trekkområder.
+
+Dette gir fem rader per område. Så tar jeg bort de radene der det ikke finnes noe (fjell)areal
+```{r}
+temp <- dat2[dat2$type=="ingen rein",]
+dat2 <- dat2[dat2$area>0,]
+dat2 <- rbind(dat2, temp)
+rm(temp)
+```
+
+
+Så kan jeg regne ut referansetettheter.
+Her er referanseverdier for tetthet gitt som 75% av bestandsmål. Metoden er beskrevet andre steder, men baseres seg på sammenhengen mellom topgrafisk varisjon og bestandsmålene for villrein. 
+```{r}
+dat2$ref <- 0.75*1.0759*exp(-0.001*dat2$`TRI-fjell`)
+```
+
+Lager noen alternativer
+```{r}
+dat2$ref60 <- 0.60*1.0759*exp(-0.001*dat2$`TRI-fjell`)
+dat2$ref80 <- 0.80*1.0759*exp(-0.001*dat2$`TRI-fjell`)
+```
+
 
 ```{r}
-table(vill$funksjon)
+temp <- dat2[dat2$type=="ingen rein",]
+dat2 <- dat2[dat2$type!="ingen rein",]
 ```
 
 ```{r}
-unique(vill$omradenavn[vill$funksjon!="trekkområde"])
+temp2 <- temp[temp$navn == "Fjell uten rein - nord" &
+                temp$reg %in% c("N"),]
+
+temp3 <- temp[temp$navn == "Fjell uten rein - sør" &
+                temp$reg %in% c("E", "S", "W", "C"),]
+
+temp4 <- temp[temp$navn =="Fjellområder uten rein",]
+temp4 <- temp4[!duplicated(temp4$reg)]
+
+temp <- rbind(temp2, temp3)
+temp$area <- temp4$area[match(temp$reg, temp4$reg)]
 ```
-Det er fortsatt alt for mange polygoner til at jeg kan manuelt mappe dat til vill.
 
 ```{r}
-unique(vill$villreinnemd[vill$funksjon!="trekkområde"])
-
+dat2 <- rbind(dat2, temp)
 ```
 
-N
 
+Og de observerte tetthetene. Siden tettheten er antat lik i fjell og ikke-fjell trenger vi ikke gå veien innom å regne ut bestandstall
+```{r}
+dat2$tetthet <- dat2$bestand/dat2$Totalreal
+dat2$tetthet[dat2$type=="ingen rein"] <- 0
+```
+
+```{r}
+df <- data.table(reg = unique(dat2$reg),
+                 obs = as.numeric(),
+                 ref = as.numeric())
+for(i in unique(dat2$reg)){
+  
+  
+  temp <- dat2[dat2$reg ==i,]
+  
+  df[df$reg==i, "obs"] <- weighted.mean(temp$tetthet, temp$area)
+  df[df$reg==i, "ref"] <- weighted.mean(temp$ref, temp$area)
+}
+```
+
+```{r}
+df$diff <- df$ref-df$obs
+df
+```
+
+Vi har både positive og negative tall her, så vi trenger kanskje en tosidig indikator. Men samtidig, den positive verdien på vestlandet er veldig liten.
+
+
+Nei, jeg må gjøre dette anderledes og skalere per delområde!
