@@ -26,7 +26,7 @@ Her viser jeg hvordan vi aggreggerer indikatorverdiene til en verdi for økologi
 
 ```{r}
 # Number of simulations
-#nsim <- 10000 # should be run with 10 000 as the end
+nsim <- 10 # should be run with 10 000 as the end
 
 # Short names for ecosystem characteristics
 characteristics <- c("ppr", "isf", "bmb", "fgw", "bio", "lsp", "abf")
@@ -52,10 +52,7 @@ periods <- data.frame(period = c(1,1,1,1,1,1,1,1,
                         2016, 2017, 2018, 2019, 2020))
 ```
 
-Save periods file
-```{r, eval=F}
-#write.csv(periods, "../output/periods.csv")
-```
+
 
 # Step 2: 
 load and adjust indicator data
@@ -215,9 +212,17 @@ ndvi$period <-
   periods$period[match(ndvi$year, periods$year)]
 
 ndvi$X <- "ndvi"
-ndvi <- select(ndvi, -X.1)
+ndvi <- dplyr::select(ndvi, -X.1)
 ```
 
+### Rein
+```{r}
+rein <- read.csv("../output/indicator_values/rein.csv", header=T)
+
+rein$period <- 
+  periods$period[match(rein$year, periods$year)]
+table(rein$reg, rein$period)
+```
 
 ### Snødekke
 ```{r}
@@ -248,7 +253,7 @@ table(smaagnagere$reg, smaagnagere$period)
 Fjernes?
 ```{r}
 varmekrav <- read.csv("../output/indicator_values/varmekrav.csv", header=T)
-varmekrav <- select(varmekrav, -X.1)
+varmekrav <- dplyr::select(varmekrav, -X.1)
 varmekrav$X <- "varmekrav"
 varmekrav$period <- 
   periods$period[match(varmekrav$year, periods$year)]
@@ -285,24 +290,27 @@ periods_use <- 6
 
 Subset additional data
 ```{r}
-alien        <- alien[alien$period%in%periods_use,]
-breareal     <- breareal[breareal$period%in%periods_use,]
-EllLHigh     <- EllLHigh[EllLHigh$period%in%periods_use,]
-EllLLow      <- EllLLow[EllLLow$period%in%periods_use,]
-EllNHigh     <- EllNHigh[EllNHigh$period%in%periods_use,]
-EllNLow      <- EllNLow[EllNLow$period%in%periods_use,]
-fjellindeks  <- fjellindeks[fjellindeks$period%in%periods_use,]
-fjellrev     <- fjellrev[fjellrev$period%in%periods_use,]
-fjellrype    <- fjellrype[fjellrype$period%in%periods_use,]
-inon         <- inon[inon$period%in%periods_use,]
-jerv         <- jerv[jerv$period%in%periods_use,]
-kongeorn     <- kongeorn[kongeorn$period%in%periods_use,]
-ndvi         <- ndvi[ndvi$period%in%periods_use,]
-smaagnagere  <- smaagnagere[smaagnagere$period%in%periods_use,]
-snodekke     <- snodekke[snodekke$period%in%periods_use,]
-snodybde     <- snodybde[snodybde$period%in%periods_use,]
-varmekrav    <- varmekrav[varmekrav$period%in%periods_use,]
-vinterregn   <- vinterregn[vinterregn$period%in%periods_use,]
+alien            <- alien[alien$period%in%periods_use,]
+breareal         <- breareal[breareal$period%in%periods_use,]
+EllLHigh         <- EllLHigh[EllLHigh$period%in%periods_use,]
+EllLLow          <- EllLLow[EllLLow$period%in%periods_use,]
+EllNHigh         <- EllNHigh[EllNHigh$period%in%periods_use,]
+EllNLow          <- EllNLow[EllNLow$period%in%periods_use,]
+fjellindeks      <- fjellindeks[fjellindeks$period%in%periods_use,]
+fjellrev         <- fjellrev[fjellrev$period%in%periods_use,]
+fjellrype        <- fjellrype[fjellrype$period%in%periods_use,]
+fragmentering    <- fragmentering[fragmentering$period%in%periods_use,]
+inon             <- inon[inon$period%in%periods_use,]
+jerv             <- jerv[jerv$period%in%periods_use,]
+kongeorn         <- kongeorn[kongeorn$period%in%periods_use,]
+lirype           <- lirype[lirype$period%in%periods_use,]
+ndvi             <- ndvi[ndvi$period%in%periods_use,]
+rein             <- rein[rein$period%in%periods_use,]
+smaagnagere      <- smaagnagere[smaagnagere$period%in%periods_use,]
+snodekke         <- snodekke[snodekke$period%in%periods_use,]
+snodybde         <- snodybde[snodybde$period%in%periods_use,]
+varmekrav        <- varmekrav[varmekrav$period%in%periods_use,]
+vinterregn       <- vinterregn[vinterregn$period%in%periods_use,]
 ```
 
 
@@ -314,10 +322,6 @@ regOrder = c("C","N","W", "S", "E","Norge")
 ```
 
 ```{r}
-alien <- alien %>%
-  arrange(match(reg, regOrder), desc(period)) %>%
-  select(X, reg, period, val)
-
 alien <- alien %>%
   arrange(match(reg, regOrder), desc(period)) %>%
   select(X, reg, period, val)
@@ -342,7 +346,6 @@ EllNLow <- EllNLow %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
-
 fjellindeks <- fjellindeks %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
@@ -352,6 +355,10 @@ fjellrev <- fjellrev %>%
   select(X, reg, period, val)
 
 fjellrype <- fjellrype %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+fragmentering <- fragmentering %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
@@ -367,7 +374,15 @@ kongeorn <- kongeorn %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
+lirype <- lirype %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
 ndvi <- ndvi %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+rein <- rein %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
@@ -405,10 +420,13 @@ allind <- rbind(
   fjellindeks,
   fjellrev,
   fjellrype,
+  fragmentering,
   inon,
   jerv,
   kongeorn,
+  lirype,
   ndvi,
+  rein,
   snodekke,
   snodybde,
   smaagnagere,
@@ -516,12 +534,11 @@ ind_char$bmb <- ifelse(
   ind_char$IND=="ndvi"|
   ind_char$IND=="fjellrev"|
   ind_char$IND=="jerv"|
+  ind_char$IND=="rein"|
   ind_char$IND=="smaagnagere"|
   ind_char$IND=="lirype"|
-  ind_char$IND=="lirype"|
   ind_char$IND=="fjellrype"|
-  ind_char$IND=="kongeørn"|
-  ind_char$IND=="fjellvaak"
+  ind_char$IND=="kongeørn"
     ,
                        1,0)
 
@@ -529,12 +546,11 @@ ind_char$bmb <- ifelse(
 ind_char$fgw <- ifelse(
   ind_char$IND=="fjellrev"|
   ind_char$IND=="jerv"|
+  ind_char$IND=="rein"|
   ind_char$IND=="smaagnagere"|
   ind_char$IND=="lirype"|
-  ind_char$IND=="lirype"|
   ind_char$IND=="fjellrype"|
-  ind_char$IND=="kongeørn"|
-  ind_char$IND=="fjellvaak"
+  ind_char$IND=="kongeørn"
     ,
                        1,0)
 
@@ -612,7 +628,6 @@ for(n in unique(allind$X)){
 ```{r}
 agg_ind <- data.frame()
 w_boot <- data.frame()
-nsim<- 100 # må skrus opp til 10 000 til slutt
 ```
 
 ```{r, eval=F}
@@ -714,8 +729,6 @@ names(w_boot)[3] <- c("val")
 
 
 ```{r, eval=F}
-
-nsim <- 100
 regions <- unlist(unique(allind$reg))
 char_w <- unlist(unique(w_boot$chr))
 tot_ind <- data.frame()
@@ -865,10 +878,13 @@ temp_names$plot <- c("Fravær av fremmede arter",
                      "Naturindeks for fjell (mod.)",
                      "Fjellrev",
                      "Fjellrype",
+                     "Fragmentering",
                      "Areal uten tekniske inngrep",
                      "Jerv",
                      "Kongeørn",
+                     "Lirype",
                      "NDVI (øvre)",
+                     "Rein",
                      "Snødekke",
                      "Snødybde",
                      "Smågnagere",
@@ -915,6 +931,7 @@ Ignorer per(iodene)
 all_Q <- select(all_Q, -per)
 ```
 
+
 ```{r, eval=F}
 
 regions <- unlist(unique(allind$reg))
@@ -932,9 +949,7 @@ for (j in 1:length(regions)){
     TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
     TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
     
-    # Change to 300 or 600 res
-    #setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Aggregation_plots/vertical")
-    png(paste("../output/aggregated_plots/","region_", regions[j],"_", ".png", sep=""), 
+  png(paste("../output/aggregated_plots/","region_", regions[j],"_", ".png", sep=""), 
         units="in", width=8, height=14, res=600)
      
     par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
