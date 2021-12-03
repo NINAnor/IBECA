@@ -42,24 +42,17 @@ head(dat)
 
 Kolonnen med total areal (helt til høyre) stemmer nesten med total fjellareal, så jeg kan bruke de vekselsvis.
 
-
+Rydder
 ```{r}
 dat <- dplyr::select(dat, -navn2)
 ```
 
 Så setter jeg alle NA til 0. Dette inkluderer totalbestand for Trollheimen. Trollheimen har tom celle for totalbestand. Siden det er skrevet 0 i cellen for fjellbestand så antar jeg det skal være null i den andre også.
-
 ```{r}
 dat[is.na(dat)] <- 0
 ```
 
-Regner ut fjellbestanden. Fjellbestanden regnes ut ved å anta at tettheten er lik i fjell og ikke-fjell.
-```{r}
-#dat$fjellbestand <- dat$bestand*(dat$fjellareal/dat$Totalreal)
-```
-
-
-Før jeg smelter datasettet vil jeg dele fjellbestanden mellom delarealene basert på fordeling av areal mellom regioner.
+Fordeling av areal mellom regioner.
 ```{r}
 dat$propN <- dat$N/dat$totalt
 dat$propC <- dat$C/dat$totalt
@@ -69,10 +62,8 @@ dat$propS <- dat$S/dat$totalt
 ```
 
 
-
 # Melt
 Nå deler jeg opp villreinområdene i så mange regioner som de inngår i
-
 ```{r}
 setDT(dat)
 dat2 <- melt(dat,
@@ -90,7 +81,6 @@ dat2 <- rbind(dat2, temp)
 rm(temp)
 ```
 
-
 Så kan jeg regne ut referansetettheter.
 Her er referanseverdier for tetthet gitt som 75% av bestandsmål. Metoden er beskrevet andre steder, men baseres seg på sammenhengen mellom topgrafisk varisjon og bestandsmålene for villrein. 
 ```{r}
@@ -104,6 +94,8 @@ dat2$ref80 <- 0.80*1.0759*exp(-0.001*dat2$`TRI-fjell`)
 ```
 
 
+
+Det er noen rader med type = ingen rein som vi må kombinere på et vis.
 ```{r}
 temp <- dat2[dat2$type=="ingen rein",]
 dat2 <- dat2[dat2$type!="ingen rein",]
@@ -128,32 +120,152 @@ dat2 <- rbind(dat2, temp)
 ```
 
 
-Og de observerte tetthetene. Siden tettheten er antat lik i fjell og ikke-fjell trenger vi ikke gå veien innom å regne ut bestandstall
+
+Her er de observerte dyretetthetene. Siden tettheten er antatt lik i fjell og ikke-fjell trenger vi ikke gå veien innom å regne ut bestandstall
 ```{r}
 dat2$tetthet <- dat2$bestand/dat2$Totalreal
+#Endrer NaN til 0
 dat2$tetthet[dat2$type=="ingen rein"] <- 0
 ```
 
+I motsettnign til de fleste andre indikatorer ønsker vi i dtte tilfelle å skalere indikatoren på minst mulig nivå, dvs per delaområde. Dette er fordi det ikke gir mening å hverken summere eller ta gjennomsnitt av tettheter. Man kan ikke la lav tetthet ett sted kompenseer for høye tettheter ett annet sted.
+```{r}
+dat2$diff <- dat2$ref-dat2$tetthet
+dotchart(dat2$diff)
+```
+Her må vi ha en tosidig skalering. Erik har laget et forslag til skalering som ser slik ut
+
+```{r}
+temp <- data.frame(x = c(0, 0.6, 1, 2,10),
+                   y = c(0, 0.6, 1, 0.6, 0))
+
+ggplot(data = temp, aes(x = x, y = y))+
+  geom_line(size=1.3, linetype="dashed", colour="grey30")+
+  geom_point(size=5)+
+  theme_bw()+
+  ylab("Skalert verdi")+
+  xlab("Obs./Ref.")
+```
+
+```{r}
+dat2$rat <- dat2$tetthet/dat2$ref
+dotchart(dat2$rat)
+```
+
+```{r}
+dat2$val <- NA 
+dat2$val[dat2$rat<1]  <- dat2$rat[dat2$rat<1]
+dat2$val[dat2$rat %between% c(1, 2)] <- 1-(0.4*((dat2$rat[dat2$rat %between% c(1, 2)])-1))
+dat2$val[dat2$rat >2] <- 0.6-((dat2$rat[dat2$rat >2]-2)/8)
+ggplot(data=dat2, aes(x = rat, y = val))+
+  geom_line(size=1.2, alpha=.4)+
+  geom_point(size=3)+
+  theme_bw()
+```
+Fint.
+
+Så trenger jeg et arealvektet gjennomsnitt per region.
+
+
 ```{r}
 df <- data.table(reg = unique(dat2$reg),
-                 obs = as.numeric(),
-                 ref = as.numeric())
+                 val = as.numeric(),
+                 X = "rein",
+                 year = 2020)
+
 for(i in unique(dat2$reg)){
   
   
   temp <- dat2[dat2$reg ==i,]
   
-  df[df$reg==i, "obs"] <- weighted.mean(temp$tetthet, temp$area)
-  df[df$reg==i, "ref"] <- weighted.mean(temp$ref, temp$area)
+  df[df$reg==i, "val"] <- weighted.mean(temp$val, temp$area)
 }
 ```
 
+Så må vi ha en verdi for hele Norge
+Fjellareal per region:
 ```{r}
-df$diff <- df$ref-df$obs
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+temp <- df
+temp$wgt <- wgt$Fjellareal2[match(temp$reg, wgt$reg)]
+```
+
+```{r}
+nor <- data.frame(reg = "Norge",
+                  val = weighted.mean(temp$val, temp$wgt),
+                  X = "rein",
+                  year = 2020)
+df <- rbind(df, nor)
 df
 ```
 
-Vi har både positive og negative tall her, så vi trenger kanskje en tosidig indikator. Men samtidig, den positive verdien på vestlandet er veldig liten.
+Det er kanskje mulig å kvantifisere usikkerhet ved å innføre usikkerhet i referanseverdien, men det bryter også med noen prinsipper i ØT, så jeg venter i hvertfall med å gjøre det.
+
+# Plotting
+```{r}
+temp2 <- c("N", "C", "E", "S", "W", "Norge")
+temp3 <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Sørlandet", "Vestlandet", "Norge")
+```
+
+```{r}
+(gg <- ggplot(data = df, aes(x = factor(reg, levels = temp2), y = val))+
+  geom_bar(stat="identity", colour="black", size=1.2,
+           fill="grey80")+
+  theme_bw(base_size = 20)+
+  ylab("Tetthet av rein\nskalert mot referansetilstand")+
+  xlab("")+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )+
+   scale_x_discrete(breaks = temp2,
+                    labels = temp3)+
+   scale_y_continuous(breaks = seq(0,1,.2),
+                      limits = c(0,1))
+)  
+```
+
+```{r, eval=F}
+png("../output/indicatorPlots/skalert/rein.png", 
+    units="in", width=6, height=8, res=300)
+gg
+dev.off()
+```
+
+```{r}
+(gg2 <- ggplot(data = dat2, aes(x = factor(reg, levels = temp2), y = tetthet))+
+  geom_point(aes(size = area),
+             shape=21,
+             colour="black", 
+             stroke=1.2,
+             fill="grey80")+
+  scale_size_continuous(range = c(1, 10))+
+  theme_bw(base_size = 20)+
+  ylab(expression(paste("Rein km "^"-2")))+
+  xlab("")+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
+  )+
+   scale_x_discrete(breaks = temp2,
+                    labels = temp3)+
+  guides(
+    size=guide_legend(override.aes = list(size = c(1, 5, 10)),
+                      title = expression(paste("km "^"-2")))
+  )
+)
+```
+
+```{r, eval=F}
+
+png("../output/indicatorPlots/uskalert/rein_tettheter.png", 
+    units="in", width=6, height=8, res=300)
+gg2
+dev.off()
+```
+
+```{r, eval=F}
+write.csv(df, "../output/indicator_values/rein.csv", row.names = F)
+```
 
 
-Nei, jeg må gjøre dette anderledes og skalere per delområde!
