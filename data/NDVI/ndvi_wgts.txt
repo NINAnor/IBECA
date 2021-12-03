@@ -1,0 +1,7 @@
+region	lower	upper
+Austlandet	1031	2812
+Midt-Norge	516	3288
+Nord-Norge	1432	10969
+Soerlandet	605	958
+Vestlandet	799	2583
+Norge	4383	20610
