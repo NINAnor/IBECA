@@ -34,9 +34,17 @@ allind  <- read.csv("../output/allind_temp.csv", row.names=1)
 weights <- read.csv("../output/weights_temp.csv", row.names=1)
 ```
 
+```{r}
+unique(allind$X)
+```
+
+```{r}
+allind$X[allind$X=="konge\xf8rn"] <- "kongeørn"
+```
+
 Number of simulations to run
 ```{r}
-nsim <- 100 # bør kjøres på 10 000 til slutt
+nsim <- 10000 # bør kjøres på 10 000 til slutt
 ```
 
 Total number of indicators
@@ -68,17 +76,18 @@ ind_press$are <-
     ind_press$IND=="alien"|
     ind_press$IND=="breareal"|
     ind_press$IND=="EllLHigh"|
-    ind_press$IND=="EllLow"|
-    #ind_press$IND=="EllNHigh"|
+    ind_press$IND=="EllLLow"|
+    ind_press$IND=="rein"|
     #ind_press$IND=="EllNLow"|
     ind_press$IND=="fjellindeks"|
     ind_press$IND=="fjellrev"|
     #ind_press$IND=="fjellrype"|
     ind_press$IND=="INON"|
     ind_press$IND=="jerv"|
+    ind_press$IND=="fragmentering"|
     ind_press$IND=="kongeørn"|
-    ind_press$IND=="ndvi"
-    #ind_press$IND=="snodekke"|
+    ind_press$IND=="NDVI_upper"|
+    ind_press$IND=="NDVI_lower"
     #ind_press$IND=="snodybde"|
     #ind_press$IND=="smaagnagere"|
     #ind_press$IND=="varmekrav"|
@@ -92,16 +101,17 @@ ind_press$kli  <-
     ind_press$IND=="alien"|
     ind_press$IND=="breareal"|
     ind_press$IND=="EllLHigh"|
-    ind_press$IND=="EllLow"|
+    ind_press$IND=="EllLLow"|
     ind_press$IND=="EllNHigh"|
     ind_press$IND=="EllNLow"|
     ind_press$IND=="fjellindeks"|
     ind_press$IND=="fjellrev"|
     ind_press$IND=="fjellrype"|
-    #ind_press$IND=="INON"|
-    #ind_press$IND=="jerv"|
+    ind_press$IND=="rein"|
+    ind_press$IND=="lirype"|
     ind_press$IND=="kongeørn"|
-    ind_press$IND=="ndvi"|
+    ind_press$IND=="NDVI_upper"|
+    ind_press$IND=="NDVI_lower"|
     ind_press$IND=="snodekke"|
     ind_press$IND=="snodybde"|
     ind_press$IND=="smaagnagere"|
@@ -115,7 +125,7 @@ ind_press$fef  <-
     #ind_press$IND=="breareal"|
     #ind_press$IND=="EllLHigh"|
     #ind_press$IND=="EllLow"|
-    #ind_press$IND=="EllNHigh"|
+    ind_press$IND=="EllNHigh"|
     ind_press$IND=="EllNLow"|
     #ind_press$IND=="fjellindeks"|
     #ind_press$IND=="fjellrev"|
@@ -123,7 +133,8 @@ ind_press$fef  <-
     #ind_press$IND=="INON"|
     #ind_press$IND=="jerv"|
     #ind_press$IND=="kongeørn"|
-    ind_press$IND=="ndvi"
+    ind_press$IND=="NDVI_upper"|
+    ind_press$IND=="NDVI_lower"
     #ind_press$IND=="snodekke"|
     #ind_press$IND=="snodybde"|
     #ind_press$IND=="smaagnagere"|
@@ -144,9 +155,9 @@ ind_press$bes <-
     ind_press$IND=="fjellindeks"|
     ind_press$IND=="fjellrev"|
     ind_press$IND=="fjellrype"|
-    #ind_press$IND=="INON"|
-    ind_press$IND=="jerv"
-    #ind_press$IND=="kongeørn"|
+    ind_press$IND=="rein"|
+    ind_press$IND=="jerv"|
+    ind_press$IND=="lirype"
     #ind_press$IND=="ndvi"|
     #ind_press$IND=="snodekke"|
     #ind_press$IND=="snodybde"|
@@ -163,7 +174,7 @@ ind_press$fre <- ifelse(
 ```
 
 
-```{r, eval=F}
+```{r, eval=T}
 write.csv(ind_press, "../output/ind_press.csv")
 ```
 

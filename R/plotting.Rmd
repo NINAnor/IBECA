@@ -18,6 +18,7 @@ library(knitr)
 library(DT)
 library(dplyr)
 library(plyr)
+library(data.table)
 library(matrixStats)
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -26,7 +27,7 @@ Her viser jeg hvordan vi aggreggerer indikatorverdiene til en verdi for økologi
 
 ```{r}
 # Number of simulations
-nsim <- 10 # should be run with 10 000 as the end
+nsim <- 10000 # should be run with 10 000 as the end
 
 # Short names for ecosystem characteristics
 characteristics <- c("ppr", "isf", "bmb", "fgw", "bio", "lsp", "abf")
@@ -205,15 +206,24 @@ lirype$X <- "lirype"
 
 ### NDVI
 ```{r}
-ndvi <- read.csv("../output/indicator_values/ndvi.csv", header=T)
-unique(ndvi$reg)
-ndvi$year <- 2020
-ndvi$period <- 
-  periods$period[match(ndvi$year, periods$year)]
+ndvi_upper <- read.csv("../output/indicator_values/ndvi_upper.csv", header=T)
 
-ndvi$X <- "ndvi"
-ndvi <- dplyr::select(ndvi, -X.1)
+ndvi_upper$year <- 2020
+ndvi_upper$period <- 
+  periods$period[match(ndvi_upper$year, periods$year)]
+ndvi_upper <- dplyr::select(ndvi_upper, -X.1)
 ```
+
+
+```{r}
+ndvi_lower <- read.csv("../output/indicator_values/ndvi_lower.csv", header=T)
+
+ndvi_lower$year <- 2020
+ndvi_lower$period <- 
+  periods$period[match(ndvi_lower$year, periods$year)]
+ndvi_lower <- dplyr::select(ndvi_lower, -X.1)
+```
+
 
 ### Rein
 ```{r}
@@ -262,7 +272,7 @@ varmekrav$period <-
 
 ### Vinterregn
 ```{r}
-vinterregn <- read.csv("../output/indicator_values/vinterregn.csv", header=T)
+vinterregn <- read.csv("../output/indicator_values/vinterregn.csv", header=T, encoding = "UTF-16")
 
 vinterregn$X <- "vinterregn"
 
@@ -271,13 +281,6 @@ vinterregn$period <-
 
 table(vinterregn$reg, vinterregn$period)
 
-vinterregn$reg <- plyr::revalue(vinterregn$reg,
-      c("Midt-Norge"="C", 
-        "Nord-Norge"="N",
-        "Norge" ="Norge",
-        "Østlandet"="E",
-        "Sørlandet"="S",
-        "Vestlandet"="W"))
 
 ```
 
@@ -304,7 +307,8 @@ inon             <- inon[inon$period%in%periods_use,]
 jerv             <- jerv[jerv$period%in%periods_use,]
 kongeorn         <- kongeorn[kongeorn$period%in%periods_use,]
 lirype           <- lirype[lirype$period%in%periods_use,]
-ndvi             <- ndvi[ndvi$period%in%periods_use,]
+ndvi_upper       <- ndvi_upper[ndvi_upper$period%in%periods_use,]
+ndvi_lower       <- ndvi_lower[ndvi_lower$period%in%periods_use,]
 rein             <- rein[rein$period%in%periods_use,]
 smaagnagere      <- smaagnagere[smaagnagere$period%in%periods_use,]
 snodekke         <- snodekke[snodekke$period%in%periods_use,]
@@ -378,7 +382,11 @@ lirype <- lirype %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
-ndvi <- ndvi %>%
+ndvi_upper <- ndvi_upper %>%
+  arrange(match(reg, regOrder), desc(period))%>%
+  select(X, reg, period, val)
+
+ndvi_lower <- ndvi_lower %>%
   arrange(match(reg, regOrder), desc(period))%>%
   select(X, reg, period, val)
 
@@ -425,7 +433,8 @@ allind <- rbind(
   jerv,
   kongeorn,
   lirype,
-  ndvi,
+  ndvi_upper,
+  ndvi_lower,
   rein,
   snodekke,
   snodybde,
@@ -444,6 +453,23 @@ write.csv(allind, "../output/allind_temp.csv")
 
 
 ## Weights
+
+### NDVI øvre
+```{r}
+ndvihigh <- read.csv("../output/indicator_values/ndvi_upper.csv", header=T)
+ndvilow <- read.csv("../output/indicator_values/ndvi_lower.csv", header=T)
+
+ndviW <- select(ndvihigh, reg, high =  nCells)
+ndviW$low <- ndvilow$nCells
+
+ndviW$tot <- ndviW$high+ndviW$low
+ndviW$wHigh <- ndviW$high/ndviW$tot
+ndviW$wLow <- ndviW$low/ndviW$tot
+
+
+ndviW <- select(ndviW, reg, wLow, wHigh)
+ndviW
+```
 
 ### Ellenberg L
 ```{r}
@@ -483,7 +509,8 @@ N <- select(N, reg, wLow, wHigh)
 N
 ```
 
-Creating a data frame for the weight and setting all weight equal to 1 as defult 
+## Weigths table
+Creating a data frame for the weights and setting all weights equal to 1 as defult 
 ```{r}
 weights <- aggregate(data = allind,
                      val~X+reg,
@@ -496,10 +523,14 @@ weights$val[weights$X=="EllLHigh"] <- L$wHigh[match(weights$reg[weights$X=="EllL
 weights$val[weights$X=="EllLLow"] <- L$wLow[match(weights$reg[weights$X=="EllLLow"], L$reg)]
 weights$val[weights$X=="EllNHigh"] <- N$wHigh[match(weights$reg[weights$X=="EllNHigh"], L$reg)]
 weights$val[weights$X=="EllNLow"] <- N$wLow[match(weights$reg[weights$X=="EllNLow"], L$reg)]
+
+weights$val[weights$X=="NDVI_upper"] <- ndviW$wHigh[match(weights$reg[weights$X=="NDVI_upper"], ndviW$reg)]
+weights$val[weights$X=="NDVI_lower"] <- ndviW$wLow[match(weights$reg[weights$X=="NDVI_lower"], ndviW$reg)]
+
 ```
 
 Write weights file
-```{r, eval=F}
+```{r, eval=T}
 write.csv(weights, "../output/weights_temp.csv")
 ```
 
@@ -526,12 +557,14 @@ ind_char$IND <- unique(allind$X)
 ```{r}
 # Primary productivity
 ind_char$ppr <- ifelse(
-  ind_char$IND=="ndvi",
+  ind_char$IND=="NDVI_upper"|
+  ind_char$IND=="NDVI_lower",
                        1,0)
 
 # Biomass distribution among trophic levels 
 ind_char$bmb <- ifelse(
-  ind_char$IND=="ndvi"|
+  ind_char$IND=="NDVI_upper"|
+  ind_char$IND=="NDVI_lower"|
   ind_char$IND=="fjellrev"|
   ind_char$IND=="jerv"|
   ind_char$IND=="rein"|
@@ -606,7 +639,7 @@ regions <- unlist(unique(allind$reg))
 per_reg <- length(periods)*length(regions)
 ```
 
-```{r, eval=F}
+```{r, eval=T}
 all_Q <- data.frame()
 
 for(n in unique(allind$X)){
@@ -630,7 +663,7 @@ agg_ind <- data.frame()
 w_boot <- data.frame()
 ```
 
-```{r, eval=F}
+```{r, eval=T}
 for (n in 1:length(characteristics)){
   
   
@@ -728,7 +761,7 @@ names(w_boot)[3] <- c("val")
 # Step 7: Aggregated total calculations
 
 
-```{r, eval=F}
+```{r, eval=T}
 regions <- unlist(unique(allind$reg))
 char_w <- unlist(unique(w_boot$chr))
 tot_ind <- data.frame()
@@ -865,7 +898,7 @@ names(tot_ind_w) <- c("ind", "reg",  "low", "med", "upp")
 
 # Step 8: Rename indicator labels key 
 
-```{r, eval=F}
+```{r, eval=T}
 temp_names <- data.frame(c(unique(allind$X), names(ind_char[,-1]),
                            "Total", "Total_w"))
 names(temp_names) <- "work"
@@ -884,6 +917,7 @@ temp_names$plot <- c("Fravær av fremmede arter",
                      "Kongeørn",
                      "Lirype",
                      "NDVI (øvre)",
+                     "NDVI (nedre)",
                      "Rein",
                      "Snødekke",
                      "Snødybde",
@@ -904,11 +938,11 @@ temp_names$plot <- c("Fravær av fremmede arter",
 # Saving 
 
 Extra column for name, matched from temp_names
-```{r, eval=F}
+```{r}
 all_Q$names_plot <- temp_names$plot[match(all_Q$ind, temp_names$work)]
 ```
 
-```{r, eval=F}
+```{r, eval=T}
 
 write.csv(all_Q,        "../output/tables/all_Q.csv")
 write.csv(tot_ind,      "../output/tables/tot_ind.csv")
@@ -919,7 +953,7 @@ write.csv(agg_ind,      "../output/tables/agg_ind.csv")
 
 
  Omit the extra name column (only for better understanding of backup csv file)
-```{r, eval=F}
+```{r}
 all_Q <- all_Q[,-7]
 ```
 
@@ -927,12 +961,12 @@ all_Q <- all_Q[,-7]
 # Step 9: Plotting
 
 Ignorer per(iodene)
-```{r, eval=F}
+```{r}
 all_Q <- select(all_Q, -per)
 ```
 
 
-```{r, eval=F}
+```{r, eval=T}
 
 regions <- unlist(unique(allind$reg))
 

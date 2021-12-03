@@ -353,13 +353,20 @@ Slope her er egentlig gjennomsnittlig slope (endring i ndvi verdi mellom to tids
 
 Indikatorverdiene er også produsert ved boostrapping av pixseler og fordelingen representerer derfor en romlig varisjon, og ikke en metodisk usikkerhet. Derfor vil jeg ikke bruke denne fordelingen videne, men basere meg kun på gjennomsnittet fra bootstrappingen.
 
-Den øvre- og nedre-skalerte indikatoren bør vektes utifra antall pixler som inngår. En pixel kan bare brukes i en av indikatorene. Det er stor overvekt av pixsler som viser en positiv utvikling i NDVI slik at jeg bruker kun den øvre-skalerte indikatoren nå i førtse omgang til jeg får vektingstallene fra Joackim. 
+Den øvre- og nedre-skalerte indikatoren bør vektes utifra antall pixler som inngår. En pixel kan bare brukes i en av indikatorene. Det er stor overvekt av pixsler som viser en positiv utvikling i NDVI.
+
+Her er vektene.
+```{r}
+ndviWgt <- ndvi_wgts <- read.delim("../data/NDVI/ndvi_wgts.txt")
+ndviWgt
+```
+
 
 Regionene har rare navn.
-
 ```{r}
 unique(ndvi$region)
 ```
+
 ```{r}
 ndvi$region <- plyr::revalue(ndvi$region,
                              c("M" = "C",
@@ -367,17 +374,43 @@ ndvi$region <- plyr::revalue(ndvi$region,
                                "A" = "E"))
 ```
 
-
 ```{r}
-ndvi2 <- aggregate(data=ndvi,
-                   ndvi.index.u~region,
-                   FUN = mean)
-names(ndvi2) <- c("reg", "val")
-ndvi2$X <- "NDVI"
-ndvi2
+ndviWgt$region <- as.factor(ndviWgt$region)
+unique(ndviWgt$region)
+ndviWgt$region <- plyr::revalue(ndviWgt$region,
+                             c("Austlandet" = "E",
+                               "Midt-Norge" = "C",
+                               "Nord-Norge" = "N",
+                               "Norge" = "Norge",
+                               "Soerlandet" = "S",
+                               "Vestlandet" = "W"))
+
 ```
 
 ```{r}
+ndvi_upper <- aggregate(data=ndvi,
+                   ndvi.index.u~region,
+                   FUN = mean)
+names(ndvi_upper) <- c("reg", "val")
+ndvi_upper$X <- "NDVI_upper"
+ndvi_upper$nCells <- ndviWgt$upper[match(ndvi_upper$reg, ndviWgt$region)]
+ndvi_upper
+```
+
+```{r}
+ndvi_lower <- aggregate(data=ndvi,
+                   ndvi.index.l~region,
+                   FUN = mean)
+names(ndvi_lower) <- c("reg", "val")
+ndvi_lower$X <- "NDVI_lower"
+ndvi_lower$nCells <- ndviWgt$lower[match(ndvi_lower$reg, ndviWgt$region)]
+ndvi_lower
+```
+
+```{r}
+ndvi2 <- ndvi_upper
+ndvi2 <- rbind(ndvi2, ndvi_lower)
+
 ndvi2$reg <- plyr::revalue(ndvi2$reg,
       c("C" = "Midt-Norge", 
         "N" = "Nord-Norge",
@@ -397,8 +430,20 @@ regOrder = c(
 ```
 
 ```{r}
-ggndvi <- ggplot(data = ndvi2, aes(x = factor(reg, levels=regOrder), y = val))+
-  geom_bar(stat="identity", alpha=.7, colour = "black")+
+ndvi2$width <- ndvi2$nCells/max(ndvi2$nCells)
+ndvi3 <- ndvi2[ndvi2$reg!="Norge",]
+```
+
+```{r}
+(ggndvi <- ggplot(data = ndvi2, 
+                     aes(x = factor(reg, levels=regOrder), 
+                         y = val,
+                         group=X,
+                         fill = X))+
+  geom_bar(stat="identity", 
+           position = "dodge",
+           alpha=.7, 
+           colour = "black")+
   ylim(c(0,1))+
   theme_bw(base_size = 20)+
   theme(
@@ -406,20 +451,22 @@ ggndvi <- ggplot(data = ndvi2, aes(x = factor(reg, levels=regOrder), y = val))+
   )+
   geom_hline(yintercept = 0.6, size=1.2, linetype=2)+
   geom_hline(yintercept = 0.6, size=2)+
-  ylab("NDVI-indikator (øvre)")+
-  xlab("")
+  ylab("NDVI skalert mot referansetilstand")+
+  xlab("")+
+   guides(fill = guide_legend(element_blank()))
+)
 ```
 
 ```{r, eval=F}
-png("../output/indicatorPlots/ndvi_barplot.png", 
-    units="in", width=5, height=7, res=300)
+png("../output/indicatorPlots/skalert/ndvi_barplot.png", 
+    units="in", width=8, height=7, res=300)
 ggndvi
 dev.off()
 ```
-![](../output/indicatorPlots/ndvi_barplot.png)
 
 ```{r, eval=F}
-write.csv(ndvi2, "../output/indicator_values/ndvi.csv")
+write.csv(ndvi_upper, "../output/indicator_values/ndvi_upper.csv")
+write.csv(ndvi_lower, "../output/indicator_values/ndvi_lower.csv")
 ```
 
 
