@@ -1,0 +1,257 @@
+---
+title: "Nitrogen og trofiske grupper"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'nitrogen.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(DT)
+library(dplyr)
+library(ggplot2)
+library(readxl)
+library(data.table)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Disse analysene ble gjort av Simon Jakobsson i forbindelse med skograpporten. Her tar jeg bare inn data igjen for å plotte de.
+Se: P:\41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly\FINAL\Scripts\Indicators
+
+
+
+
+# Nitrogen
+
+```{r}
+### Nitrogen data (old method, same for all years; for trend figure)
+nitrogen <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/nitrogen_fjell_OLDMETHOD.csv", header=T) # w. 2014 based on old method
+
+nitrogen <- nitrogen %>% dplyr::select(reg, year, val_unscaled) %>%
+  dplyr::rename(val=val_unscaled)
+```
+
+```{r}
+eval(parse("indicator_plots2.R", encoding="UTF-8"))
+
+```
+
+
+```{r}
+png("../output/supplerende indikatorer/nitrogen.png", 
+    units="in", width=12, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot2(dataset = nitrogen,
+               yAxisTitle = "Tilført nitrogen fra luft (kg N/ha)",
+               lowYlimit = 0,
+               upperYlimit = 12,
+               yStep = 5,
+               minyear = 1975,
+               maxyear = 2018,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+# Trofiske nivå 
+Dette er tematsike NI-indekser
+
+```{r}
+mellom <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Mellompredator.csv", header=T)
+
+herb <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Plante- og filterspisere.csv", header=T)
+
+prim <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Primærprodusent.csv", header=T)
+
+topp <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Topp-predator.csv", header=T)
+
+```
+
+
+
+```{r}
+png("../output/supplerende indikatorer/mellompredatorer.png", 
+    units="in", width=12, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot2(dataset = mellom,
+               yAxisTitle = "Naturindeks - mellompredatorer (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0.8,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+```{r}
+png("../output/supplerende indikatorer/plantespisere.png", 
+    units="in", width=12, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot2(dataset = herb,
+               yAxisTitle = "Naturindeks - plantespisere (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+```{r}
+png("../output/supplerende indikatorer/primaerprodusenter.png", 
+    units="in", width=12, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot2(dataset = prim,
+               yAxisTitle = "Naturindeks - primærprodusenter (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0.8,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+```{r}
+png("../output/supplerende indikatorer/topp-predatorer.png", 
+    units="in", width=12, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot2(dataset = topp,
+               yAxisTitle = "Naturindeks - topp-predatorer (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+Alle fire figurene combinert
+```{r}
+png("../output/supplerende indikatorer/naturindeks - funksjonelle grupper.png", 
+    units="in", width=10, height=20, res=300)
+
+par(mfrow=c(4,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot2(dataset = topp,
+               yAxisTitle = "Naturindeks - topp-predatorer (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.5)
+
+indicator_plot2(dataset = mellom,
+               yAxisTitle = "Naturindeks - mellompredatorer (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = -1,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+
+indicator_plot2(dataset = herb,
+               yAxisTitle = "Naturindeks - plantespisere (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = -10,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+
+indicator_plot2(dataset = prim,
+               yAxisTitle = "Naturindeks - primærprodusenter (skalert)",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = -1,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+
+```
+

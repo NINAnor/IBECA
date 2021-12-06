@@ -26,7 +26,7 @@ library(rgdal)
 library(spatial)
 library(tiff)
 library(knitr)
-
+library(ggplot2)
 ```
 
 ## Google Earth Engine (GEE)
@@ -380,6 +380,13 @@ infraValsR3 = values(infraMountRegion3)
 infraValsR4 = values(infraMountRegion4)
 infraValsR5 = values(infraMountRegion5)
 
+
+infraValsR1 <- infraValsR1[!is.na(infraValsR1)]
+infraValsR2 <- infraValsR2[!is.na(infraValsR2)]
+infraValsR3 <- infraValsR3[!is.na(infraValsR3)]
+infraValsR4 <- infraValsR4[!is.na(infraValsR4)]
+infraValsR5 <- infraValsR5[!is.na(infraValsR5)]
+
 tmpDF = data.frame(matrix(c(
   mean(infraValsR1, na.rm = TRUE), 
   mean(infraValsR2, na.rm = TRUE), 
@@ -408,12 +415,73 @@ write_xlsx(tmpDF, path = "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dat
 
 ```
 
+Reduserer datamengden
+```{r}
+
+R1 <- round(sample(infraValsR1, 10000), 0)
+R2 <- round(sample(infraValsR2, 10000), 0)
+R3 <- round(sample(infraValsR3, 10000), 0)
+R4 <- round(sample(infraValsR4, 10000), 0)
+R5 <- round(sample(infraValsR5, 10000), 0)
 
 
+df <- data.frame(val = c(R1, R2,R3, R4, R5),
+                 reg = paste(c(rep("Nord-Norge",length(R1)),
+                               rep("Midt-Norge",length(R2)),
+                               rep("Østlandet", length(R3)),
+                               rep("Vestlandet",length(R4)),
+                               rep("Sørlandet",length(R5)))))
+
+df$group <- "0"
+df$group[df$val>0 & df$val <=6] <-  ">0-6"
+df$group[df$val>6] <- ">6"
+
+ord <- c("0", ">0-6", ">6")
+```
 
 
+```{r}
+(tbl <- table(df$val, df$reg))
+```
 
+```{r}
+(tbl2 <- table(df$reg, df$group))
+```
 
+```{r}
+tbl3 <- as.data.frame(tbl2)
+tbl3 <- data.table::melt(data=tbl3)
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+   "Sørlandet"
+             )
+
+(gg <- ggplot(data = tbl3, aes(y = value, x = factor(Var1, levels = regOrder), fill = factor(Var2, levels=ord)))+
+  geom_bar(stat="identity", position="dodge")+
+   scale_fill_hue(l=70, c=60)+
+  ylab("Arealandel")+
+  scale_y_sqrt(breaks = c(200, 500, 2500, 5000, 7500, 10000),
+                labels = c("2%","5%", "25%", "50%", "75%", "100%")
+                     )+
+  
+  scale_x_discrete(name="")+
+  xlab("")+
+  theme_bw(base_size = 20)+
+  theme(axis.text.x = 
+          element_text(angle = 90, vjust = 0.5, hjust=1))+
+  guides(fill = guide_legend(title = "Infrastrukturindeks"))
+)
+```
+
+```{r}
+png("../output/supplerende indikatorer/infrastrukturindeks.png", 
+    units="in", width=10, height=7, res=300)
+gg
+dev.off()
+```
 
 
 
