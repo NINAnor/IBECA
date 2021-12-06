@@ -1,5 +1,6 @@
 ---
-title: "Rein"
+---
+title: "Rein v2"
 output:
   html_document:
     toc: true
@@ -10,7 +11,7 @@ knit: (function(input_file, encoding) {
   out_dir <- '../docs';
   rmarkdown::render(input_file,
  encoding=encoding,
- output_file=file.path(dirname(input_file), out_dir, 'rein.html'))})
+ output_file=file.path(dirname(input_file), out_dir, 'reinv2.html'))})
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
@@ -81,17 +82,6 @@ dat2 <- rbind(dat2, temp)
 rm(temp)
 ```
 
-Så kan jeg regne ut referansetettheter.
-Her er referanseverdier for tetthet gitt som 75% av bestandsmål. Metoden er beskrevet andre steder, men baseres seg på sammenhengen mellom topgrafisk varisjon og bestandsmålene for villrein. 
-```{r}
-dat2$ref <- 0.75*1.0759*exp(-0.001*dat2$`TRI-fjell`)
-```
-
-Lager noen alternativer
-```{r}
-dat2$ref60 <- 0.60*1.0759*exp(-0.001*dat2$`TRI-fjell`)
-dat2$ref80 <- 0.80*1.0759*exp(-0.001*dat2$`TRI-fjell`)
-```
 
 
 
@@ -120,7 +110,6 @@ dat2 <- rbind(dat2, temp)
 ```
 
 
-
 Her er de observerte dyretetthetene. Siden tettheten er antatt lik i fjell og ikke-fjell trenger vi ikke gå veien innom å regne ut bestandstall
 ```{r}
 dat2$tetthet <- dat2$bestand/dat2$Totalreal
@@ -128,10 +117,50 @@ dat2$tetthet <- dat2$bestand/dat2$Totalreal
 dat2$tetthet[dat2$type=="ingen rein"] <- 0
 ```
 
+Så kan jeg regne ut referansetettheter.
+Her er referanseverdier for tetthet gitt som 75% av bestandsmål. Metoden er beskrevet andre steder, men baseres seg på sammenhengen mellom topgrafisk varisjon og bestandsmålene for villrein. Jeg legger til en usikkerhet rundt dette tallet som ser slik ut:
+
+```{r}
+hist(rnorm(1000, 0.75, 0.05))
+```
+
+
+```{r}
+#setDT(dat2)
+dat2$ID <- paste0(dat2$navn, dat2$reg)
+
+refs <- c()
+IDs <- c()
+reg <- c()
+area <- c()
+ind <- c()
+
+for(i in dat2$ID){
+  temp <- dat2[dat2$ID == i,]
+  
+  for(n in 1:100){
+    temp2 <- rnorm(1, 0.75, 0.05)
+    refs <- c(refs, temp2*1.0759*exp(-0.001*temp$`TRI-fjell`))
+    IDs <- c(IDs, i)
+    reg <- c(reg, as.character(temp$reg))
+    area <- c(area, temp$area)
+    ind <- c(ind, temp$tetthet)
+  }
+}
+
+sims <- data.table(reg = reg,
+                   ID = IDs,
+                   area = area,
+                   refs = refs,
+                   ind = ind)
+```
+
+
+
 I motsettnign til de fleste andre indikatorer ønsker vi i dtte tilfelle å skalere indikatoren på minst mulig nivå, dvs per delaområde. Dette er fordi det ikke gir mening å hverken summere eller ta gjennomsnitt av tettheter. Man kan ikke la lav tetthet ett sted kompenseer for høye tettheter ett annet sted.
 ```{r}
-dat2$diff <- dat2$ref-dat2$tetthet
-dotchart(dat2$diff)
+sims$diff <- sims$refs-sims$ind
+dotchart(sims$diff)
 ```
 Her må vi ha en tosidig skalering. Erik har laget et forslag til skalering som ser slik ut
 
@@ -148,38 +177,61 @@ ggplot(data = temp, aes(x = x, y = y))+
 ```
 
 ```{r}
-dat2$rat <- dat2$tetthet/dat2$ref
-dotchart(dat2$rat)
+sims$rat <- sims$ind/sims$refs
+dotchart(sims$rat)
+```
+```{r}
+rm(dat2, dat)
 ```
 
 ```{r}
-dat2$val <- NA 
-dat2$val[dat2$rat<1]  <- dat2$rat[dat2$rat<1]
-dat2$val[dat2$rat %between% c(1, 2)] <- 1-(0.4*((dat2$rat[dat2$rat %between% c(1, 2)])-1))
-dat2$val[dat2$rat >2] <- 0.6-((dat2$rat[dat2$rat >2]-2)/8)
-ggplot(data=dat2, aes(x = rat, y = val))+
-  geom_line(size=1.2, alpha=.4)+
-  geom_point(size=3)+
+sims$val <- NA 
+sims$val[sims$rat<1]                 <- sims$rat[sims$rat<1]
+sims$val[sims$rat %between% c(1, 2)] <- 1-(0.4*((sims$rat[sims$rat %between% c(1, 2)])-1))
+sims$val[sims$rat >2]                <- 0.6-((sims$rat[sims$rat >2]-2)/8)
+ggplot(data=sims, aes(x = rat, y = val))+
+  geom_point(size=3, alpha=.005, stroke=3)+
+  geom_line(size=1.2, alpha=.8)+
   theme_bw()
 ```
 
 Fint.
-
 Så trenger jeg et arealvektet gjennomsnitt per region.
-```{r}
-df <- data.table(reg = unique(dat2$reg),
-                 val = as.numeric(),
-                 X = "rein",
-                 year = 2020)
 
-for(i in unique(dat2$reg)){
+```{r}
+nsim <- 1000
+vals <- c()
+reg <- c()
+
+
+for(i in unique(sims$reg)){
+  temp3 <- c()
+  temp5 <- c()
+  wgt   <- c()
   
+  temp <- sims[sims$reg==i,]
   
-  temp <- dat2[dat2$reg ==i,]
+  for(m in 1:nsim){
   
-  df[df$reg==i, "val"] <- weighted.mean(temp$val, temp$area)
+  for(n in unique(temp$ID)){
+    
+    temp3 <- c(temp3, sample(temp$val[temp$ID==n], 1))
+    wgt   <-  c(wgt, temp$area[temp$ID==n][1])
+    
+    
+  }
+  vals <- c(vals, weighted.mean(temp3, wgt))
+  reg <- c(reg, temp$reg[1])
+  }
 }
+
+df <- data.frame(reg = reg,
+                 val = vals,
+                 year = 2020,
+                 X = "rein")
+
 ```
+
 
 Så må vi ha en verdi for hele Norge
 Fjellareal per region:
@@ -187,31 +239,65 @@ Fjellareal per region:
 wgt <- readRDS("../data/fjellareal.rds")
 wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
 wgt$reg <- c("N", "C", "E", "W", "S")
-temp <- df
-temp$wgt <- wgt$Fjellareal2[match(temp$reg, wgt$reg)]
 ```
 
 ```{r}
-nor <- data.frame(reg = "Norge",
-                  val = weighted.mean(temp$val, temp$wgt),
-                  X = "rein",
-                  year = 2020)
-df <- rbind(df, nor)
-df
+regions <- c("N", "C", "W", "S", "E")
+
+
+
+temp <- c()
+temp2 <- c()
+
+
+for(i in 1:1000){
+  
+temp <- c(
+      sample(df$val[df$reg == "N"], 1),
+      sample(df$val[df$reg == "C"], 1),
+      sample(df$val[df$reg == "E"], 1),
+      sample(df$val[df$reg == "W"], 1),
+      sample(df$val[df$reg == "S"], 1)
+    )
+    
+temp2 <- c(temp2, weighted.mean(temp, wgt$Fjellareal2))
+
+}
+
+
+Norge <- data.frame(
+  reg = rep("Norge", 1000),
+  val = temp2,
+  year = 2020,
+  X = "rein"
+)
+df <- rbind(df, Norge)
 ```
 
-Det er kanskje mulig å kvantifisere usikkerhet ved å innføre usikkerhet i referanseverdien, men det bryter også med noen prinsipper i ØT, så jeg venter i hvertfall med å gjøre det.
-
 # Plotting
+
+
 ```{r}
 temp2 <- c("N", "C", "E", "S", "W", "Norge")
 temp3 <- c("Nord-Norge", "Midt-Norge", "Østlandet", "Sørlandet", "Vestlandet", "Norge")
 ```
 
 ```{r}
-(gg <- ggplot(data = df, aes(x = factor(reg, levels = temp2), y = val))+
+df2 <- df
+
+df <- aggregate(data = df,
+                val~reg,
+                FUN = function(x) c(quantile(x, c(0.025, .5, 0.975))))
+df <- do.call(data.frame, df)
+names(df) <- c("reg", "low", "med", "upp")
+```
+
+
+```{r}
+(gg <- ggplot(data = df, aes(x = factor(reg, levels = temp2), y = med))+
   geom_bar(stat="identity", colour="black", size=1.2,
            fill="grey80")+
+  geom_errorbar(aes(ymax = upp, ymin=low), width=.0, size=2)+
   theme_bw(base_size = 20)+
   ylab("Tetthet av rein\nskalert mot referansetilstand")+
   xlab("")+
@@ -268,3 +354,30 @@ write.csv(df, "../output/indicator_values/rein.csv", row.names = F)
 ```
 
 
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
