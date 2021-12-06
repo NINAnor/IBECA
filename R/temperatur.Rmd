@@ -86,18 +86,36 @@ aar_err$Region <- plyr::revalue(aar_err$Region,
 ```
 
 ```{r}
-(fig_temp <- ggplot(data = aar,
-                   aes(x  = year, 
-                       y  = value))+
-  geom_line()+
-  geom_smooth()+
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+   "Sørlandet"
+             )
+aar$col <- ifelse(aar$value<0, "one", "two")
+```
+
+```{r}
+fig_temp <- ggplot()+
+  geom_bar(data = aar,
+          aes(x  = year, 
+              y  = value,
+              fill=col),
+          stat="identity")+
+  geom_smooth(data = aar,
+          aes(x  = year, 
+              y  = value))+
   ylab("Gj. sommertemperatur (\u00B0C)\navvik fra 1961-1990")+
   xlab("År")+
   geom_hline(yintercept=0)+
   geom_hline(data = aar_err, aes(yintercept=low), linetype=2)+
   geom_hline(data = aar_err, aes(yintercept=upp), linetype=2)+
-  facet_wrap(.~Region)+
-  theme_bw(base_size = 20))
+  guides(fill="none")+
+  theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  facet_wrap(.~factor(Region, levels = regOrder))
   
 ```
 
@@ -110,12 +128,12 @@ png("../output/paavirkningsindikatorer/facet plot/sommertemperatur.png",
 fig_temp
 dev.off()
 ```
-
+![](../output/paavirkningsindikatorer/facet plot/sommertemperatur.png)
 
 
 ```{r, eval=F}
 Tbl <- aar
-names(Tbl) <- c("year", "reg", "diff")
+names(Tbl) <- c("year", "reg", "diff", "col")
 regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
 Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
 minyear <- 1958
@@ -141,11 +159,14 @@ colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 
 png("../output/paavirkningsindikatorer/enkel stil/sommertemperatur.png", 
     units="in", width=12, height=7, res=300)  
+
+  par(mar=c(4.5,6.5,2,2))
+
   
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Gj. sommertemperatur (\u00B0C) avvik fra 1961-1990",
+    ylab="Gj. sommertemperatur (\u00B0C)\navvik fra 1961-1990",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -169,7 +190,7 @@ png("../output/paavirkningsindikatorer/enkel stil/sommertemperatur.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=1) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -188,7 +209,7 @@ png("../output/paavirkningsindikatorer/enkel stil/sommertemperatur.png",
     quants <- subset(Tbl, reg==uniq2[n])
     
     # Add lines
-    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=1) 
     
     # Save temp points for later addition to plot
     temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
@@ -196,14 +217,14 @@ png("../output/paavirkningsindikatorer/enkel stil/sommertemperatur.png",
     
   }
   
-  # Add points for regions
-  for(n in 1:(length(uniq2)-1)){
-    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
-    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
-  }
-  
-  # Add points for Norge
-  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[5], cex=1.5)
+#  # Add points for regions
+#  for(n in 1:(length(uniq2)-1)){
+#    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+#    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, #bg=colours[n], cex=1.5)
+#  }
+#  
+#  # Add points for Norge
+#  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, #bg=colours[5], cex=1.5)
   
   # Add legend to plot
   legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 
@@ -278,18 +299,37 @@ aar_err$Region <- plyr::revalue(aar_err$Region,
 ```
 
 ```{r}
-(fig_temp <- ggplot(data = aar,
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+   "Sørlandet"
+             )
+aar$col <- ifelse(aar$value<0, "one", "two")
+```
+
+```{r}
+fig_temp <- ggplot()+
+  geom_bar(stat="identity",
+           data = aar,
+                   aes(x  = year, 
+                       y  = value,
+                       fill=col))+
+  geom_smooth(data = aar,
                    aes(x  = year, 
                        y  = value))+
-  geom_line()+
-  geom_smooth()+
   ylab("Gj. vintertemperatur (\u00B0C)\navvik fra 1961-1990")+
   xlab("År")+
   geom_hline(yintercept=0)+
   geom_hline(data = aar_err, aes(yintercept=low), linetype=2)+
   geom_hline(data = aar_err, aes(yintercept=upp), linetype=2)+
-  facet_wrap(.~Region)+
-  theme_bw(base_size = 20))
+  theme_bw(base_size = 20)+
+  theme(
+    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  guides(fill="none")+
+  facet_wrap(.~factor(Region, levels = regOrder))
+
   
 ```
 
@@ -302,12 +342,12 @@ png("../output/paavirkningsindikatorer/facet plot/vintertemperatur.png",
 fig_temp
 dev.off()
 ```
-
+![](../output/paavirkningsindikatorer/facet plot/vintertemperatur.png)
 
 
 ```{r, eval=F}
 Tbl <- aar
-names(Tbl) <- c("year", "reg", "diff")
+names(Tbl) <- c("year", "reg", "diff", "col")
 regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
 Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
 minyear <- 1958
@@ -333,11 +373,12 @@ colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 
 png("../output/paavirkningsindikatorer/enkel stil/vintertemperatur.png", 
     units="in", width=12, height=7, res=300)  
-  
+   par(mar=c(4.5,6.5,2,2))
+ 
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Gj. vintertemperatur (\u00B0C) avvik fra 1961-1990",
+    ylab="Gj. vintertemperatur (\u00B0C)\navvik fra 1961-1990",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -361,7 +402,7 @@ png("../output/paavirkningsindikatorer/enkel stil/vintertemperatur.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=1) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -380,7 +421,7 @@ png("../output/paavirkningsindikatorer/enkel stil/vintertemperatur.png",
     quants <- subset(Tbl, reg==uniq2[n])
     
     # Add lines
-    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=1) 
     
     # Save temp points for later addition to plot
     temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])

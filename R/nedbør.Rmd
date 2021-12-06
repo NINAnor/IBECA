@@ -87,15 +87,22 @@ regOrder = c(
              )
 ```
 
+```{r}
+dat$col <- ifelse(dat$value<0, "one", "two")
+```
 
 
 ```{r}
-fig_nedbør <- ggplot(data = dat,
-                    aes(x = year, 
-                        y = value))+
-  geom_line()+
-  geom_smooth()+
-  ylab("Årsnedbør (mm)\navvik fra 1960-1990")+
+fig_nedbør <- ggplot()+
+  geom_bar(data = dat,
+           aes(x = year, 
+               y = value,
+               fill = col),
+           stat="identity")+
+  geom_smooth(data = dat,
+                aes(x = year, 
+                y = value))+
+  ylab("Årsnedbør (mm)\navvik fra 1961-1990")+
   xlab("")+
   geom_hline(yintercept=0)+
   geom_hline(data = err, aes(yintercept=low), linetype=2)+
@@ -103,7 +110,9 @@ fig_nedbør <- ggplot(data = dat,
   theme_bw(base_size = 20)+
    theme(
     axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+   guides(fill="none")+
     facet_wrap(.~factor(Region, levels = regOrder), scales = "free_y")
+
 ```
 
 
@@ -118,7 +127,7 @@ dev.off()
 ```{r}
 Tbl <- dat
 Tbl$Region <- as.factor(Tbl$Region)
-names(Tbl) <- c("year", "reg", "diff")
+names(Tbl) <- c("year", "reg", "diff", "col")
 regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
 Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
 minyear <- 1958
@@ -274,18 +283,53 @@ dager$Region[dager$Region=="sørlandet"] <- "Sørlandet"
 ```
 
 ```{r}
-fig_dager <- ggplot(data = dager,
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+   "Sørlandet"
+             )
+```
+
+```{r}
+dager$col <- ifelse(dager$value<0, "one", "two")
+```
+
+```{r}
+fig_dager <- ggplot()+
+  geom_bar(data = dager,
+          aes(x= year, 
+              y= value,
+              fill=col),
+          stat="identity")+
+  scale_fill_hue(l=70, c=60)+
+  geom_smooth(data = dager,
           aes(x= year, 
               y= value))+
-  geom_line()+
-  geom_smooth()+
-  ylab("Antall dager med nedbør")+
+  ylab("Antall dager med nedbør\navvik fra 1961-1990")+
+  xlab("")+
   geom_hline(yintercept=0)+
-  geom_hline(data = dager_err, aes(yintercept=low), linetype=2)+
-  geom_hline(data = dager_err, aes(yintercept=upp), linetype=2)+
-  facet_wrap(.~Region)+
-  theme_bw(base_size = 20)
+  geom_hline(data = dager_err, 
+             aes(yintercept=low), linetype=2)+
+  geom_hline(data = dager_err, 
+             aes(yintercept=upp), linetype=2)+
+  theme_bw(base_size = 20)+
+  theme(axis.text.x = 
+          element_text(angle = 90, vjust = 0.5, hjust=1))+
+  guides(fill="none")+
+  facet_wrap(.~factor(Region, levels = regOrder))
+  
 ```
+
+
+```{r, eval=F}
+png("../output/paavirkningsindikatorer/facet plot/dagerMedNedbør_tidsserie.png", 
+    units="in", width=10, height=7, res=300)
+fig_dager
+dev.off()
+```
+
 ![](../output/paavirkningsindikatorer/facet plot/dagerMedNedbør_tidsserie.png)
 
 Det er tydelig at antall dager med nedbør har økt, såpass mye at gjennomsnittet de siste fem årene på sør- og østlandet vill blitt kalt ekstremår i forrige normalperiode (over 2 standardavvik fra normalen.)
@@ -294,7 +338,7 @@ Det er tydelig at antall dager med nedbør har økt, såpass mye at gjennomsnitt
 
 ```{r, eval=F}
 Tbl <- dager
-names(Tbl) <- c("year", "reg", "diff")
+names(Tbl) <- c("year", "reg", "diff", "col")
 regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge")
 Tbl <- Tbl[order(match(Tbl$reg,regOrder),Tbl$year),]
 minyear <- 1958
@@ -320,11 +364,11 @@ colours = c("#2DCCD3", "#004F71", "#7A9A01", "#93328E", "#FFB25B")
 
 png("../output/paavirkningsindikatorer/enkel stil/dager med nedbør.png", 
     units="in", width=12, height=7, res=300)  
-  
+  par(mar=c(4.5,6.5,2,2))
  # Plot for region = 'Norge'
   plot(
     Norge$diff~Norge$year, 
-    ylab="Antall dager med nebør avvik fra 1961-1990",
+    ylab="Antall dager med nebør\navvik fra 1961-1990",
     xlab="",
     main="",
     xlim=c(minyear, maxyear),
@@ -348,7 +392,7 @@ png("../output/paavirkningsindikatorer/enkel stil/dager med nedbør.png",
   
   
   # Add lines
-  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=3) 
+  lines(Norge$year+(move*(-2.5)), Norge$diff, col=colours[5], lwd=2, lty=1) 
   
   # Save temp points for later addition to plot
   temppoints <- data.frame(year = Norge$year, med = Norge$diff)
@@ -367,7 +411,7 @@ png("../output/paavirkningsindikatorer/enkel stil/dager med nedbør.png",
     quants <- subset(Tbl, reg==uniq2[n])
     
     # Add lines
-    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=3) 
+    lines(quants$year+move*(n-2.5), quants$diff, col=colours[n], lwd=2, lty=1) 
     
     # Save temp points for later addition to plot
     temppoints2 <- data.frame(year = quants$year, med = quants$diff, reg = uniq2[n])
@@ -375,14 +419,14 @@ png("../output/paavirkningsindikatorer/enkel stil/dager med nedbør.png",
     
   }
   
-  # Add points for regions
-  for(n in 1:(length(uniq2)-1)){
-    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
-    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, bg=colours[n], cex=1.5)
-  }
-  
-  # Add points for Norge
-  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, bg=colours[5], cex=1.5)
+#  # Add points for regions
+#  for(n in 1:(length(uniq2)-1)){
+#    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+#    points(temppoints4$year+move*(n-2.5),temppoints4$diff, pch=21, #bg=colours[n], cex=1.5)
+#  }
+#  
+#  # Add points for Norge
+#  points(temppoints$year+(move*(-2.5)),temppoints$diff, pch=21, #bg=colours[5], cex=1.5)
   
   # Add legend to plot
   legend(legendPosition, legendPositionY, legend = regOrder, col = c(colours[5], colours[1:4]), 
@@ -401,9 +445,3 @@ dev.off()
 
 
 
-```{r, eval=F}
-png("../output/paavirkningsindikatorer/facet plot/dagerMedNedbør_tidsserie.png", 
-    units="in", width=10, height=7, res=300)
-fig_dager
-dev.off()
-```

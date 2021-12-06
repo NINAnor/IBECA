@@ -119,7 +119,7 @@ gg <- ggplot(data = dat,
 
 ```{r, eval=F}
 png("../output/paavirkningsindikatorer/facet plot/vekstsesong normalisert tiddserie med barplot.png", 
-    units="in", width=5, height=12, res=300)
+    units="in", width=10, height=7, res=300)
 gg
 dev.off()
 ```
