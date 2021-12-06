@@ -55,11 +55,11 @@ Bruker kun data fra 2011-2020, da det var flere områder som ikke ble overvåket
 # Copy of the original data
 trimdata_new = TrimResults %>% filter(Year >= 2011, Species > 0) %>% mutate(Count = ifelse(Count == -1, NA, Count)) # Subset on data from 2011
 trimdata_new = trimdata_new[which(trimdata_new$Species %in% species_EC$ArtsID), ] # Subset on the species in "species_EC"
-species_EC = species_EC %>% rename(Species = ArtsID) # Rename ArtsID to Species to match trimdata
+species_EC = species_EC %>% dplyr::rename(Species = ArtsID) # Rename ArtsID to Species to match trimdata
 species_EC$Species = as.numeric(species_EC$Species)
 ecovar = species_EC %>% select(Species, ecosystem, regions)
 region = trimdata_orig %>% select(speciesID, site, year, region, county)
-region = region %>% rename(Species = speciesID, Site = site, Year = year, Region = region, County = county)
+region = region %>% dplyr::rename(Species = speciesID, Site = site, Year = year, Region = region, County = county)
 
 trimdata_new = left_join(trimdata_new, ecovar, by = "Species") # Append "ecosystem" and "regions" to the count data
 trimdata_new = left_join(trimdata_new, region, by = c("Species", "Site", "Year")) # Append "region" to the count data
@@ -200,7 +200,8 @@ alpa_n_smp = c()
 alpa_s_smp = c()
 tmp1 = c()
 tmp2 = c()
-k = 10000
+#k = 10000
+k = 100  # 10 000 is used for the plots, but is reduced to 100 fr knitting
 for(i in 1:length(unique(alpa_n$Year))){
   for(j in 1:k){
     for(h in 1:length(unique(alpa_n$Species))){
@@ -230,16 +231,20 @@ alpa_smp_mean = as_tibble(alpa_smp_mean) %>% mutate(Region = c("north", "south")
 
 ```
 
+
+
 ```{r tbl, echo=FALSE, warning=FALSE}
-tbl = read_excel(path = "~/GitHub/NINANOR/IBECA/data/alpine_ns_01_10_2021.xlsx")
+#tbl = read_excel(path = "~/GitHub/NINANOR/IBECA/data/alpine_ns_01_10_2021.xlsx")
+tbl <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/M/2021 Fjell/Fugler i fjellet/Output/alpine_ns_01_10_2021.xlsx")
 DT::datatable(
   tbl, 
-  editable = 'cell',
+  #editable = 'cell',
   extensions = "FixedColumns",
   options = list(
-    dom = "t",
+    #dom = "t",
     scrollX = TRUE,
-    scrollCollapse = TRUE,
+    scrollY=T,
+    #scrollCollapse = TRUE,
     caption = "Tabell 1. Trimtabell for artene Heilo, Blåstrupe, Steinskvett, Ringtrost og Heipiplerke for Nord og Sør-Norge."
   ))
 
@@ -271,4 +276,135 @@ lines("2011":"2020", alpa_s_lower, col = "steelblue", lwd = 2)
 lines("2011":"2020", alpa_s_upper, col = "steelblue", lwd = 2)
 
 ```
+Compile dataset for the final plot
+```{r, eval=T}
+pdat <- data.frame(year = colnames(alpa_n_smp),
+                   med = colMeans(alpa_n_smp),
+                   upp = alpa_n_upper,
+                   low = alpa_n_lower,
+                   reg = "Nord")
 
+pdat2 <- data.frame(year = colnames(alpa_s_smp),
+                   med = colMeans(alpa_s_smp),
+                   upp = alpa_s_upper,
+                   low = alpa_s_lower,
+                   reg = "Sør")
+pdat <- rbind(pdat, pdat2)
+rm(pdat2)
+```
+
+```{r, eval=T}
+regOrder = c("Nord","Sør")
+pdat <- pdat[order(match(pdat$reg,regOrder),pdat$year),]
+pdat$year <- as.numeric(pdat$year)
+```
+
+```{r, eval=F}
+uniq1 <- unique(unlist(pdat$year))
+uniq2 <- unique(unlist(pdat$reg))
+Nord <- subset(pdat, reg=="Nord")
+minyear <- 2010
+maxyear <- 2021
+lowYlimit <- 0
+upperYlimit <- 1.6
+move <- 0.1
+yStep <- 0.3
+colours = c("black", "grey")
+legendPosition = "bottom"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.8
+
+png("../output/supplerende indikatorer/fjellfugleindeks.png", 
+    units="in", width=12, height=7, res=300)
+
+# Plot windows par
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+plot(
+    Nord$med~Nord$year, 
+       ylab="Fugleindeks - Fjell",
+       xlab="",
+       main="",
+       xlim=c(minyear, maxyear),
+       ylim=c(lowYlimit, upperYlimit),
+       cex.main=1,
+       cex.lab=1.5,
+       cex.axis=1.5,
+       type="n", 
+       frame.plot=FALSE,
+       axes=FALSE
+    )
+    
+  # Axis 1 options
+    axis(side=1, at=c(minyear, Nord$year, maxyear), labels=c("",Nord$year, ""), cex.axis=1.5) 
+    
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Nord$year+(move*(-2.5)), Nord$med, col=colours[2], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Nord$year, med = Nord$med)
+  
+
+  
+  for(i in 1:nrow(Nord)){
+    arrows(Nord$year[i]+(move*(-2.5)),Nord$med[i],Nord$year[i]+(move*(-2.5)),Nord$upp[i], angle=90, length=0.05, col=colours[2], lwd=1)
+    arrows(Nord$year[i]+(move*(-2.5)),Nord$med[i],Nord$year[i]+(move*(-2.5)),Nord$low[i], angle=90, length=0.05, col=colours[2], lwd=1)
+    
+  }   
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+ 
+    # Subset for region i
+    quants <- subset(pdat, reg==uniq2[2])
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$med, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$med, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+    # Add quantiles to plot
+    for(i in 1:nrow(quants)){
+      arrows(quants$year[i]+move*(n-2.5),quants$med[i],quants$year[i]+move*(n-2.5),quants$upp[i], angle=90, length=0.05, col=colours[n], lwd=1)
+      arrows(quants$year[i]+move*(n-2.5),quants$med[i],quants$year[i]+move*(n-2.5),quants$low[i], angle=90, length=0.05, col=colours[n], lwd=1)
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$med, pch=21, bg=colours[2], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$med, pch=21, bg=colours[1], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = regOrder, col = colours, 
+         #bg = c(colours), 
+         pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  
+dev.off()
+
+
+```
+![alt text](../output/supplerende indikatorer/fjellfugleindeks.png)
