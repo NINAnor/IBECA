@@ -1,6 +1,5 @@
 ---
----
-title: "Rein v2 - Usikkerhet i referansetettheter"
+title: "Rein v3 - Usikkerhet i bestandstall"
 output:
   html_document:
     toc: true
@@ -11,7 +10,7 @@ knit: (function(input_file, encoding) {
   out_dir <- '../docs';
   rmarkdown::render(input_file,
  encoding=encoding,
- output_file=file.path(dirname(input_file), out_dir, 'reinv2.html'))})
+ output_file=file.path(dirname(input_file), out_dir, 'reinv3.html'))})
 ---
 
 ```{r setup, include=FALSE, message=FALSE}
@@ -31,6 +30,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Start
 Dette er en felles indikator for villrein og tamreinsbestander
 Utarbeidelsen av metodikken er gjort av Erik Fremstad.
+I denne varsjonen av indikatoren legger vi til en usikkerhet i bestandsestimatet - litt større for villrein enn for tamrein. Det er usikkert hvor presist dette er, men man kan gjerne tolke usikkerhet til også å omfavne usikkerheten i referanseverdien
 
 # Import
 Datasett med bestandstall, areal, og TRIverdier. Topographic roughenss index brukes til å modellere referansetilstand.
@@ -109,77 +109,114 @@ temp$area <- temp4$area[match(temp$reg, temp4$reg)]
 dat2 <- rbind(dat2, temp)
 ```
 
+Så kan jeg regne ut referansetettheter.
+```{r}
+dat2$ref <- 0.75*1.0759*exp(-0.001*dat2$`TRI-fjell`)
+```
+
+Så legger jeg på en usikkerhet rundt betsnadsestimatene. 10%CV for villrein og 5%CV for tamrein.
+
 
 Her er de observerte dyretetthetene. Siden tettheten er antatt lik i fjell og ikke-fjell trenger vi ikke gå veien innom å regne ut bestandstall
 ```{r}
 dat2$tetthet <- dat2$bestand/dat2$Totalreal
 #Endrer NaN til 0
 dat2$tetthet[dat2$type=="ingen rein"] <- 0
-```
 
-Så kan jeg regne ut referansetettheter.
-Her er referanseverdier for tetthet gitt som 75% av bestandsmål. Metoden er beskrevet andre steder, men baseres seg på sammenhengen mellom topgrafisk varisjon og bestandsmålene for villrein. Jeg legger til en usikkerhet rundt dette tallet som ser slik ut:
-
-```{r}
-hist(rnorm(100000, 0.75, 0.05))
-```
-
-
-```{r}
-#setDT(dat2)
 dat2$ID <- paste0(dat2$navn, dat2$reg)
 
+```
+
+
+```{r}
+
+nsim <- 1000
 refs <- c()
 IDs <- c()
 reg <- c()
 area <- c()
 ind <- c()
+indtemp <- c()
 
 for(i in dat2$ID){
   temp <- dat2[dat2$ID == i,]
   
-  for(n in 1:1000){
-    temp2 <- rnorm(1, 0.75, 0.05)
-    refs <- c(refs, temp2*1.0759*exp(-0.001*temp$`TRI-fjell`))
-    IDs <- c(IDs, i)
-    reg <- c(reg, as.character(temp$reg))
-    area <- c(area, temp$area)
-    ind <- c(ind, temp$tetthet)
-  }
+  ifelse(temp$type == "Tamrein", 
+           temp2 <- rnorm(nsim, 1, 0.1),
+           temp2 <- rnorm(nsim, 1, 0.05))
+    
+  indtemp <- (temp$bestand/temp$Totalreal)*temp2
+  IDs <- c(IDs, rep(i, nsim))
+  refs <- c(refs, rep(temp$ref, nsim))
+  reg <- c(reg, rep(as.character(temp$reg), nsim))
+  area <- c(area, rep(temp$area, nsim))
+  ind <- c(ind, indtemp)
 }
 
-sims <- data.table(reg = reg,
-                   ID = IDs,
-                   area = area,
-                   refs = refs,
-                   ind = ind)
 ```
 
 
 
-I motsettnign til de fleste andre indikatorer ønsker vi i dtte tilfelle å skalere indikatoren på minst mulig nivå, dvs per delaområde. Dette er fordi det ikke gir mening å hverken summere eller ta gjennomsnitt av tettheter. Man kan ikke la lav tetthet ett sted kompenseer for høye tettheter ett annet sted.
 ```{r}
-sims$diff <- sims$refs-sims$ind
-dotchart(sims$diff)
-```
-Her må vi ha en tosidig skalering. Erik har laget et forslag til skalering som ser slik ut
+sims <- data.table(
+  reg = reg,
+  ID = IDs,
+  area = area,
+  refs = refs,
+  ind = ind)
 
+```
+
+Det blir NaN der vi har null rein.
+```{r}
+unique(sims$ID[sims$ind== "NaN"])
+```
+
+Disse kan vi sette til null.
+```{r}
+sims$ind[sims$ind == "NaN"] <- 0
+```
+
+```{r}
+ggplot(data = sims, aes(x = reg, y = ind))+
+  geom_violin()
+```
+
+```{r}
+ggplot(data = sims, aes(x = ID, y = ind))+
+  geom_violin(trim=F)+
+  coord_flip()
+```
+
+```{r}
+summary(sims$ind)
+```
+
+Det ser bra ut. Variasjonen øker når gjennomsnittet øker.
+```{r}
+sims$diff <- sims$ref-sims$ind
+dotchart(sample(sims$diff, 1000, replace = F))
+```
+
+Her må vi ha en tosidig skalering. Erik har laget et forslag til skalering som ser slik ut
 ```{r}
 temp <- data.frame(x = c(0, 0.6, 1, 2,10),
                    y = c(0, 0.6, 1, 0.6, 0))
 
-ggplot(data = temp, aes(x = x, y = y))+
+(mod <- ggplot(data = temp, aes(x = x, y = y))+
   geom_line(size=1.3, linetype="dashed", colour="grey30")+
   geom_point(size=5)+
   theme_bw()+
   ylab("Skalert verdi")+
   xlab("Obs./Ref.")
+)
 ```
 
 ```{r}
-sims$rat <- sims$ind/sims$refs
-dotchart(sims$rat)
+sims$rat <- sims$ind/sims$ref
+dotchart(sample(sims$rat, 1000, replace = F))
 ```
+
 ```{r}
 rm(dat2, dat)
 ```
@@ -188,41 +225,59 @@ rm(dat2, dat)
 sims$val <- NA 
 sims$val[sims$rat<1]                 <- sims$rat[sims$rat<1]
 sims$val[sims$rat %between% c(1, 2)] <- 1-(0.4*((sims$rat[sims$rat %between% c(1, 2)])-1))
-sims$val[sims$rat >2]                <- 0.6-((sims$rat[sims$rat >2]-2)/8)
-ggplot(data=sims, aes(x = rat, y = val))+
-  geom_point(size=3, alpha=.005, stroke=3)+
-  geom_line(size=1.2, alpha=.8)+
-  theme_bw()
+sims$val[sims$rat >2]                <- (1-((sims$rat[sims$rat >2]-2)/(10-2)))/1.6
+
+(mod + geom_point(data=sims, aes(x = rat, y = val),
+                  size=3, alpha=.005, stroke=3))
+
+```
+
+```{r}
+summary(sims$val)
+```
+
+```{r}
+ggplot(data = sims, aes(x = ID, y = val))+
+  geom_violin(trim=F)+
+  coord_flip()
+```
+
+```{r}
+ggplot(data = sims, aes(x = reg, y = val))+
+  geom_point(position = position_dodge2(0.4), 
+             aes(size = area),
+             alpha = 0.01)+
+ scale_size_continuous(range = c(1, 10))
+
 ```
 
 Fint.
 Så trenger jeg et arealvektet gjennomsnitt per region.
 
 ```{r}
-nsim <- 1000
+nsim <- 500
 vals <- c()
 reg <- c()
+temp2 <- c()
 
 
 for(i in unique(sims$reg)){
-  temp3 <- c()
-  temp5 <- c()
-  wgt   <- c()
   
   temp <- sims[sims$reg==i,]
   
-  for(m in 1:nsim){
-  
-  for(n in unique(temp$ID)){
+  for(i in 1:nsim){
+    temp3 <- c()
+    wgt   <- c()
     
-    temp3 <- c(temp3, sample(temp$val[temp$ID==n], 1))
-    wgt   <-  c(wgt, temp$area[temp$ID==n][1])
-    
-    
+  for(m in 1:100){
+
+    temp2 <- temp[runif(1,0,nrow(temp)),]
+    temp3 <- c(temp3, temp2$val)
+    wgt   <-  c(wgt, temp2$area)
   }
-  vals <- c(vals, weighted.mean(temp3, wgt))
-  reg <- c(reg, temp$reg[1])
-  }
+    vals <- c(vals, weighted.mean(temp3, wgt))
+    reg <- c(reg, temp$reg[1])
+  }    
 }
 
 df <- data.frame(reg = reg,
@@ -230,6 +285,12 @@ df <- data.frame(reg = reg,
                  year = 2020,
                  X = "rein")
 
+```
+
+```{r}
+ggplot(data = df, aes(x = reg, y = val))+
+  geom_violin(trim=F, fill="black")+
+  theme_bw()
 ```
 
 
@@ -274,6 +335,11 @@ Norge <- data.frame(
 df <- rbind(df, Norge)
 ```
 
+
+```{r}
+df$reg <- as.factor(df$reg)
+```
+
 # Plotting
 
 
@@ -297,7 +363,7 @@ names(df) <- c("reg", "low", "med", "upp")
 (gg <- ggplot(data = df, aes(x = factor(reg, levels = temp2), y = med))+
   geom_bar(stat="identity", colour="black", size=1.2,
            fill="grey80")+
-  geom_errorbar(aes(ymax = upp, ymin=low), width=.0, size=2)+
+  geom_errorbar(aes(ymax = upp, ymin=low), width=.5, size=2)+
   theme_bw(base_size = 20)+
   ylab("Tetthet av rein\nskalert mot referansetilstand")+
   xlab("")+
@@ -318,66 +384,8 @@ gg
 dev.off()
 ```
 
-```{r}
-(gg2 <- ggplot(data = dat2, aes(x = factor(reg, levels = temp2), y = tetthet))+
-  geom_point(aes(size = area),
-             shape=21,
-             colour="black", 
-             stroke=1.2,
-             fill="grey80")+
-  scale_size_continuous(range = c(1, 10))+
-  theme_bw(base_size = 20)+
-  ylab(expression(paste("Rein km "^"-2")))+
-  xlab("")+
-  theme(
-    axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)
-  )+
-   scale_x_discrete(breaks = temp2,
-                    labels = temp3)+
-  guides(
-    size=guide_legend(override.aes = list(size = c(1, 5, 10)),
-                      title = expression(paste("km "^"-2")))
-  )
-)
-```
 
 ```{r, eval=F}
-
-png("../output/indicatorPlots/uskalert/rein_tettheter.png", 
-    units="in", width=6, height=8, res=300)
-gg2
-dev.off()
+write.csv(df2, "../output/indicator_values/rein.csv", row.names = F)
 ```
 
-```{r, eval=F}
-write.csv(df, "../output/indicator_values/rein.csv", row.names = F)
-```
-
-
-title: "Untitled"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

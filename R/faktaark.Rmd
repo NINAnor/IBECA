@@ -119,7 +119,7 @@ tbl
 ```
 
 
-## Fragmentering
+## Fragmentering / Konnektivitet
 Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fragmentering.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 ```{r, echo=FALSE}
@@ -180,6 +180,17 @@ Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){widt
 
 ```{r, echo=FALSE}
 tbl <- get("NDVI")
+tbl
+
+```
+
+## Rein
+
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/reinv3.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Rein")
 tbl
 
 ```
