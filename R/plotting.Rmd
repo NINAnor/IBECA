@@ -16,10 +16,11 @@ knit: (function(input_file, encoding) {
 ```{r setup, include=FALSE, message=FALSE}
 library(knitr)
 library(DT)
-library(dplyr)
 library(plyr)
 library(data.table)
 library(matrixStats)
+library(dplyr)
+#detach("package:raster", unload=TRUE)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -447,7 +448,7 @@ table(allind$X)
 The number of re-samplings differs.
 
 ## Save allind file
-```{r, eval=F}
+```{r, eval=T}
 write.csv(allind, "../output/allind_temp.csv")
 ```
 
@@ -911,7 +912,7 @@ temp_names$plot <- c("Fravær av fremmede arter",
                      "Naturindeks for fjell (mod.)",
                      "Fjellrev",
                      "Fjellrype",
-                     "Fragmentering",
+                     "Konnektivitet",  # Fragmentering
                      "Areal uten tekniske inngrep",
                      "Jerv",
                      "Kongeørn",
@@ -919,7 +920,7 @@ temp_names$plot <- c("Fravær av fremmede arter",
                      "NDVI (øvre)",
                      "NDVI (nedre)",
                      "Rein",
-                     "Snødekke",
+                     "Snødekkets varighet",
                      "Snødybde",
                      "Smågnagere",
                      "Vegetasjonens varmekrav",

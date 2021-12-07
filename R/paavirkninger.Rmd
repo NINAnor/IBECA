@@ -19,6 +19,9 @@ library(DT)
 library(dplyr)
 library(plyr)
 library(matrixStats)
+library(data.table)
+#detach("package:raster", unload=TRUE)
+
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -38,6 +41,7 @@ weights <- read.csv("../output/weights_temp.csv", row.names=1)
 unique(allind$X)
 ```
 
+Det blir feil med ø'ene om dette kjøres på serveren
 ```{r}
 allind$X[allind$X=="konge\xf8rn"] <- "kongeørn"
 ```
@@ -58,8 +62,8 @@ pressures <- c("are", "kli", "fef", "bes", "fre")
 ```
 
 ```{r}
-pressures2 <- c("Arealinngrep", "Klima", "Forurensing",
-                     "Beskatning", "Fremmede arter")
+pressures2 <- c("Arealbruk/inngrep", "Klima", "Forurensing",
+                     "Bestandsregulering", "Fremmede arter")
 ```
 
 
