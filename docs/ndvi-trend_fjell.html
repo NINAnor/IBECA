@@ -1,0 +1,606 @@
+NDVI trend fjell
+================
+
+This document describes the methodology behind the ecological condition
+indicator ‘NDVI trend’ for mountain ecosystems in Norway. The indicator
+is based on a random sample of 20 000 pixels from within the defined
+mountain polygons in Norway with NDVI values from the MODIS satellite
+2000-2019. The procedure is as follows: -regress NDVI by year for every
+pixel to get time slopes for the NDVI-trend through time -regress NDVI
+by randomized years for every pixel to get a reference condition under
+the reference expectation of no systematic change in NDVI through time
+-define limit and min/max values for the scaling from the reference
+distribution of slopes (0.025 & 0.975 quantiles for the limit values,
+min & max value of the distribution for the scaling to 0) -scale all
+time slopes larger than of the original regression against the defined
+scaling values -note that this is a 2-sided indicator, so we got to
+scale twice: –the values lower than the reference value against the
+lower limit value and the minimum value –the values larger than the
+reference value against the upper limit value and the maximum value
+-scaled values \>1 on one side are to be set to NA as these pixels are
+covered by values \<1 on the other side -calculate the number of pixels
+behind each side for Norway and each region to give the two sides
+relative weights. Together they should have weight 1.
+
+## Libraries needed
+
+``` r
+library(tidyverse)
+library(broom)
+library(sf)
+library(RColorBrewer)
+library("gridExtra") 
+```
+
+## Data
+
+NDVI samples NDVI sample locations ØT fjell regions
+
+ndviTS is a simple tibble with the variables ID, year and NDVI
+
+``` r
+ndviTS
+```
+
+    ## # A tibble: 500,140 x 3
+    ##        ID  year  ndvi
+    ##     <dbl> <dbl> <dbl>
+    ##  1  15136  2000 0.523
+    ##  2 968635  2000 0.201
+    ##  3 548872  2000 0.505
+    ##  4 338936  2000 0.479
+    ##  5 561107  2000 0.458
+    ##  6 155082  2000 0.603
+    ##  7 752490  2000 0.530
+    ##  8  52722  2000 0.552
+    ##  9 750123  2000 0.677
+    ## 10  87444  2000 0.332
+    ## # ... with 500,130 more rows
+
+locations is a spatial object with the same ID’s as in ndviTS and the
+corresponding point geometry
+
+``` r
+locations
+```
+
+    ## Simple feature collection with 29658 features and 1 field
+    ## Geometry type: POINT
+    ## Dimension:     XY
+    ## Bounding box:  xmin: 4.673168 ymin: 58.33117 xmax: 31.07896 ymax: 71.16132
+    ## Geodetic CRS:  WGS 84
+    ## First 10 features:
+    ##        ID                  geometry
+    ## 1   15136 POINT (5.840641 60.54294)
+    ## 2  968635   POINT (9.07951 62.6231)
+    ## 3  548872 POINT (6.631273 59.14986)
+    ## 4  338936 POINT (25.33822 69.99437)
+    ## 5  561107 POINT (8.053704 62.51785)
+    ## 6  155082 POINT (27.23629 70.93837)
+    ## 7  830356 POINT (8.257126 61.62694)
+    ## 8  202160 POINT (7.356875 60.72745)
+    ## 9  752490 POINT (7.071486 59.22123)
+    ## 10  52722 POINT (9.457698 62.86394)
+
+regions is a spatial object with a polygon geometry for the regions in
+ØT fjell
+
+``` r
+regions
+```
+
+    ## Simple feature collection with 5 features and 2 fields
+    ## Geometry type: POLYGON
+    ## Dimension:     XY
+    ## Bounding box:  xmin: 4.087524 ymin: 57.75901 xmax: 31.76159 ymax: 71.38488
+    ## Geodetic CRS:  WGS 84
+    ##   id            region                       geometry
+    ## 1  1        Nord-Norge POLYGON ((11.88023 65.06874...
+    ## 2  2        Midt-Norge POLYGON ((8.205852 62.33174...
+    ## 3  3 Ã<U+0098>stlandet POLYGON ((10.5931 58.76096,...
+    ## 4  4        Vestlandet POLYGON ((6.470577 58.29951...
+    ## 5  5        SÃ¸rlandet POLYGON ((9.067269 58.25027...
+
+## Analysis
+
+we run a linear model (ndvi\~year) for every sample in ndviTS, and for
+every sample where years have been randomized
+
+``` r
+# calculate linear regressions for each pixel
+ndviTrends <- ndviTS  %>% 
+  group_by(ID) %>% 
+  nest()%>% 
+  mutate(model = map(data, ~lm(ndvi ~ year, data = .x))) %>%
+  mutate(tidy = map(model, tidy),
+           glance = map(model, glance),
+           augment = map(model, augment),
+           rsq = glance %>% map_dbl('r.squared'),
+           pvalue = glance %>% map_dbl('p.value'),
+           intercept = tidy %>% map_dbl(~ filter(.x, term == "(Intercept)") %>% pull(estimate)),
+           slope = tidy %>% map_dbl(~ filter(.x, term == "year") %>% pull(estimate))) %>%
+  dplyr::select(ID, intercept, slope, rsq, pvalue)
+
+ndviTrends
+
+# randomize years and calculate linear regressions
+ndviTrends_ran <- ndviTS %>%
+  group_by(ID) %>%
+  mutate(year_ran = sample(year,20)) %>%
+  nest()%>% 
+  mutate(model = map(data, ~lm(ndvi ~ year_ran, data = .x))) %>%
+  mutate(tidy = map(model, tidy),
+         glance = map(model, glance),
+         augment = map(model, augment),
+         rsq = glance %>% map_dbl('r.squared'),
+         pvalue = glance %>% map_dbl('p.value'),
+         intercept = tidy %>% map_dbl(~ filter(.x, term == "(Intercept)") %>% pull(estimate)),
+         slope = tidy %>% map_dbl(~ filter(.x, term == "year_ran") %>% pull(estimate))) %>%
+  dplyr::select(ID, intercept, slope, rsq, pvalue)
+```
+
+``` r
+ndviTrends
+```
+
+    ## # A tibble: 25,007 x 5
+    ## # Groups:   ID [25,007]
+    ##        ID intercept    slope      rsq   pvalue
+    ##     <dbl>     <dbl>    <dbl>    <dbl>    <dbl>
+    ##  1  15136   -1.96   0.00125  0.138    0.107   
+    ##  2 968635   -9.26   0.00476  0.254    0.0235  
+    ##  3 548872    0.318  0.000108 0.000668 0.914   
+    ##  4 338936   -3.33   0.00191  0.170    0.0706  
+    ##  5 561107   -6.29   0.00340  0.526    0.000297
+    ##  6 155082   -3.64   0.00214  0.156    0.0845  
+    ##  7 752490    0.0860 0.000226 0.00467  0.775   
+    ##  8  52722   -0.268  0.000449 0.00383  0.795   
+    ##  9 750123   -3.08   0.00187  0.151    0.0905  
+    ## 10  87444   -1.79   0.00107  0.132    0.116   
+    ## # ... with 24,997 more rows
+
+``` r
+ndviTrends_ran
+```
+
+    ## # A tibble: 25,007 x 5
+    ## # Groups:   ID [25,007]
+    ##        ID intercept     slope     rsq pvalue
+    ##     <dbl>     <dbl>     <dbl>   <dbl>  <dbl>
+    ##  1  15136    -0.160  0.000357 0.0112   0.657
+    ##  2 968635     2.50  -0.00109  0.0133   0.629
+    ##  3 548872    -0.732  0.000631 0.0226   0.527
+    ##  4 338936    -1.84   0.00117  0.0635   0.284
+    ##  5 561107    -1.89   0.00120  0.0661   0.274
+    ##  6 155082     1.38  -0.000353 0.00425  0.785
+    ##  7 752490     1.49  -0.000474 0.0204   0.548
+    ##  8  52722     5.81  -0.00257  0.126    0.125
+    ##  9 750123     1.45  -0.000385 0.00640  0.737
+    ## 10  87444     1.89  -0.000759 0.0657   0.275
+    ## # ... with 24,997 more rows
+
+We can plot the slopes as histograms (original=blue, randomized=red)
+
+    ## Warning: Removed 85 rows containing non-finite values (stat_bin).
+
+    ## Warning: Removed 2 rows containing missing values (geom_bar).
+
+    ## Warning: Removed 26 rows containing non-finite values (stat_bin).
+
+    ## Warning: Removed 2 rows containing missing values (geom_bar).
+
+![](C:\\Users\\JOACHI~1.TOP\\ONEDRI~1\\work\\RPROJE~1\\github\\IBECA\\R..\\docs\\NDVI-T~1/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+Original: Most slopes are clearly positive, fewer are negative.
+Randomized: Slopes are centered around zero and with similar
+variability. We derive the 0.025 and 0.975 quantiles from the
+‘randomized’ slopes to define the limit values for good ecological
+condition under the reference condition.
+
+``` r
+# derive quantiles
+ndviTrend_percent_ran <- ndviTrends_ran %>% ungroup() %>%
+  summarise(t_025 = quantile(slope,0.025)[[1]],
+            t_975 = quantile(slope,0.975)[[1]])
+```
+
+On the very left we see the result of this operation with the scaling
+values on the ‘randomized’ slopes To the right we see the original
+slopes with the same scaling and limit values
+
+    ## Warning: Removed 85 rows containing non-finite values (stat_bin).
+
+    ## Warning: Removed 2 rows containing missing values (geom_bar).
+
+    ## Warning: Removed 26 rows containing non-finite values (stat_bin).
+
+    ## Warning: Removed 2 rows containing missing values (geom_bar).
+
+![](C:\\Users\\JOACHI~1.TOP\\ONEDRI~1\\work\\RPROJE~1\\github\\IBECA\\R..\\docs\\NDVI-T~1/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+## Scaling
+
+We define the scaling as well as the scaled values and create NDVI
+indices. Note that we scale twice: - the values lower than the reference
+value against the lower limit value and the minimum value - the values
+larger than the reference value against the upper limit value and the
+maximum value
+
+``` r
+# scaling values
+ref <- 0
+lim.l <- as.numeric(ndviTrend_percent_ran[1])
+lim.u <- as.numeric(ndviTrend_percent_ran[2])
+maxmin.l <- as.numeric(ndviTrends_ran %>% ungroup() %>%
+  summarise(min(slope)))
+maxmin.u <- as.numeric(ndviTrends_ran %>% ungroup() %>%
+  summarise(max(slope)))
+
+# scaled values
+r.s <- 1    # reference value
+l.s <- 0.6  # limit value
+a.s <- 0    # abscence of indicator, or indicator at maximum
+
+ndviTrends2 <- ndviTrends
+# scaling against upper limit
+ndviTrends2$ndvi.index.u <- ifelse(ndviTrends2$slope>lim.u,
+                                   ( l.s - (l.s * (ndviTrends2$slope - lim.u) / (maxmin.u - lim.u) ) ),
+                                   ( r.s - ( (r.s - l.s) * (ndviTrends2$slope - ref) / (lim.u - ref) ) )
+)
+ndviTrends2$ndvi.index.u[ndviTrends2$ndvi.index.u > 1] <- NA
+ndviTrends2$ndvi.index.u[ndviTrends2$ndvi.index.u < 0] <- 0
+# scaling to lower limit
+ndviTrends2$ndvi.index.l <- ifelse(ndviTrends2$slope<lim.l,
+                                   (a.s + (ndviTrends2$slope-maxmin.l) * ( (l.s-a.s) / (lim.l-maxmin.l) ) ),
+                                   (l.s + (ndviTrends2$slope-lim.l) * ( (r.s-l.s) / (ref-lim.l) ) )
+)
+ndviTrends2$ndvi.index.l[ndviTrends2$ndvi.index.l > 1] <- NA
+ndviTrends2$ndvi.index.l[ndviTrends2$ndvi.index.l < 0] <- 0
+
+summary(ndviTrends2$ndvi.index.l)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+    ##   0.237   0.821   0.903   0.874   0.959   1.000   20623
+
+``` r
+summary(ndviTrends2$ndvi.index.u)
+```
+
+    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+    ##   0.000   0.638   0.766   0.751   0.870   1.000    4384
+
+Here is the result, the dashed line indicates the limit for good
+ecological condition.
+
+    ## Warning: Removed 20623 rows containing non-finite values (stat_bin).
+
+    ## Warning: Removed 4384 rows containing non-finite values (stat_bin).
+
+![](C:\\Users\\JOACHI~1.TOP\\ONEDRI~1\\work\\RPROJE~1\\github\\IBECA\\R..\\docs\\NDVI-T~1/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+Finally, we merge the indices with the geometry and drop the geometry
+before bootstrapping the results.
+
+``` r
+# join indices with region information
+ndviTrends2 = left_join(locations,ndviTrends2, left=TRUE, by = "ID")
+ndviTrends2 <- ndviTrends2[!is.na(ndviTrends2$slope),]
+# getting region info into ndviTrends2
+ndviTrends2 <- st_intersection(ndviTrends2, regions)
+```
+
+    ## Warning: attribute variables are assumed to be spatially constant throughout all
+    ## geometries
+
+``` r
+ndviTrends2 <- ndviTrends2 %>%
+  rename(pixel.id = ID, region.id = id) 
+
+# drop geometry
+ndviTrends3 <- st_drop_geometry(ndviTrends2)
+head(ndviTrends3)
+```
+
+    ##    pixel.id  intercept        slope         rsq      pvalue ndvi.index.u
+    ## 4    338936 -3.3287964 0.0019090229 0.170231568 0.070625234    0.7216162
+    ## 6    155082 -3.6369720 0.0021428935 0.156267826 0.084507116    0.6875120
+    ## 13    87444 -1.7918838 0.0010733833 0.131504470 0.116096517    0.8434736
+    ## 14   644901 -0.7982837 0.0006624054 0.004363013 0.782025936    0.9034045
+    ## 22   330612 -2.2286442 0.0013249250 0.270269270 0.018797425    0.8067925
+    ## 23   354939 -2.6705059 0.0015783458 0.327426966 0.008378939    0.7698373
+    ##    ndvi.index.l region.id     region
+    ## 4            NA         1 Nord-Norge
+    ## 6            NA         1 Nord-Norge
+    ## 13           NA         1 Nord-Norge
+    ## 14           NA         1 Nord-Norge
+    ## 22           NA         1 Nord-Norge
+    ## 23           NA         1 Nord-Norge
+
+``` r
+summary(ndviTrends3)
+```
+
+    ##     pixel.id        intercept            slope                 rsq         
+    ##  Min.   :    11   Min.   :-37.7116   Min.   :-0.0101970   Min.   :0.00000  
+    ##  1st Qu.:248491   1st Qu.: -4.0272   1st Qu.: 0.0003741   1st Qu.:0.02281  
+    ##  Median :499595   Median : -2.1007   Median : 0.0013077   Median :0.09019  
+    ##  Mean   :499628   Mean   : -2.1904   Mean   : 0.0013580   Mean   :0.13985  
+    ##  3rd Qu.:751647   3rd Qu.: -0.1743   3rd Qu.: 0.0022576   3rd Qu.:0.21350  
+    ##  Max.   :999970   Max.   : 20.9098   Max.   : 0.0188948   Max.   :0.86562  
+    ##                                                                            
+    ##      pvalue         ndvi.index.u    ndvi.index.l     region.id    
+    ##  Min.   :0.00000   Min.   :0.000   Min.   :0.237   Min.   :1.000  
+    ##  1st Qu.:0.04026   1st Qu.:0.638   1st Qu.:0.821   1st Qu.:1.000  
+    ##  Median :0.19827   Median :0.765   Median :0.903   Median :2.000  
+    ##  Mean   :0.30522   Mean   :0.751   Mean   :0.874   Mean   :2.116  
+    ##  3rd Qu.:0.52504   3rd Qu.:0.870   3rd Qu.:0.959   3rd Qu.:3.000  
+    ##  Max.   :1.00000   Max.   :1.000   Max.   :1.000   Max.   :5.000  
+    ##                    NA's   :4383    NA's   :20610                  
+    ##     region         
+    ##  Length:24993      
+    ##  Class :character  
+    ##  Mode  :character  
+    ##                    
+    ##                    
+    ##                    
+    ## 
+
+``` r
+ndviTrends3$region <- as.factor(ndviTrends3$region)
+levels(ndviTrends3$region)
+```
+
+    ## [1] "Ã<U+0098>stlandet" "Midt-Norge"      "Nord-Norge"      "SÃ¸rlandet"     
+    ## [5] "Vestlandet"
+
+``` r
+levels(ndviTrends3$region)[c(1,4)] <- c("Austlandet","Soerlandet")
+levels(ndviTrends3$region)
+```
+
+    ## [1] "Austlandet" "Midt-Norge" "Nord-Norge" "Soerlandet" "Vestlandet"
+
+## Bootstrapping
+
+We bootstrap the indices 10000 times for each region and calculate the
+mean
+
+``` r
+# Empty dataframes for bootstrapping results
+ndvi.fjell.boot.tot <- data.frame(region = factor(),
+                              slope = numeric(),
+                              ndvi.index.l = numeric(),
+                              ndvi.index.u = numeric()
+                              )
+ndvi.fjell.boot.N <- ndvi.fjell.boot.M <- ndvi.fjell.boot.A <- ndvi.fjell.boot.V <- ndvi.fjell.boot.S <- ndvi.fjell.boot.tot
+
+
+# number of bootstraps
+nsim <- 10
+
+
+
+# Norge total bootstrap
+for (k in 1:nsim){
+  
+  ### Sample data
+  ## total
+  temp.t <- ndviTrends3[sample(nrow(ndviTrends3), replace=T),]
+  ## Nord-Norge (1)
+  ndviTrends3.N <- ndviTrends3[ndviTrends3$region.id == 1,]
+  temp.N <- ndviTrends3.N[sample(nrow(ndviTrends3.N), replace=T),]
+  ## Midt-Norge (2)
+  ndviTrends3.M <- ndviTrends3[ndviTrends3$region.id == 2,]
+  temp.M <- ndviTrends3.M[sample(nrow(ndviTrends3.M), replace=T),]
+  ## Østlandet (3)
+  ndviTrends3.A <- ndviTrends3[ndviTrends3$region.id == 3,]
+  temp.A <- ndviTrends3.A[sample(nrow(ndviTrends3.A), replace=T),]
+  ## Vestlandet (4)
+  ndviTrends3.V <- ndviTrends3[ndviTrends3$region.id == 4,]
+  temp.V <- ndviTrends3.V[sample(nrow(ndviTrends3.V), replace=T),]
+  # Sørlandet (5)
+  ndviTrends3.S <- ndviTrends3[ndviTrends3$region.id == 5,]
+  temp.S <- ndviTrends3.S[sample(nrow(ndviTrends3.S), replace=T),]
+  
+  ### Estimates
+  ## Norge total
+  # Mean values
+  ndvi.fjell.boot.tot[k,"slope"] <- mean(temp.t$slope,na.rm=T)
+  ndvi.fjell.boot.tot[k,"ndvi.index.l"] <- mean(temp.t$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.tot[k,"ndvi.index.u"] <- mean(temp.t$ndvi.index.u,na.rm=T)
+
+  ## Nord-Norge (N)
+  # Mean values
+  ndvi.fjell.boot.N[k,"slope"] <- mean(temp.N$slope,na.rm=T)
+  ndvi.fjell.boot.N[k,"ndvi.index.l"] <- mean(temp.N$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.N[k,"ndvi.index.u"] <- mean(temp.N$ndvi.index.u,na.rm=T)
+
+  ## Midt-Norge (M)
+  # Mean values
+  ndvi.fjell.boot.M[k,"slope"] <- mean(temp.M$slope,na.rm=T)
+  ndvi.fjell.boot.M[k,"ndvi.index.l"] <- mean(temp.M$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.M[k,"ndvi.index.u"] <- mean(temp.M$ndvi.index.u,na.rm=T)
+
+  ## Østlandet (A)
+  # Mean values
+  ndvi.fjell.boot.A[k,"slope"] <- mean(temp.A$slope,na.rm=T)
+  ndvi.fjell.boot.A[k,"ndvi.index.l"] <- mean(temp.A$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.A[k,"ndvi.index.u"] <- mean(temp.A$ndvi.index.u,na.rm=T)
+
+  ## Vestlandet (V)
+  # Mean values
+  ndvi.fjell.boot.V[k,"slope"] <- mean(temp.V$slope,na.rm=T)
+  ndvi.fjell.boot.V[k,"ndvi.index.l"] <- mean(temp.V$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.V[k,"ndvi.index.u"] <- mean(temp.V$ndvi.index.u,na.rm=T)
+
+  ## Sørlandet (S)
+  # Mean values
+  ndvi.fjell.boot.S[k,"slope"] <- mean(temp.S$slope,na.rm=T)
+  ndvi.fjell.boot.S[k,"ndvi.index.l"] <- mean(temp.S$ndvi.index.l,na.rm=T)
+  ndvi.fjell.boot.S[k,"ndvi.index.u"] <- mean(temp.S$ndvi.index.u,na.rm=T)
+
+}
+
+ndvi.fjell.boot.tot$region <- "t"
+ndvi.fjell.boot.N$region <- "N"
+ndvi.fjell.boot.M$region <- "M"
+ndvi.fjell.boot.A$region <- "A"
+ndvi.fjell.boot.V$region <- "V"
+ndvi.fjell.boot.S$region <- "S"
+```
+
+## Results
+
+``` r
+# Norge total
+summary(ndvi.fjell.boot.tot)[,c(3,4)]
+```
+
+    ##   ndvi.index.l     ndvi.index.u   
+    ##  Min.   :0.8724   Min.   :0.7489  
+    ##  1st Qu.:0.8734   1st Qu.:0.7504  
+    ##  Median :0.8742   Median :0.7508  
+    ##  Mean   :0.8739   Mean   :0.7510  
+    ##  3rd Qu.:0.8747   3rd Qu.:0.7519  
+    ##  Max.   :0.8750   Max.   :0.7526
+
+``` r
+# Nord Norge
+summary(ndvi.fjell.boot.N)[,c(3,4)]
+```
+
+    ##   ndvi.index.l     ndvi.index.u   
+    ##  Min.   :0.8763   Min.   :0.7279  
+    ##  1st Qu.:0.8796   1st Qu.:0.7285  
+    ##  Median :0.8808   Median :0.7297  
+    ##  Mean   :0.8807   Mean   :0.7297  
+    ##  3rd Qu.:0.8826   3rd Qu.:0.7309  
+    ##  Max.   :0.8833   Max.   :0.7315
+
+``` r
+# Midt-Norge
+summary(ndvi.fjell.boot.M)[,c(3,4)]
+```
+
+    ##   ndvi.index.l     ndvi.index.u   
+    ##  Min.   :0.9033   Min.   :0.7654  
+    ##  1st Qu.:0.9050   1st Qu.:0.7718  
+    ##  Median :0.9078   Median :0.7725  
+    ##  Mean   :0.9077   Mean   :0.7718  
+    ##  3rd Qu.:0.9101   3rd Qu.:0.7734  
+    ##  Max.   :0.9115   Max.   :0.7747
+
+``` r
+# Østlandet
+summary(ndvi.fjell.boot.A)[,c(3,4)]
+```
+
+    ##   ndvi.index.l     ndvi.index.u   
+    ##  Min.   :0.8522   Min.   :0.7726  
+    ##  1st Qu.:0.8538   1st Qu.:0.7744  
+    ##  Median :0.8571   Median :0.7770  
+    ##  Mean   :0.8566   Mean   :0.7768  
+    ##  3rd Qu.:0.8584   3rd Qu.:0.7786  
+    ##  Max.   :0.8626   Max.   :0.7820
+
+``` r
+# Vestlandet
+summary(ndvi.fjell.boot.V)[,c(3,4)]
+```
+
+    ##   ndvi.index.l     ndvi.index.u   
+    ##  Min.   :0.8685   Min.   :0.7575  
+    ##  1st Qu.:0.8719   1st Qu.:0.7641  
+    ##  Median :0.8773   Median :0.7648  
+    ##  Mean   :0.8754   Mean   :0.7641  
+    ##  3rd Qu.:0.8781   3rd Qu.:0.7656  
+    ##  Max.   :0.8804   Max.   :0.7678
+
+``` r
+# Sørlandet
+summary(ndvi.fjell.boot.S)[,c(3,4)]
+```
+
+    ##   ndvi.index.l     ndvi.index.u   
+    ##  Min.   :0.8546   Min.   :0.8061  
+    ##  1st Qu.:0.8560   1st Qu.:0.8114  
+    ##  Median :0.8596   Median :0.8146  
+    ##  Mean   :0.8598   Mean   :0.8145  
+    ##  3rd Qu.:0.8623   3rd Qu.:0.8175  
+    ##  Max.   :0.8693   Max.   :0.8203
+
+The lower and upper indicators for NDVI should have a joint weight of 1
+in the assessment of ecological condition. Both indicators should thus
+receive a weight directly dependent of the number of pixels they
+represent. This may vary between regions and compared to the entire
+country.
+
+``` r
+# number of pixels for lower and upper indicator - by region
+# lower
+ndviTrends3 %>% 
+  group_by(region) %>%
+  drop_na(ndvi.index.l) %>%
+  summarise(no_rows = length(ndvi.index.l))
+```
+
+    ## # A tibble: 5 x 2
+    ##   region     no_rows
+    ##   <fct>        <int>
+    ## 1 Austlandet    1031
+    ## 2 Midt-Norge     516
+    ## 3 Nord-Norge    1432
+    ## 4 Soerlandet     605
+    ## 5 Vestlandet     799
+
+``` r
+# upper
+ndviTrends3 %>% 
+  group_by(region) %>%
+  drop_na(ndvi.index.u) %>%
+  summarise(no_rows = length(ndvi.index.u))
+```
+
+    ## # A tibble: 5 x 2
+    ##   region     no_rows
+    ##   <fct>        <int>
+    ## 1 Austlandet    2812
+    ## 2 Midt-Norge    3288
+    ## 3 Nord-Norge   10969
+    ## 4 Soerlandet     958
+    ## 5 Vestlandet    2583
+
+``` r
+# number of pixels for lower and upper indicator - Norge total
+# lower
+nrow(ndviTrends2[!is.na(ndviTrends3$ndvi.index.l),])
+```
+
+    ## [1] 4383
+
+``` r
+# upper
+nrow(ndviTrends2[!is.na(ndviTrends3$ndvi.index.u),])
+```
+
+    ## [1] 20610
+
+``` r
+# e.g. weights for lower and upper indicator - Norge total
+# lower
+nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])/
+  (nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])+
+     nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),]))
+```
+
+    ## [1] 0.1753691
+
+``` r
+# upper
+nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),])/
+  (nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])+
+     nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),]))
+```
+
+    ## [1] 0.8246309

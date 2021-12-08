@@ -1,11 +1,30 @@
 ---
 title: "NDVI trend fjell"
-output: github_document
+output:
+  github_document: default
+  html_document:
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+knit: (function(input_file, encoding) { out_dir <- '../docs'; rmarkdown::render(input_file,
+  encoding=encoding, output_file=file.path(dirname(input_file), out_dir, 'ndvi-trend_fjell.html'))})
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+This document describes the methodology behind the ecological condition indicator 'NDVI trend' for mountain ecosystems in Norway.
+The indicator is based on a random sample of 20 000 pixels from within the defined mountain polygons in Norway with NDVI values from the MODIS satellite 2000-2019. The procedure is as follows:
+-regress NDVI by year for every pixel to get time slopes for the NDVI-trend through time
+-regress NDVI by randomized years for every pixel to get a reference condition under the reference expectation of no systematic change in NDVI through time
+-define limit and min/max values for the scaling from the reference distribution of slopes (0.025 & 0.975 quantiles for the limit values, min & max value of the distribution for the scaling to 0)
+-scale all time slopes larger than of the original regression against the defined scaling values
+-note that this is a 2-sided indicator, so we got to scale twice:
+--the values lower than the reference value against the lower limit value and the minimum value
+--the values larger than the reference value against the upper limit value and the maximum value
+-scaled values >1 on one side are to be set to NA as these pixels are covered by values <1 on the other side
+-calculate the number of pixels behind each side for Norway and each region to give the two sides relative weights. Together they should have weight 1.
 
 ## Libraries needed
 ```{r message = FALSE, warning = FALSE}
@@ -226,7 +245,7 @@ levels(ndviTrends3$region)
 
 ## Bootstrapping
 We bootstrap the indices 10000 times for each region and calculate the mean
-```{r eval=FALSE}
+```{r}
 # Empty dataframes for bootstrapping results
 ndvi.fjell.boot.tot <- data.frame(region = factor(),
                               slope = numeric(),
@@ -237,7 +256,7 @@ ndvi.fjell.boot.N <- ndvi.fjell.boot.M <- ndvi.fjell.boot.A <- ndvi.fjell.boot.V
 
 
 # number of bootstraps
-nsim <- 10000
+nsim <- 10
 
 
 
@@ -308,6 +327,13 @@ ndvi.fjell.boot.M$region <- "M"
 ndvi.fjell.boot.A$region <- "A"
 ndvi.fjell.boot.V$region <- "V"
 ndvi.fjell.boot.S$region <- "S"
+```
+
+``` {r include = FALSE}
+# save the result of the regressions and rather load it from the workspace rather than running the reg's all over again as the reg's take time
+#save.image('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_regressions')
+load('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_regressions')
+
 ```
 ## Results
 ```{r}
