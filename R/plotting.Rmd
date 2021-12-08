@@ -591,6 +591,7 @@ ind_char$fgw <- ifelse(
 # Structurally important species and biophysical structures
 ind_char$isf <- ifelse(
   ind_char$IND=="smaagnagere"|
+  ind_char$IND=="rein"|
   ind_char$IND=="alien"  
     ,
                        1,0)
