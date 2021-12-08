@@ -25,13 +25,16 @@ library(tidyr)
 library(stringr)
 library(tidyverse)
 library(dplyr)
+library(ggplot2)
+library(hrbrthemes)
+library(viridis)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Analyses of heat rquirement of species in a plant community 
-- Data import & handling
-- Building the reference
-- Scaling of the evaluation data to an ecological-condition index
+# Analyses of heat requirement of species in a plant community 
+- Data import & handling  
+- Building the reference  
+- Scaling of the evaluation data to an ecological-condition index  
 
 ## Data import & handling
 We have three data sources for this indicator:
@@ -44,21 +47,21 @@ ANO data
 - species 
 
 ```{r include = FALSE}
-setwd("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA")
+setwd("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/projects/økol tilst fjell 2021")
 
-ind_swe <- read.table(file="data/varmekrav/ind_swe.txt", sep = '\t', header=T, quote = '')
+ind_swe <- read.table(file="input/indicators/ind_swe.txt", sep = '\t', header=T, quote = '')
 
-load("data/varmekrav/Eco_State.RData")
+load("input/reference/Eco_State.RData")
 
-ANOpkt <- read.table(file="data/varmekrav/PunktData_all.txt", dec=',', sep = '\t', header=T)
-ANOpkt.geo <- read.table(file="data/varmekrav/ANO_geo.csv", sep = ',', header=T)
-sp <- read.table(file="data/varmekrav/ArtsData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt <- read.table(file="input/ANO/PunktData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt.geo <- read.table(file="input/ANO/ANO_geo.csv", sep = ',', header=T)
+sp <- read.table(file="input/ANO/ArtsData_all.txt", dec=',', sep = '\t', header=T)
 ```
 
 ind_swe is a data frame with a range of species indicators for Swedish plant species. Literature reference:
 
 Tyler, T., Herbertsson, L., Olofsson, J., & Olsson, P. A. (2021). Ecological indicator and traits values for Swedish vascular plants. Ecological Indicators, 120. doi:10.1016/j.ecolind.2020.106923
-```{r eval = FALSE}
+```{r}
 head(ind_swe)
 ```
 
@@ -71,18 +74,18 @@ Halvorsen, R., Bryn, A., & Erikstad, L. (2015). NiNs systemkjerne – teori, pri
 str(Eco_State)
 ```
 
-ANOpkt.geo is a data frame with geograhical information for each ANO site and point
-```{r eval = FALSE}
+ANOpkt.geo is a data frame with geographical information for each ANO site and point
+```{r}
 head(ANOpkt.geo)
 ```
 
-ANOpkt is a data frame with ecologcial information for each ANO-point
-```{r eval = FALSE}
+ANOpkt is a data frame with ecological information for each ANO-point
+```{r}
 head(ANOpkt)
 ```
 
-sp is a data frame with plant species information (occurence and abundance) for each ANO-point
-```{r eval = FALSE}
+sp is a data frame with plant species information (occurrence and abundance) for each ANO-point
+```{r}
 head(sp)
 ```
 
@@ -208,7 +211,7 @@ sp$Species <- gsub("_", " ", sp$Species) # replace underscore with space
 sp$Species <- gsub("(-.*)","\\L\\1",sp$Species,perl=TRUE) # make capital letters after hyphon to lowercase
 
 ## merge species data with indicators
-sp <- merge(x=sp, y= ind_swe,by.x="Species", by.y="species", all.x=T)
+sp <- merge(x=sp, y= ind_swe[,c("species","Heat_requirement")],by.x="Species", by.y="species", all.x=T)
 summary(sp)
 
 ## adding hoved?kosystem, hovetype & kartleggingsenhet
@@ -228,7 +231,8 @@ head(mount.dat.cov)
 # Species data from ANO matched with indicator values
 head(sp)
 ```
-After some merging and data wrangling we arrive at (i) NiN species lists for mountains matched with Heat-requirement values (Note that the abundance values in the NiN species lists are maximum abundance). From here we can build the reference.
+After some merging and data wrangling we arrive at:
+(i) NiN species lists for mountains matched with Heat-requirement values (Note that the abundance values in the NiN species lists are maximum abundance). From here we can build the reference.
 ``` {r}
 head(mount.dat.cov)
 ```
@@ -240,7 +244,7 @@ head(sp)
 
 ## Building the reference (scaling values)
 
-### concept for the reference
+### Concept for the reference
 We can calculate cumulative cums of cover for all Heat-requirement levels starting with the highest level. Note that (i) it is maximum cover that is represented in the generalized species lists from NiN, and (ii) we use relative cover, i.e. every species' cover is devided by the total cover of all species summed.
 ```{r echo = FALSE}
 abun.cumsums <- abun.sums <- data.frame(ind=rev(1:9))
@@ -265,9 +269,10 @@ plot(abun.cumsums[,1],abun.cumsums[,10],
      ylab="Cumulative relative abundance",
      main=colnames(abun.cumsums)[10])
 ```
+
 Under climate warming we'd expect the plant community to show a shift in dominance structure, where the cover of species with higher heat requirement increases. This may be both due to a cover increase of certain alpine species with higher heat requirement or because of colonization by species having a higher heat requirement than what is represented in the reference condition for Alpine systems.
 Under this scenario, we should expect the cumulative sum of relative cover for higher heat requirement to at some point in time exceed the maximum value in the reference distribution.  
-Below comes the same plot as above, but now also including the cumulative sum of cover for two ANO-points.
+Below comes the same plot as above, but now also including the cumulative cover for two ANO-points.
 
 ```{r echo = FALSE}
 good <- sp[sp$ParentGlobalID=='c0594346-c084-4d61-9c4d-4b0c0d50dd83',c('Species','Dekning','Heat_requirement')]
@@ -307,17 +312,17 @@ heat.scal.tab.boot <- data.frame(NiN=colnames(mount.dat.cov)[2:28],             
 heat.scal.tab.boot$ind_level <- c(3,3,3,3,3,3,3,3,3,3,3,4,4,3,3,3,3,3,3,3,3,3,2,NA,3,3,3)
 ```
 
-### Definisjon av skaleringsverdier
+### Definition of scaling values
 Next step is to define scaling values for scaling evaluation data to the ecological condition index based on the cumulative cover distributions for each NiN ecosystem type. For this, we bootstrap the NiN species lists, calculate the (relative) cumulative cover for all species at the heat requirement threshold and above in each bootstrap, and then derive limit and reference values from the resulting distribution of bootstraped cumulative cover values.
 
-### Bootstrap function
-sp...the species names
-abun...the species abundances for every ecosystem type
-ind...the indicator value for each species
-ind_level...the Heat_requirement threshold value for calculating summed cover
-iter...number of iterations
-obl...allows to specify if certain abundance levels (and above) are to be reatained in every sample
-rat...ratio of the number of species in the respective ecoystem type (i.e. defines sampling ratio in the bootstrap)
+##### Bootstrap function
+sp...the species names  
+abun...the species abundances for every ecosystem type  
+ind...the indicator value for each species  
+ind_level...the Heat_requirement threshold value for calculating summed cover  
+iter...number of iterations  
+obl...allows to specify if certain abundance levels (and above) are to be retained in every sample  
+rat...ratio of the number of species in the respective ecoystem type (i.e. defines sampling ratio in the bootstrap)  
 ``` {r}
 indBoot.HeatOverhang <- function(sp,abun,ind, ind_level,iter,obl,rat) {
   
@@ -429,7 +434,7 @@ heat.scal.tab.boot
 
 ## Scaling of the evaluation data to an ecological-condition index
 We calculate the relative cumulative cover for species at and above the heat requirement threshold for the ANO data and evaluate these against their respective reference values (i.e. scaling according to reference value=1, limit value=0.6, and maximum value=0)
-This is just technical, so I don't show the code
+This is just technical, so we don't show the code.
 ```{r include = FALSE}
 ## scaled values ####
 r.s <- 1    # reference value
@@ -528,6 +533,8 @@ summary(result.mount)
 result.mount <- result.mount[result.mount$Hovedtype_rute %in% c('T3','T7','T14','T22'),]
 # for Heat values>1 should equal 1
 result.mount[result.mount$Heat>1 & !is.na(result.mount$Heat),"Heat"] <- 1
+result.mount$Hovedtype_rute <- as.factor(result.mount$Hovedtype_rute)
+result.mount$Hovedtype_rute <- factor(result.mount$Hovedtype_rute)
 ```
 Here's the result
 ```{r echo = FALSE}
@@ -535,19 +542,35 @@ summary(result.mount[,"Heat"])
 ```
 
 And here's the result as boxplots by main ecosystem types  
-T3 = Fjellhei, leeside & tundra  
-T14 = Rabbe  
-T7 = Snøleie  
-T22 = Fjellgrashei og grastundra  
-```{r echo = FALSE}
-result.mount$Hovedtype_rute <- as.factor(result.mount$Hovedtype_rute)
-result.mount$Hovedtype_rute <- factor(result.mount$Hovedtype_rute)
+T3 = mountain heat, leeside, & tundra (fjellhei, leeside & tundra)  
+T14 = ridge (rabbe)  
+T7 = snowbed (snøleie)  
+T22 = grassy mountain heath & tundra (fjellgrashei & grastundra)  
 
-with(result.mount,plot(Hovedtype_rute,Heat))
+``` {r echo = FALSE}
+
+# sample size
+sample_size = result.mount %>% group_by(Hovedtype_rute) %>% summarize(num=n())
+
+# Plot
+result.mount %>%
+  left_join(sample_size) %>%
+  mutate(myaxis = paste0(Hovedtype_rute, "\n", "n=", num)) %>%
+  ggplot( aes(x=myaxis, y=Heat, fill=Hovedtype_rute)) +
+    geom_violin(width=1.4) +
+    geom_boxplot(width=0.1, color="grey", alpha=0.2) +
+    scale_fill_viridis(discrete = TRUE) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("Scaled index result") +
+    xlab("Ecosystem type") +
+  ylab("Heat requirement index")
 ```
 
 Not quite unexpected it is the leesides that show the strongest signal. They are largely below the threshold value of 0.6, indicating a larger cover of species with higher Heat_requirement than expected for NiN-species-lists.
-
 
 
 
