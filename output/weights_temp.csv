@@ -11,7 +11,7 @@
 "10","fragmentering","C",1
 "11","INON","C",1
 "12","jerv","C",1
-"13","kongeørn","C",1
+"13","kongeÃ¸rn","C",1
 "14","lirype","C",1
 "15","NDVI_lower","C",0.135646687697161
 "16","NDVI_upper","C",0.864353312302839
@@ -33,7 +33,7 @@
 "32","fragmentering","E",1
 "33","INON","E",1
 "34","jerv","E",1
-"35","kongeørn","E",1
+"35","kongeÃ¸rn","E",1
 "36","lirype","E",1
 "37","NDVI_lower","E",0.268279989591465
 "38","NDVI_upper","E",0.731720010408535
@@ -55,7 +55,7 @@
 "54","fragmentering","N",1
 "55","INON","N",1
 "56","jerv","N",1
-"57","kongeørn","N",1
+"57","kongeÃ¸rn","N",1
 "58","lirype","N",1
 "59","NDVI_lower","N",0.115474558503347
 "60","NDVI_upper","N",0.884525441496653
@@ -77,7 +77,7 @@
 "76","fragmentering","Norge",1
 "77","INON","Norge",1
 "78","jerv","Norge",1
-"79","kongeørn","Norge",1
+"79","kongeÃ¸rn","Norge",1
 "80","lirype","Norge",1
 "81","NDVI_lower","Norge",0.175369103348938
 "82","NDVI_upper","Norge",0.824630896651062
@@ -99,7 +99,7 @@
 "98","fragmentering","S",1
 "99","INON","S",1
 "100","jerv","S",1
-"101","kongeørn","S",1
+"101","kongeÃ¸rn","S",1
 "102","lirype","S",1
 "103","NDVI_lower","S",0.387076135636596
 "104","NDVI_upper","S",0.612923864363404
@@ -121,7 +121,7 @@
 "120","fragmentering","W",1
 "121","INON","W",1
 "122","jerv","W",1
-"123","kongeørn","W",1
+"123","kongeÃ¸rn","W",1
 "124","lirype","W",1
 "125","NDVI_lower","W",0.236250739207569
 "126","NDVI_upper","W",0.763749260792431
