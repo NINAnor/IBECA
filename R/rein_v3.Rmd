@@ -127,6 +127,14 @@ dat2$ID <- paste0(dat2$navn, dat2$reg)
 
 ```
 
+Jeg legger på en CV på 10% for villrein og 5% for tamrein. Dette gir en spredning i verdier som ser slik ut:
+```{r, warning=F}
+temp <- seq(0,150, 1)
+CV10 <- rnorm(150, 1, .1)
+ggplot()+
+  geom_point(mapping = aes(y = temp*CV10,
+                           x = 1:length(temp)))
+```
 
 ```{r}
 
@@ -142,8 +150,8 @@ for(i in dat2$ID){
   temp <- dat2[dat2$ID == i,]
   
   ifelse(temp$type == "Tamrein", 
-           temp2 <- rnorm(nsim, 1, 0.1),
-           temp2 <- rnorm(nsim, 1, 0.05))
+           temp2 <- rnorm(nsim, 1, 0.05),
+           temp2 <- rnorm(nsim, 1, 0.1))
     
   indtemp <- (temp$bestand/temp$Totalreal)*temp2
   IDs <- c(IDs, rep(i, nsim))
@@ -252,7 +260,7 @@ ggplot(data = sims, aes(x = reg, y = val))+
 ```
 
 Fint.
-Så trenger jeg et arealvektet gjennomsnitt per region.
+Så trenger jeg et arealvektet gjennomsnitt per region. Bruker 100*500 resamplings.
 
 ```{r}
 nsim <- 500
@@ -289,7 +297,7 @@ df <- data.frame(reg = reg,
 
 ```{r}
 ggplot(data = df, aes(x = reg, y = val))+
-  geom_violin(trim=F, fill="black")+
+  geom_violin(trim=F, fill="grey")+
   theme_bw()
 ```
 
