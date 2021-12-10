@@ -41,16 +41,15 @@ ANO data
 - locations  
 - species 
 
-```{r include = FALSE}
-#setwd("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/projects/økol tilst fjell 2021")
+```{r data import, include = FALSE}
 
-ind_swe <- read.table(file="data/varmekrav/ind_swe.txt", sep = '\t', header=T, quote = '')
+ind_swe <- read.table(file="../data/varmekrav/ind_swe.txt", sep = '\t', header=T, quote = '')
 
-load("data/varmekrav/Eco_State.RData")
+load("../data/varmekrav/Eco_State.RData")
 
-ANOpkt <- read.table(file="data/varmekrav/PunktData_all.txt", dec=',', sep = '\t', header=T)
-ANOpkt.geo <- read.table(file="data/varmekrav/ANO_geo.csv", sep = ',', header=T)
-sp <- read.table(file="data/varmekrav/ArtsData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt <- read.table(file="../data/varmekrav/PunktData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt.geo <- read.table(file="../data/varmekrav/ANO_geo.csv", sep = ',', header=T)
+sp <- read.table(file="../data/varmekrav/ArtsData_all.txt", dec=',', sep = '\t', header=T)
 ```
 
 ind_swe is a data frame with a range of species indicators for Swedish plant species. Literature reference:
@@ -85,7 +84,7 @@ head(sp)
 ```
 
 
-```{r include = FALSE}
+```{r data handling, include = FALSE}
 #### Data handling
 ### Indicator data
 names(ind_swe)[1] <- 'species'
@@ -241,7 +240,7 @@ head(sp)
 
 ### Concept for the reference
 We can calculate cumulative cums of cover for all Heat-requirement levels starting with the highest level. Note that (i) it is maximum cover that is represented in the generalized species lists from NiN, and (ii) we use relative cover, i.e. every species' cover is devided by the total cover of all species summed.
-```{r echo = FALSE}
+```{r calculate cumsums, echo = FALSE}
 abun.cumsums <- abun.sums <- data.frame(ind=rev(1:9))
 
 for (i in 2:28) {
@@ -257,7 +256,7 @@ for (i in 2:28) {
 colnames(abun.cumsums)[2:28] <- colnames(mount.dat.cov)[2:28]
 ```
 Here is an example illustrating how this  cumulative distribution of cover from high to low heat requirement for one ecosystem type in NiN: T3-C4 is a leeside with intermediate access to lime  (Intermediær leside)
-```{r echo=FALSE}
+```{r, echo=FALSE}
 plot(abun.cumsums[,1],abun.cumsums[,10],
      type='b',
      xlab="Heat_requirement",
@@ -269,7 +268,7 @@ Under climate warming we'd expect the plant community to show a shift in dominan
 Under this scenario, we should expect the cumulative sum of relative cover for higher heat requirement to at some point in time exceed the maximum value in the reference distribution.  
 Below comes the same plot as above, but now also including the cumulative cover for two ANO-points.
 
-```{r echo = FALSE}
+```{r ANO examples, echo = FALSE}
 good <- sp[sp$ParentGlobalID=='c0594346-c084-4d61-9c4d-4b0c0d50dd83',c('Species','Dekning','Heat_requirement')]
 bad <- sp[sp$ParentGlobalID=='4a39f7af-7aa2-4aaa-9907-e52d08268186',c('Species','Dekning','Heat_requirement')]
 
@@ -302,7 +301,7 @@ All we need to do is now to define at which level of heat requirement the cumula
 
 We evaluate all NiN-types visually and create a table holding this information and with space for the scaling values which are to be defined further down.
 
-```{r echo = FALSE}
+```{r heat requirement thresholds, echo = FALSE}
 heat.scal.tab.boot <- data.frame(NiN=colnames(mount.dat.cov)[2:28],                            ind_level=NA,ref=NA,lim=NA,maxmin=1)
 heat.scal.tab.boot$ind_level <- c(3,3,3,3,3,3,3,3,3,3,3,4,4,3,3,3,3,3,3,3,3,3,2,NA,3,3,3)
 ```
@@ -318,7 +317,7 @@ ind_level...the Heat_requirement threshold value for calculating summed cover
 iter...number of iterations  
 obl...allows to specify if certain abundance levels (and above) are to be retained in every sample  
 rat...ratio of the number of species in the respective ecoystem type (i.e. defines sampling ratio in the bootstrap)  
-``` {r}
+``` {r bootstrap function for reference}
 indBoot.HeatOverhang <- function(sp,abun,ind, ind_level,iter,obl,rat) {
   
   # data frame to hold the results
@@ -366,7 +365,7 @@ We run the bootstrap (here with 1000 iterations for now)
 Here, we keep the two highest abundance classes (4/5 & 1, argument 'obl'), sampling 1/2 of the original list (argument 'rat')  
 Note that I tried different values for rat (from 1/3 to 4/5)...but the results hardly changed
 
-```{r}
+```{r bootstrap run}
 heat.ind.b <- indBoot.HeatOverhang(sp=mount.dat.cov[,1],
                                    abun=mount.dat.cov[,2:28],
                                    ind=mount.dat.cov[,29],
@@ -376,7 +375,7 @@ heat.ind.b <- indBoot.HeatOverhang(sp=mount.dat.cov[,1],
 Then we derive the limit and reference values from the bootstrapped distribution
 e.g. limit value = 95% percentile, reference value = median, maximum value = 1 (i.e. the cumulative cover already reaching 1 before reaching the heat requirement threshold)
 
-```{r error = FALSE, message = FALSE}
+```{r derive ref threshold values, error = FALSE, message = FALSE}
 for (i in 1:ncol(heat.ind.b) ) {
   
   tryCatch({
@@ -392,7 +391,7 @@ for (i in 1:ncol(heat.ind.b) ) {
 ```
 
 
-```{r include = FALSE}
+```{r ref handling, include = FALSE}
 ## some fixing of double NiN-type species lists
 
 # removing the lower values (of a & b) for the NiN types with 2 species lists
@@ -430,7 +429,7 @@ heat.scal.tab.boot
 ## Scaling of the evaluation data to an ecological-condition index
 We calculate the relative cumulative cover for species at and above the heat requirement threshold for the ANO data and evaluate these against their respective reference values (i.e. scaling according to reference value=1, limit value=0.6, and maximum value=0)
 This is just technical, so we don't show the code.
-```{r include = FALSE}
+```{r index scaling, include = FALSE}
 ## scaled values ####
 r.s <- 1    # reference value
 l.s <- 0.6  # limit value
@@ -532,7 +531,7 @@ result.mount$Hovedtype_rute <- as.factor(result.mount$Hovedtype_rute)
 result.mount$Hovedtype_rute <- factor(result.mount$Hovedtype_rute)
 ```
 Here's the result
-```{r echo = FALSE}
+```{r, echo = FALSE}
 summary(result.mount[,"Heat"])
 ```
 
@@ -542,7 +541,7 @@ T14 = ridge (rabbe)
 T7 = snowbed (snøleie)  
 T22 = grassy mountain heath & tundra (fjellgrashei & grastundra)  
 
-``` {r echo = FALSE}
+``` {r result, echo = FALSE}
 
 # sample size
 sample_size = result.mount %>% group_by(Hovedtype_rute) %>% summarize(num=n())
@@ -568,8 +567,6 @@ result.mount %>%
 Not quite unexpected it is the leesides that show the strongest signal. They are largely below the threshold value of 0.6, indicating a larger cover of species with higher Heat_requirement than expected for NiN-species-lists.
 
 
-
-
-
+[Klikk here](tilrettelegge.html) to see the next step in the analysis, aggregation and standardization of the indicator data set.
 
 
