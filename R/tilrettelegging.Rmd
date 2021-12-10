@@ -457,6 +457,23 @@ ndvi3 <- ndvi2[ndvi2$reg!="Norge",]
 )
 ```
 
+NDVI-dataene kommer fra et utvalg av pixler, og er slikt sett ikke arealdekkende, men arealrepresentativt. Vi kan derfor bruke den romlige variasjonen som usikkerhet i hvorvidt endringen er reell. Dvs, vi bruker det bootstrappede datasettet
+
+```{r}
+ndvi_lower <- select(ndvi, reg = region,
+                     val = ndvi.index.l)
+ndvi_lower$X <- "NDVI_lower"
+ndvi_lower$nCells <- ndviWgt$lower[match(ndvi_lower$reg, ndviWgt$region)]
+
+ndvi_upper <- select(ndvi, reg = region,
+                     val = ndvi.index.u)
+ndvi_upper$X <- "NDVI_upper"
+ndvi_upper$nCells <- ndviWgt$upper[match(ndvi_upper$reg, ndviWgt$region)]
+
+```
+
+
+
 ```{r, eval=F}
 png("../output/indicatorPlots/skalert/ndvi_barplot.png", 
     units="in", width=8, height=7, res=300)

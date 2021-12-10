@@ -227,6 +227,7 @@ ndvi_upper$year <- 2020
 ndvi_upper$period <- 
   periods$period[match(ndvi_upper$year, periods$year)]
 ndvi_upper <- dplyr::select(ndvi_upper, -X.1)
+table(ndvi_upper$reg)
 ```
 
 
@@ -237,6 +238,7 @@ ndvi_lower$year <- 2020
 ndvi_lower$period <- 
   periods$period[match(ndvi_lower$year, periods$year)]
 ndvi_lower <- dplyr::select(ndvi_lower, -X.1)
+table(ndvi_lower$reg)
 ```
 
 
