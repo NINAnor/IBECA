@@ -1,0 +1,170 @@
+---
+title: "Vedlegg 1. Dokumentasjon av indikatorer brukt i beregning av tilstandsverdi for fjell."
+output: 
+  pdf_document:
+    df_print: kable
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readxl)
+library(knitr)
+library(kableExtra)
+library(plyr)
+library(dplyr)
+library(tinytex)
+
+
+doc <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
+```
+
+```{r, echo=F}
+
+doc$Indikator <- as.factor(doc$Indikator)
+doc$Indikator <- droplevels(doc$Indikator)
+doc$Indikator <- plyr::revalue(doc$Indikator,c(
+  "Bestandsnivå-fjellrev"           = "Fjellrev",
+  "Bestandsnivå-jerv"               = "Jerv",
+  "Smågnagere"                      = "Smågnagere",
+  "Bestandsnivå-lirype"             = "Lirype",
+  "Bestandsnivå-fjellrype"          = "Fjellrype",
+  "Kongeørn"                        = "Kongeørn",
+  "Vegetasjonens varmekrav"         = "Vegetasjonens varmekrav",
+  "NI-for-fjell"                    = "Naturindeks for fjell (mod.)",
+  "EllenbergN"                      = "Ellenberg N",
+  "EllenbergL"                      = "Ellenberg L",
+  "Areal-uten-fremmede-plantearter" = "Fravær av fremmede arter",
+  "NDVI"                            = "NDVI", 
+  "Areal-uten-tekniske-inngrep"     = "Areal uten tekniske inngrep",
+  "Areal-av-isbreer"                = "Areal av isbreer",
+  "Snødybde"                        = "Snødybde",
+  "Vinterregn"                      =  "Vinterregn",
+  "Snødekkets varighet"             = "Snødekkets varighet",
+  "Fragmentering"                   = "Konnektivitet",
+  "Rein"                            = "Rein"
+))
+
+                     
+```
+
+
+```{r, echo=F}
+for(i in 1:nrow(doc)){
+  docTemp <- doc[i,]
+  docTemp <- as.data.frame(t(docTemp))
+  docTemp <- as.data.frame(cbind(row.names(docTemp), docTemp$V1))
+
+  name <- docTemp$V2[1]
+  
+  docTemp <- kableExtra::kbl(docTemp, longtable = F,
+        col.names = NULL,
+        #position = "here",
+        caption =   paste("Faktaark for tilstandindikatoren ", name))%>%
+    kable_styling(full_width = F,
+               font_size = 8,
+               latex_options = "HOLD_position")%>%
+    column_spec(1, width = "5cm")%>%
+    column_spec(2,  width = "11cm")
+
+  assign(name, docTemp)
+}
+rm(doc, i, name)
+```
+
+
+```{r, echo=F}
+myTbls <- ls()
+temp <- get(myTbls[1])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[2])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[3])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[4])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[5])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[6])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[7])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[8])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[9])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[10])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[11])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[12])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[13])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[14])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[15])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[16])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[17])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[18])
+temp
+```
+
+```{r, echo=F}
+temp <- get(myTbls[19])
+temp
+```

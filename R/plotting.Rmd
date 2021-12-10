@@ -173,6 +173,20 @@ inon$X <- "INON"
 inon$period <- periods$period[match(inon$year, periods$year)]
 ```
 
+Er INON og Konnektivitetsindeksen korrelert?
+```{r}
+plot(fragmentering$val, 
+     inon$val[inon$period==6],
+     ylim = c(0,1), xlim=c(0,1),
+     ylab = "INON", xlab = "Konnektivitet",
+     col = "black", pch = 21, bg="grey", cex=2, lwd=2)
+abline(a=0, b=1)
+text(0.6, 0.2, paste("Pearson's r = ", 
+    round(cor(fragmentering$val, 
+         inon$val[inon$period==6]), 2)))
+```
+De er ganske korrelerte ja!
+
 ### Jerv
 ```{r}
 jerv <- read.csv("../output/indicator_values/jerv.csv", header=T)

@@ -15,12 +15,6 @@ knit: (function(input_file, encoding) {
   
 ```{r setup, include=FALSE, message=FALSE}
 library(knitr)
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-### R-libraries nedded
-```{r setup, message=FALSE, warning = FALSE}
-library(knitr)
 library(tidyr)
 library(stringr)
 library(tidyverse)
@@ -30,6 +24,7 @@ library(hrbrthemes)
 library(viridis)
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
 
 # Analyses of heat requirement of species in a plant community 
 - Data import & handling  
@@ -315,7 +310,7 @@ heat.scal.tab.boot$ind_level <- c(3,3,3,3,3,3,3,3,3,3,3,4,4,3,3,3,3,3,3,3,3,3,2,
 ### Definition of scaling values
 Next step is to define scaling values for scaling evaluation data to the ecological condition index based on the cumulative cover distributions for each NiN ecosystem type. For this, we bootstrap the NiN species lists, calculate the (relative) cumulative cover for all species at the heat requirement threshold and above in each bootstrap, and then derive limit and reference values from the resulting distribution of bootstraped cumulative cover values.
 
-##### Bootstrap function
+#### Bootstrap function
 sp...the species names  
 abun...the species abundances for every ecosystem type  
 ind...the indicator value for each species  
@@ -576,18 +571,5 @@ Not quite unexpected it is the leesides that show the strongest signal. They are
 
 
 
-
-
-
-
-
-
-
-
-
-## Sjekkliste
-Sjekklisten er ikke utfylt enda.
-
-![Sjekkliste](../output/test/abc.pdf){width=100%}
 
 

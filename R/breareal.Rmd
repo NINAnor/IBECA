@@ -369,7 +369,7 @@ Her er alternativene oppsummert:
 Her kan det diskuteres hva som egentlig er best, men vi har valgt å gå for alt 4 for å være konsistent med SEEA EA bl.a. Indikatorverdien for Norge er da 0.62. 
 
 ## Usikkerhet
-NVE oppgir 3% usikkerhet ved metoden. Dette tolker jeg som at +- 3 er %99.9%CI for estimatet. Dvs ca 2 SD
+NVE oppgir 3% usikkerhet ved metoden. Dette tolker jeg som at +- 3% utgjør 99.9%CI for estimatet (ca 2 SD).
 ```{r}
 reg <- c("N", "C", "E", "W", "S")
 myTbl$reg <- c("C", "N", "S", "W", "E")

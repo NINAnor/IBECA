@@ -71,7 +71,6 @@ Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){widt
 ```{r, echo=FALSE}
 tbl <- get("Areal-uten-tekniske-inngrep")
 tbl
-
 ```
 
 ## Ellenberg N
@@ -175,7 +174,7 @@ tbl
 
 ## NDVI
 
-Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/NDVI.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/ndvi-trend_fjell.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene. Se også [her](tilrettelegge.html) for de siste stegene i analysen.
 
 
 ```{r, echo=FALSE}
@@ -228,6 +227,16 @@ tbl <- get("Snødekkets varighet")
 tbl
 ```
 
+## Vegetasjonens varmekrav
+
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/vegetasjonens_varmekrav.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+
+```{r, echo=FALSE}
+tbl <- get("Vegetasjonens varmekrav")
+tbl
+```
+
 ## Vinterregn
 
 Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/vinterregn.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
@@ -238,8 +247,3 @@ tbl <- get("Vinterregn")
 tbl
 ```
 
-# Skog
-...
-
-# Våtmark
-...

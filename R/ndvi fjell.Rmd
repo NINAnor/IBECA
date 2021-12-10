@@ -1,7 +1,6 @@
 ---
 title: "NDVI trend fjell"
 output:
-  github_document: default
   html_document:
     toc: yes
     toc_depth: 3
