@@ -42,15 +42,15 @@ ANO data
 - species 
 
 ```{r include = FALSE}
-setwd("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/projects/økol tilst fjell 2021")
+#setwd("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/projects/økol tilst fjell 2021")
 
-ind_swe <- read.table(file="input/indicators/ind_swe.txt", sep = '\t', header=T, quote = '')
+ind_swe <- read.table(file="data/varmekrav/ind_swe.txt", sep = '\t', header=T, quote = '')
 
-load("input/reference/Eco_State.RData")
+load("data/varmekrav/Eco_State.RData")
 
-ANOpkt <- read.table(file="input/ANO/PunktData_all.txt", dec=',', sep = '\t', header=T)
-ANOpkt.geo <- read.table(file="input/ANO/ANO_geo.csv", sep = ',', header=T)
-sp <- read.table(file="input/ANO/ArtsData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt <- read.table(file="data/varmekrav/PunktData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt.geo <- read.table(file="data/varmekrav/ANO_geo.csv", sep = ',', header=T)
+sp <- read.table(file="data/varmekrav/ArtsData_all.txt", dec=',', sep = '\t', header=T)
 ```
 
 ind_swe is a data frame with a range of species indicators for Swedish plant species. Literature reference:
