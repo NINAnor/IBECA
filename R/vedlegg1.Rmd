@@ -8,6 +8,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+options(knitr.kable.NA = '-')
 library(readxl)
 library(knitr)
 library(kableExtra)
@@ -57,13 +58,13 @@ for(i in 1:nrow(doc)){
 
   name <- docTemp$V2[1]
   
-  docTemp <- kableExtra::kbl(docTemp, longtable = F,
+  docTemp <- kableExtra::kbl(docTemp, 
+        longtable = T, booktabs = T,
         col.names = NULL,
-        #position = "here",
         caption =   paste("Faktaark for tilstandindikatoren ", name))%>%
     kable_styling(full_width = F,
                font_size = 8,
-               latex_options = "HOLD_position")%>%
+               latex_options = c("HOLD_position", "striped"))%>%
     column_spec(1, width = "5cm")%>%
     column_spec(2,  width = "11cm")
 
