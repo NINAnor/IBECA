@@ -28,10 +28,13 @@ The indicator is based on a random sample of 20 000 pixels from within the defin
 ## Libraries needed
 ```{r message = FALSE, warning = FALSE}
 library(tidyverse)
+library(dplyr)
 library(broom)
 library(sf)
 library(RColorBrewer)
 library("gridExtra") 
+library(ggridges)
+library(ggplot2)
 ```
 
 ## Data
@@ -44,7 +47,7 @@ theme_set(theme_bw()+
             theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
             theme(strip.background =element_rect(fill="white")))
 
-ndviTS <- read_csv('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_annual_randomSample.csv') %>%
+ndviTS <- read_csv('../data/NDVI/NDVI_annual_randomSample.csv') %>%
   mutate(ndvi = mean) %>%
   dplyr::select(ID, year, ndvi) %>%
   # drop NA values
@@ -56,9 +59,9 @@ ndviTS <- read_csv('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/gith
   ungroup() %>% dplyr::select(-n)
 
 
-locations<- st_read('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/randomSample_locations.shp')
+locations<- st_read('../data/NDVI/randomSample_locations.shp')
 
-regions<- st_read('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/regioner_2010/regNorway_wgs84 - MERGED.shp')
+regions<- st_read('../data/regioner_2010/regNorway_wgs84 - MERGED.shp')
 ```
 
 ndviTS is a simple tibble with the variables ID, year and NDVI
@@ -114,7 +117,7 @@ ndviTrends_ran <- ndviTS %>%
 ``` {r include = FALSE}
 # save the result of the regressions and rather load it from the workspace rather than running the reg's all over again as the reg's take time
 #save.image('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_regressions')
-load('C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/data/NDVI/NDVI_regressions')
+load('../data/NDVI/NDVI_regressions')
 
 ```
 
@@ -240,6 +243,21 @@ levels(ndviTrends3$region)
 levels(ndviTrends3$region)[c(1,4)] <- c("Austlandet","Soerlandet")
 levels(ndviTrends3$region)
 
+```
+
+Here is a graphic representation of the slopes by region (for the original data, no ranomization of years)  
+``` {r slope plot, echo=FALSE}
+
+ndviTrends3$region2 <- ndviTrends3$region
+levels(ndviTrends3$region2) <- c("Østlandet","Midt-Norge","Nord-Norge","Sørlandet","Vestlandet")
+ndviTrends3$region2 <- factor(ndviTrends3$region2, levels = rev(c("Sørlandet","Østlandet","Midt-Norge","Vestlandet","Nord-Norge")))
+
+ggplot(ndviTrends3, aes(x = slope, y = region2, fill = region2)) +
+  geom_density_ridges(alpha=1) +
+  theme_ridges() + 
+  theme(legend.position = "none") +
+  xlim(-0.006, 0.008) +
+  labs(x='Årlig NDVI-endring',y='Region')
 ```
 
 ## Bootstrapping
@@ -387,3 +405,6 @@ nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),])/
   (nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.l),])+
      nrow(ndviTrends2[!is.na(ndviTrends2$ndvi.index.u),]))
 ```
+
+
+[Klikk here](tilrettelegge.html) to see the next steps of the analysis, aggregation and standardization of the indicator dataset.
