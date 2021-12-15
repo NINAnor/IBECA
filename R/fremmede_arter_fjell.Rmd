@@ -15,28 +15,439 @@ knit: (function(input_file, encoding) {
 
 ```{r setup, include=FALSE, message=FALSE}
 library(knitr)
+library(tibble)
+library(dplyr)
+library(stringr)
+library(tidyr)
+library(tidyverse)
+library(ggplot2)
+library(hrbrthemes)
+library(viridis)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ## Beskrivelse
-Fremmede arter kan endre økologiske funskjoner og utkonkurere hjemlige arer. Det er imidlertidig få fremmede arter på fjellet i dag. Det kan diskuteres om den introduserte  prionsjukdommen skrantesjuke bør inkluderes her, selv om den ikke oppfyller den vanligste definisjonen på 'art'.
+Fremmede arter kan endre økologiske funskjoner og utkonkurrere hjemlige arter. Det er imidlertidig få fremmede arter på fjellet i dag. Her viser vi først kunnskapsstatus for påvirkningsfaktoren fremmedartsintroduksjoner i fjelløkosystemer fra Fremmedartslisten 2018, og så evaluerer vi data fra overvåkingsprogrammet ANO fra årene 209-2021 for fremmede plantearter.
 
+## Data import & handling
+This document includes two data sets:
 
-## Påvirkningsindikatorer
-Her vil du kunne lese om ulike påvirkningsindikatorer som sier oss noe om
-trender og status for den aktuelle påvirkningen 
+Alien species introductions form Fremmedartslista 2018 (pressure data)  
+ANO data 2018-2021 (ecological condition data)  
+- geography  
+- locations 
 
-```{r cars}
-summary(cars)
+# Pressure indicator 'Introduction of alien species'
+
+```{r data import fremmedartslista, include = FALSE}
+
+spr <- read.delim('../data/alien species/spr.txt',header=T, sep = '\t')
+sp <- read.delim('../data/alien species/sp.txt',header=T, sep = '\t')
+
 ```
 
+```{r data handling fremmedartslista, include = FALSE}
+#### Data handling
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+### Fremmedartsliste data
+# removing entries for Svalbard
+sprN <- subset(spr, grepl('N', Id))
+spN <- subset(sp, grepl('N', Id))
+# checking how many colonizations via the main intro categories
+sprN$num=1
+for (i in unique(sprN$mcat) ) {
+  
+  print(i)
+  print(sum(sprN[sprN$mcat==i,'num']))
+}
+
+# merging sprN & spN
+colnames(spN)
+spN <- spN[,c(2:7,10:13,16,19,24:28,31:35,42:43,53,56)]
+sprspN <- merge(sprN, spN, by='TaxonId', all=T)
+head(sprspN)
+summary(sprspN)
+sprspN[sprspN$TaxonId==135279,'C_koloniserte_naturtyper']
+
+# splitting the NiN information from one col for all NiN-types to one col for each NiN-type
+split_into_multiple <- function(column, pattern = ", ", into_prefix){
+  cols <- str_split_fixed(column, pattern, n = Inf)
+  # Sub out the ""'s returned by filling the matrix to the right, with NAs which are useful
+  cols[which(cols == "")] <- NA
+  cols <- as_tibble(cols)
+  # name the 'cols' tibble as 'into_prefix_1', 'into_prefix_2', ..., 'into_prefix_m' 
+  # where m = # columns of 'cols'
+  m <- dim(cols)[2]
+  
+  names(cols) <- paste(into_prefix, 1:m, sep = "_")
+  return(cols)
+}
+
+sprspN.x <- sprspN %>% 
+  bind_cols(split_into_multiple(.$C_koloniserte_naturtyper, ",", "NiN")) #%>% 
+# selecting those that start with 'NiN_' will remove the original 'type' column
+# select(attr, starts_with("NiN_"))
+
+# tidying up the dataframe by gathering all the NiN-cols into one column
+sprspN.x <- gather(sprspN.x, 'no', 'NiN', -(1:37) )
+colnames(sprspN.x)
+dim(sprspN.x)
+# getting rid of the comment-column (11), and the redundant NiN-columns ("C_koloniserte_naturtyper" & "no")
+sprspN.x <- sprspN.x[,c(1:10,12:36,39)]
+
+# removing duplicate rows (arising from NiN-columns with NA's)
+sprspN.x <- distinct(sprspN.x)
+dim(sprspN.x)
+
+# splitting the information on 'Arten_finnes_i_foelgende_fylker_omraader' from one col for all fylker to one col for each fylke
+sprspN.xx <- sprspN.x %>% 
+  bind_cols(split_into_multiple(.$Arten_finnes_i_foelgende_fylker_omraader, ",", "fylke")) #%>% 
+# selecting those that start with 'fylke_' will remove the original 'type' column
+# select(attr, starts_with("fylke_"))
+
+# tidying up the dataframe by gathering all the fylke-cols into one column
+sprspN.xx <- gather(sprspN.xx, 'no', 'fylke', -(1:36) )
+colnames(sprspN.xx)
+dim(sprspN.xx)
+# getting rid of the redundant fylke-columns ("Arten_finnes_i_foelgende_fylker_omraader" & "no")
+sprspN.xx <- sprspN.xx[,c(1:31,33:36,38)]
+
+# removing duplicate rows (arising from fylke-columns with NA's)
+sprspN.xx <- distinct(sprspN.xx)
+dim(sprspN.xx)
+
+# there is codes from NiN1.0 (livsmedium) and NiN2.0 (habitat types)
+sprspN.xx$NiNver <- 'NiN2'
+sprspN.xx[grepl('S', sprspN.xx$NiN),'NiNver'] <- 'NiN1'
+sprspN.xx$NiNver <- as.factor(sprspN.xx$NiNver)
+summary(sprspN.xx)
+
+# harmonizing varying NiN-levels (grunntype, hovedtype, kartleggingsenhet) within NiN2.0 to hovedtype
+sprspN.xx[sprspN.xx$NiNver=='NiN2','NiN'] <- gsub("\\-.*","",sprspN.xx[sprspN.xx$NiNver=='NiN2','NiN']) # removing basic type and mapping unit suffixes like '-4' and '-C-4'
+sprspN.xx$NiN <- as.factor(sprspN.xx$NiN)
+
+# creating variable for NiN-hovedtypegruppe from the NiN-column
+sprspN.xx$NiNH <- NA
+sprspN.xx[sprspN.xx$NiNver=='NiN2','NiNH'] <- substr(sprspN.xx[sprspN.xx$NiNver=='NiN2','NiN'],1,1)
+sprspN.xx$NiNH <- as.factor(sprspN.xx$NiNH)
+summary(sprspN.xx)
+
+levels(sprspN.xx$Seksuell_reproduksjon)
+levels(sprspN.xx$Seksuell_reproduksjon) <- c('nei','ja')
+sprspN.xx[is.na(sprspN.xx$Seksuell_reproduksjon),'Seksuell_reproduksjon'] <- 'nei'
+levels(sprspN.xx$Aseksuell_reproduksjon)
+levels(sprspN.xx$Aseksuell_reproduksjon) <- c('nei','ja')
+sprspN.xx[is.na(sprspN.xx$Seksuell_reproduksjon),'Seksuell_reproduksjon'] <- 'nei'
+
+sprspN.xx$repro <- as.factor(paste(sprspN.xx$Seksuell_reproduksjon,sprspN.xx$Aseksuell_reproduksjon, sep='_'))
+
+levels(sprspN.xx$repro) <- c('both','sexual','asexual','unknown','unknown')
+
+# tidying up the workspace
+datN <- sprspN.xx
+rm(list=ls(pattern="sp"))
+
+# removing all NiN1 rows for the moment
+datn <- datN[datN$NiNver=='NiN2',]
+datn$NiN <- factor(datn$NiN)
+datn$num=1
+### only taking into account species assessed as alien
+datn <- datn[datn$Vurderingskategori=='AlienSpecie',]
+
+### creating a column for regions
+datn$fylke <- as.factor(datn$fylke)
+datn$region <- datn$fylke
+levels(datn$fylke)
+levels(datn$region) <- c('O','N','O','V','Ja','M','N','M','O','O','V','V','M','Sv','S','N','S','O','O','S')
+# removing the fylke variable and the resulting duplicate rows
+dim(datn)
+datn$fylke <- NULL
+dim(datn)
+datn <- distinct(datn)
+dim(datn)
+
+### only taking into account invasions into mountain ecosystems
+head(datn)
+unique(datn$NiN)
+datn.fjell <- datn[datn$NiN=='T3' | datn$NiN=='T7' | datn$NiN=='T14' | datn$NiN=='T22'| datn$NiN=='T9'| datn$NiN=='T10'| datn$NiN=='T26',]
+# merging the mountain ecosystem types to one main ecosytem type (fjell) & removing duplicate rows (due to mountain types merged)
+datn.fjell$NiN <- factor(datn.fjell$NiN)
+datn.fjell$NiNx <- datn.fjell$NiN
+levels(datn.fjell$NiN) <- c('fjell','fjell','fjell','fjell')
+dim(datn.fjell)
+datn.fjell <- distinct(datn.fjell)
+dim(datn.fjell)
+# removing the muskoxen, since they are re-introduced
+datn.fjell <- datn.fjell[datn.fjell$navn!='moskusfe' & !is.na(datn.fjell$navn),]
+
+# creating one df for the country total and removing duplicate rows from merging regions to country
+datn.fjell.T <- datn.fjell
+dim(datn.fjell.T)
+datn.fjell.T$region <- NULL
+dim(datn.fjell.T)
+datn.fjell.T <- distinct(datn.fjell.T)
+dim(datn.fjell.T)
+
+
+
 ```
 
+We can plot the cumulative introduction of alien species over time for each region
+``` {r alien introduction result, echo = FALSE, fig.show='hide'}
+
+# summarizing
+h.T <- hist(datn.fjell.T$Foerst_observert2,xlim=c(1730,2030),breaks=30,main='Norge total',xlab='',ylab='')
+h.N <- hist(datn.fjell[datn.fjell$region=='N','Foerst_observert2'],xlim=c(1730,2030),ylim=c(0,110),breaks=30,main='Nord-Norge',xlab='',ylab='')
+h.M <- hist(datn.fjell[datn.fjell$region=='M','Foerst_observert2'],xlim=c(1730,2030),ylim=c(0,110),breaks=30,main='Midt-Norge',xlab='',ylab='')
+h.V <- hist(datn.fjell[datn.fjell$region=='V','Foerst_observert2'],xlim=c(1730,2030),ylim=c(0,110),breaks=30,main='Vestlandet',xlab='',ylab='')
+h.O <- hist(datn.fjell[datn.fjell$region=='O','Foerst_observert2'],xlim=c(1730,2030),ylim=c(0,110),breaks=30,main='Østlandet',xlab='',ylab='')
+h.S <- hist(datn.fjell[datn.fjell$region=='S','Foerst_observert2'],xlim=c(1730,2030),ylim=c(0,110),breaks=30,main='Sørlandet',xlab='',ylab='')
+
+# one figure for all
+cols <- c("dark grey", "#FFB25B", "#2DCCD3","#004F71", "#7A9A01", "#93328E") 
+```
+
+``` {r alien introduction plot, echo = FALSE}
+par(mfrow=c(1,1),mar=c(5,5.5,2,1))
+with( h.T, plot(mids,cumsum(counts),type='l',col= cols[1],lwd=3,
+                ylim=c(0,20), frame=F,main='',yaxt='n',
+                xlab='?rstall',ylab='Antall fremmedartsintroduksjoner \n i fjell (kumulativt)') )
+axis(side=2, labels= c('0','','10','','20'),at=seq(0,20,5))
+with(h.M, points(mids,cumsum(counts),type='l',col= cols[5],lwd=3) )
+with(h.V, points(mids,cumsum(counts),type='l',col= cols[4],lwd=3) )
+with(h.O, points(mids,cumsum(counts),type='l',col= cols[2],lwd=3) )
+with(h.S, points(mids-0.5,cumsum(counts),type='l',col= cols[3],lwd=3) )
+with(h.N, points(mids+0.5,cumsum(counts),type='l',col= cols[6],lwd=3) )
+legend('topleft',legend=c('Norge total','Nord-Norge','Midt-Norge','Vestlandet','Østlandet','Sørlandet'), 
+       col=cols[c(1,6,5,4,2,3)],
+       lty=1,lwd=3,bty='n')
+```
+
+The introductions cover 17 species within 2 kingdoms - all 11 animal species are birds  
+```{r, echo = FALSE}
+data.frame(Plantae=nrow(datn.fjell.T[datn.fjell.T$kingdom=='Plantae',]),
+           Fungi=nrow(datn.fjell.T[datn.fjell.T$kingdom=='Fungi',]),
+           Chromista=nrow(datn.fjell.T[datn.fjell.T$kingdom=='Chromista',]),
+           Animalia=nrow(datn.fjell.T[datn.fjell.T$kingdom=='Animalia',]),
+           Aves=nrow(datn.fjell.T[datn.fjell.T$class=='Aves',])
+)
+```
+
+The introductions cover 3 ecosystem types  
+```{r, echo = FALSE}
+data.frame(Fjellhei_leside_tundra=nrow(datn.fjell.T[datn.fjell.T$NiNx=='T3',]),
+           Snøleie=nrow(datn.fjell.T[datn.fjell.T$NiNx=='T7',]),
+           Rabbe=nrow(datn.fjell.T[datn.fjell.T$NiNx=='T14',]),
+           Fjellgrashei=nrow(datn.fjell.T[datn.fjell.T$NiNx=='T22',])
+)
+```
+
+# Condition indicator 'Area without cover of alien plant species'
+
+This indicator is defined as 'Area with alien species cover' for plant species since systematically collected data on alien species are available for plants.
+
+```{r data import ANO, include = FALSE}
+
+ANOpkt <- read.table(file="../data/varmekrav/PunktData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt.geo <- read.table(file="../data/varmekrav/ANO_geo.csv", sep = ',', header=T)
+
+```
+
+```{r data handling ANO, include = FALSE}
+#### Data handling
+
+
+### preparing ANO punkt-data and merging with geographical imformation
+head(ANOpkt)
+
+colnames(ANOpkt)
+# simplfy punkt data
+pkt.vars <- c("GlobalID", "ANO_flate_ID", "ANO_punkt_ID", 
+              "Hovedoekosystem_rute", "Hovedoekosystem_sirkel", "Andel_hovedoekosystem_sirkel", 
+              "Hovedtype_rute", "Kartleggingsenhet_rute", 
+              "Hovedtype_sirkel", "Kartleggingsenhet_sirkel", "Andel_Kartleggingsenhet_sirkel",
+              "Arter_tilstede", "Dekning_fremmedarter")
+
+ANOpkt <- ANOpkt[,pkt.vars]
+ANOpkt <- ANOpkt[!is.na(ANOpkt$GlobalID),]
+
+# merging geographical information with ANOpkt
+# removing duplicate ANOID's (due to multiple historical municipalities)
+ANOpkt.geo <- ANOpkt.geo[!duplicated(ANOpkt.geo$ANOID), ]
+
+head(ANOpkt.geo)
+# fixing names and factor levels in ANOpkt.geo
+colnames(ANOpkt.geo)[c(12,16,21)] <- c("Year","Region","Region_no")
+ANOpkt.geo$CountyName <- as.factor(ANOpkt.geo$CountyName)
+levels(ANOpkt.geo$CountyName) <- c("Oestfold","Akershus",         
+                                    "Aust-Agder","Buskerud",         
+                                    "Finnmark","Hedmark",          
+                                    "Hordaland","Moere og Romsdal",
+                                    "Nordland","Oppland",          
+                                    "Oslo","Rogaland",         
+                                    "Sogn og Fjordane","Telemark",         
+                                    "Troendelag","Troms",          
+                                    "Vest-Agder","Vestfold") 
+ANOpkt.geo$Fylke <- as.factor(ANOpkt.geo$Fylke)
+levels(ANOpkt.geo$Fylke) <- c("Oestfold","Akershus",         
+                                   "Aust-Agder","Buskerud",         
+                                   "Finnmark","Hedmark",          
+                                   "Hordaland","Moere og Romsdal",
+                              "Nord-Troendelag",
+                                   "Nordland","Oppland",          
+                                   "Oslo","Rogaland", 
+                              "Hordaland","Moere og Romsdal",
+                              "Soer-Troendelag",
+                                   "Sogn og Fjordane","Telemark",         
+                                   "Troendelag","Troms",          
+                                   "Vest-Agder","Vestfold") 
+# trimming ANOpkt.geo
+colnames(ANOpkt.geo)
+ANOpkt.geo <- ANOpkt.geo[,c(4,8,9,12,15,16)]
+head(ANOpkt.geo)
+
+colnames(ANOpkt)
+colnames(ANOpkt.geo)
+ANOpkt <- merge(x=ANOpkt, y= ANOpkt.geo,by.x="ANO_flate_ID", by.y="ANOID", all.x=T)
+head(ANOpkt)
+
+
+```
+
+We define the reference value to reflect the abscence of alien species (i.e. 100% cover without alien species), the limit value for good ecological condition is set to 95% (expert-opinion based), and the minimum value is 0.  
+``` {r defining the reference condition}
+
+alien.ref <- data.frame(ref=100,lim=95,min=0)
+```
+
+Next we scale the alien species cover data against the threshold values in alien.ref.  
+``` {r scaling, echo = FALSE, include=FALSE}
+
+#### scaled values ####
+r.s <- 1    # reference value
+l.s <- 0.6  # limit value
+a.s <- 0    # abscence of indicator, or indicator at maximum
+
+#### function for calculating scaled values for measured value ####
+
+## scaling function including truncation
+scal <- function() {
+  # place to hold the result
+  x <- numeric()
+  if (maxmin < ref) {
+    # values >= the reference value equal 1
+    if (val >= ref) {x <- 1}
+    # values < the reference value and >= the limit value can be deducted from the linear relationship between these two
+    if (val < ref & val >= lim) {x <- (l.s + (val-lim) * ( (r.s-l.s) / (ref-lim) ) )}
+    # values < the limit value and > maxmin can be deducted from the linear relationship between these two
+    if (val < lim & val > maxmin) {x <- (a.s + (val-maxmin) * ( (l.s-a.s) / (lim-maxmin) ) )}
+    # value equals or lower than maxmin
+    if (val <= maxmin) {x <-0}
+  } else {
+    # values <= the reference value equal 1
+    if (val <= ref) {x <- 1}
+    # values > the reference value and <= the limit value can be deducted from the linear relationship between these two
+    if (val > ref & val <= lim) {x <- ( r.s - ( (r.s - l.s) * (val - ref) / (lim - ref) ) )}
+    # values > the limit value and < maxmin can be deducted from the linear relationship between these two
+    if (val > lim) {x <- ( l.s - (l.s * (val - lim) / (maxmin - lim) ) )}
+    # value equals or larger than maxmin
+    if (val >= maxmin) {x <-0}
+  }
+  return(x)
+  
+}
 
 
 
+#### creating dataframe to holde the results ####
+ANOpkt.mount <- ANOpkt[ANOpkt$Hovedoekosystem_rute=='fjell' | ANOpkt$Hovedoekosystem_sirkel=='fjell',]
+ANOpkt.mount$Hovedtype_rute <- factor(ANOpkt.mount$Hovedtype_rute)
+ANOpkt.mount$Kartleggingsenhet_rute <- factor(ANOpkt.mount$Kartleggingsenhet_rute)
+
+results.mount.alien <- list()
+# choose columns for site description
+colnames(ANOpkt.mount)
+results.mount.alien[['original']] <- ANOpkt.mount[,c(2,1,3,4:18)]
+
+# add column for the indicators
+results.mount.alien[['original']]$alien <- as.numeric(NA)
+
+summary(results.mount.alien[['original']])
+results.mount.alien[['original']]$Region <- as.factor(results.mount.alien[['original']]$Region)
+results.mount.alien[['original']]$GlobalID <- as.factor(results.mount.alien[['original']]$GlobalID)
+results.mount.alien[['original']]$ANO_flate_ID <- as.factor(results.mount.alien[['original']]$ANO_flate_ID)
+results.mount.alien[['original']]$ANO_punkt_ID <- as.factor(results.mount.alien[['original']]$ANO_punkt_ID)
+results.mount.alien[['original']]$Hovedoekosystem_sirkel <- as.factor(results.mount.alien[['original']]$Hovedoekosystem_sirkel)
+results.mount.alien[['original']]$Hovedoekosystem_rute  <- as.factor(results.mount.alien[['original']]$Hovedoekosystem_rute )
+results.mount.alien[['original']]$Kartleggingsenhet_sirkel <- as.factor(results.mount.alien[['original']]$Kartleggingsenhet_sirkel)
+results.mount.alien[['original']]$Hovedtype_sirkel    <- as.factor(results.mount.alien[['original']]$Hovedtype_sirkel)
+
+
+# roll out
+results.mount.alien[['scaled']] <- results.mount.alien[['original']]
+
+
+#### calculating scaled and non-truncated values for the indicators based on the dataset ####
+for (i in 1:nrow(ANOpkt.mount) ) {  #
+  tryCatch({
+    print(i)
+    print(paste(ANOpkt.mount$ANO_flate_ID[i]))
+    print(paste(ANOpkt.mount$ANO_punkt_ID[i]))
+#    ANOpkt.mount$Hovedoekosystem_sirkel[i]
+#    ANOpkt.mount$Hovedoekosystem_rute[i]
+
+
+    if (ANOpkt.mount$Hovedoekosystem_sirkel[i]=='fjell' & !is.na(ANOpkt.mount$Dekning_fremmedarter[i]) ) {
+      
+      # area without alien species      
+        val <- 100-ANOpkt.mount$Dekning_fremmedarter[i]
+        ref <- alien.ref[,'ref']
+        lim <- alien.ref[,'lim']
+        maxmin <- alien.ref[,'min']
+        # coercing x into results.mount.alien dataframes in list
+        results.mount.alien[['scaled']][i,'alien'] <- scal() 
+        results.mount.alien[['original']][i,'alien'] <- val 
+    }
+    
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
+}
+
+```
+
+Here is the result for Norway  
+``` {r result}
+
+# overall result
+summary(results.mount.alien[['scaled']][,'alien'])
+```
+
+and by region (C = Central, E = Eastern, N = Northern, S = Southern, W = Western)  
+``` {r region result, echo=F, warning = F, message = F}
+
+# sample size
+sample_size = results.mount.alien[['scaled']] %>% group_by(Region) %>% summarize(num=n())
+
+# Plot
+results.mount.alien[['scaled']] %>%
+  left_join(sample_size) %>%
+  mutate(myaxis = paste0(Region, "\n", "n=", num)) %>%
+  ggplot( aes(x=myaxis, y=alien, fill=Region)) +
+    geom_violin(width=1.4) +
+#    geom_boxplot(width=0.1, color="grey", alpha=0.2) +
+    scale_fill_viridis(discrete = TRUE) +
+    theme_ipsum() +
+    theme(
+      legend.position="none",
+      plot.title = element_text(size=11)
+    ) +
+    ggtitle("Scaled index result") +
+    xlab("Region") +
+  ylab("Alien species index")
+
+```
+
+Most indices are equal or close to 1 (optimal). Serious deviations do occur in Eastern and Northern Norway, but they are very seldom. Southern and Western Norway do not have a single index value below 1, i.e. there were no alien species registrations at all.  
+
+
+[Klikk here](tilrettelegge.html) to see the next step in the analysis, aggregation and standardization of the indicator data set.
 
