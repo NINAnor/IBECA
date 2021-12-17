@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-```{r, echo=FALSE, message=F}
+```{r, echo=FALSE, message=F, warning=F}
 library(readxl)
 library(knitr)
 library(kableExtra)
@@ -49,7 +49,7 @@ for(i in 1:nrow(doc)){
 
 ```
 
-# Fjell
+<font size="20"> Fjell </font>
 
 ## Areal av isbreer
 
@@ -75,7 +75,7 @@ tbl
 
 ## Ellenberg N
 
-Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/ellenberg-n.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/ellenberg_indicators.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 
 ```{r, echo=FALSE}
@@ -86,7 +86,7 @@ tbl
 
 ## Ellenberg L
 
-Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/ellenberg-l.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/ellenberg_indicators.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 
 ```{r, echo=FALSE}
@@ -123,6 +123,15 @@ Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){widt
 
 ```{r, echo=FALSE}
 tbl <- get('Fragmentering')
+tbl
+
+```
+
+## Fravær av fremmede arter
+Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fremmede-arter-fjell.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
+
+```{r, echo=FALSE}
+tbl <- get('Areal-uten-fremmede-plantearter')
 tbl
 
 ```
