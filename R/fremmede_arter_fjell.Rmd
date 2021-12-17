@@ -41,8 +41,8 @@ ANO data 2018-2021 (ecological condition data)
 
 ```{r data import fremmedartslista, include = FALSE}
 
-spr <- read.delim('../data/alien species/spr.txt',header=T, sep = '\t')
-sp <- read.delim('../data/alien species/sp.txt',header=T, sep = '\t')
+spr <- read.delim('../data/plant indicators/alien species/spr.txt',header=T, sep = '\t')
+sp <- read.delim('../data/plant indicators/alien species/sp.txt',header=T, sep = '\t')
 
 ```
 
@@ -248,8 +248,8 @@ This indicator is defined as 'Area with alien species cover' for plant species s
 
 ```{r data import ANO, include = FALSE}
 
-ANOpkt <- read.table(file="../data/varmekrav/PunktData_all.txt", dec=',', sep = '\t', header=T)
-ANOpkt.geo <- read.table(file="../data/varmekrav/ANO_geo.csv", sep = ',', header=T)
+ANOpkt <- read.table(file="../data/plant indicators/ANO/PunktData_all.txt", dec=',', sep = '\t', header=T)
+ANOpkt.geo <- read.table(file="../data/plant indicators/ANO/ANO_geo.csv", sep = ',', header=T)
 
 ```
 
