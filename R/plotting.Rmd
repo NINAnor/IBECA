@@ -485,7 +485,7 @@ ndviW$wLow <- ndviW$low/ndviW$tot
 
 
 ndviW <- select(ndviW, reg, wLow, wHigh)
-ndviW
+head(ndviW)
 ```
 
 ### Ellenberg L
@@ -649,7 +649,7 @@ write.csv(ind_char, "../output/ind_char.csv")
 
 # Step 5: Indicator quantiles per region and period
 
-```{r}
+```{r, eval=F}
 #unique(allind$X[allind$reg=="A"])
 
 periods <- unlist(unique(allind$period))
@@ -657,7 +657,7 @@ regions <- unlist(unique(allind$reg))
 per_reg <- length(periods)*length(regions)
 ```
 
-```{r, eval=T}
+```{r, eval=F}
 all_Q <- data.frame()
 
 for(n in unique(allind$X)){
@@ -676,12 +676,12 @@ for(n in unique(allind$X)){
 
 # Step 6: Aggregated characteristic calculations
 
-```{r}
+```{r,  eval=F}
 agg_ind <- data.frame()
 w_boot <- data.frame()
 ```
 
-```{r, eval=T}
+```{r, eval=F}
 for (n in 1:length(characteristics)){
   
   
@@ -779,7 +779,7 @@ names(w_boot)[3] <- c("val")
 # Step 7: Aggregated total calculations
 
 
-```{r, eval=T}
+```{r, eval=F}
 regions <- unlist(unique(allind$reg))
 char_w <- unlist(unique(w_boot$chr))
 tot_ind <- data.frame()
@@ -916,7 +916,7 @@ names(tot_ind_w) <- c("ind", "reg",  "low", "med", "upp")
 
 # Step 8: Rename indicator labels key 
 
-```{r, eval=T}
+```{r, eval=F}
 temp_names <- data.frame(c(unique(allind$X), names(ind_char[,-1]),
                            "Total", "Total_w"))
 names(temp_names) <- "work"
@@ -956,11 +956,11 @@ temp_names$plot <- c("Fravær av fremmede arter",
 # Saving 
 
 Extra column for name, matched from temp_names
-```{r}
+```{r, eval=F}
 all_Q$names_plot <- temp_names$plot[match(all_Q$ind, temp_names$work)]
 ```
 
-```{r, eval=T}
+```{r, eval=F}
 
 write.csv(all_Q,        "../output/tables/all_Q.csv")
 write.csv(tot_ind,      "../output/tables/tot_ind.csv")
@@ -971,7 +971,7 @@ write.csv(agg_ind,      "../output/tables/agg_ind.csv")
 
 
  Omit the extra name column (only for better understanding of backup csv file)
-```{r}
+```{r, eval=F}
 all_Q <- all_Q[,-7]
 ```
 
@@ -979,7 +979,7 @@ all_Q <- all_Q[,-7]
 # Step 9: Plotting
 
 Ignorer per(iodene)
-```{r}
+```{r,  eval=F}
 all_Q <- select(all_Q, -per)
 ```
 
@@ -1023,7 +1023,7 @@ myOrder <- c(
 ```
 
 
-```{r, eval=T}
+```{r, eval=F}
 
 regions <- unlist(unique(allind$reg))
 
