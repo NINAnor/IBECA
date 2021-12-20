@@ -983,6 +983,45 @@ Ignorer per(iodene)
 all_Q <- select(all_Q, -per)
 ```
 
+Define plotting order
+```{r}
+myOrder <- c(
+  
+ "NDVI (øvre)",
+ "NDVI (nedre)",
+ "Rein",
+ "Smågnagere",
+ "Lirype",
+ "Fjellrype",
+ "Fjellrev",
+ "Jerv",
+ "Kongeørn",
+ "Fravær av fremmede arter",
+ "Areal uten tekniske inngrep",
+ "Konnektivitet",
+ "Naturindeks for fjell (mod.)",
+ "Ellenberg N (øvre)",
+ "Ellenberg N (nedre)",
+ "Ellenberg L (øvre)",
+ "Ellenberg L (nedre)",
+ "Vegetasjonens varmekrav",
+ "Areal av isbreer",
+ "Snødybde",
+ "Snødekkets varighet",
+ "Vinterregn",
+ 
+ "Total",
+ "Total (vektet pr. egenskap)",
+ "Primærproduksjon",
+ "Fordeling av biomasse i ulike trofiske nivå",
+ "Funksjonelle grupper innen trofiske nivåer",
+ "Funksjonelt viktige arter og biofysiske strukturer",
+ "Landskapsøkologiske mønstre",
+ "Biologisk mangfold",
+ "Abiotiske forhold"
+)
+```
+
 
 ```{r, eval=T}
 
@@ -996,10 +1035,11 @@ for (j in 1:length(regions)){
                     tot_ind_w[tot_ind_w$reg==regions[j],],
                     agg_ind[agg_ind$reg==regions[j],])
    
+    TEMP_Q$ind <- temp_names$plot[match(TEMP_Q$ind, temp_names$work)]
     
+    TEMP_Q <- TEMP_Q[order(match(TEMP_Q$ind, myOrder)),]
     
     TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
-    TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
     
   png(paste("../output/aggregated_plots/","region_", regions[j],"_", ".png", sep=""), 
         units="in", width=8, height=14, res=600)
