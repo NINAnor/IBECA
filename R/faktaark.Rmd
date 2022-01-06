@@ -29,10 +29,10 @@ library(kableExtra)
 library(dplyr)
 
 # local path
-doc <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
+#doc <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
 
 # server path
-#doc <- read_excel("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
+doc <- read_excel("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/dokumentasjonIndikatorer.xlsx")
 
 ```
 
@@ -101,7 +101,7 @@ Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){widt
 
 
 ```{r, echo=FALSE}
-tbl <- get('Bestandsnivå-fjellrev')
+tbl <- get('Fjellrev')
 tbl
 
 ```
@@ -112,7 +112,7 @@ Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){widt
 
 
 ```{r, echo=FALSE}
-tbl <- get("Bestandsnivå-fjellrype")
+tbl <- get("Fjellrype")
 tbl
 
 ```
@@ -122,7 +122,7 @@ tbl
 Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fragmentering.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 ```{r, echo=FALSE}
-tbl <- get('Fragmentering')
+tbl <- get('Konnektivitet')
 tbl
 
 ```
@@ -141,7 +141,7 @@ tbl
 Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/jerv.html) for å se tekniske detaljer om selve utregningene av indikatorverdiene.
 
 ```{r, echo=FALSE}
-tbl <- get('Bestandsnivå-jerv')
+tbl <- get('Jerv')
 tbl
 
 ```
@@ -165,7 +165,7 @@ Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){widt
 
 
 ```{r, echo=FALSE}
-tbl <- get("Bestandsnivå-lirype")
+tbl <- get("Lirype")
 tbl
 
 ```
@@ -176,7 +176,7 @@ Under ser du faktaarket for indikatoren. ![](../figures/magnifyingglas.png){widt
 
 
 ```{r, echo=FALSE}
-tbl <- get("NI-for-fjell")
+tbl <- get("Naturindeks for fjell")
 tbl
 
 ```
