@@ -24,11 +24,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-### Flytskjema
-Indikatorenes tilknyttning til påvirkninger og egenskaper.
-Klikk på boksene for å lese mer, eller gå rett til [faktarksiden](faktaark.html).
-
-Denne figurene er under arbeid, man skal vise hvordan tilstandsikatorene knytter seg til de ulike påvirkningene og egenskapene. Boksene er klikkbare og tar deg til faktaarket. Hold musepeker over boksene får å se noe utfyllende informasjon, og klikk for se enda mer detaljer.
+Figuren udner viser indikatorenes tilknyttning til påvirkninger og egenskaper.
+Klikk på boksene for å lese mer, eller gå rett til [faktarksiden](faktaark.html). Hold musepekeren over boksene får å se noe utfyllende informasjon, og klikk for se enda mer detaljer.
 
 ```{r plotting, message=FALSE, echo=FALSE}
 library(DiagrammeR)
