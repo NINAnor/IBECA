@@ -3,7 +3,7 @@ title: "Økosystem Fjell"
 
 output:
   html_document:
-    toc: true
+    toc: false
     toc_depth: 6
     toc_float: true
     
@@ -24,8 +24,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-Figuren udner viser indikatorenes tilknyttning til påvirkninger og egenskaper.
-Klikk på boksene for å lese mer, eller gå rett til [faktarksiden](faktaark.html). Hold musepekeren over boksene får å se noe utfyllende informasjon, og klikk for se enda mer detaljer.
+Figuren under viser indikatorenes tilknyttning til påvirkninger og egenskaper.
+Klikk på boksene for å lese mer, eller gå rett til [faktarksiden](faktaark.html).
 
 ```{r plotting, message=FALSE, echo=FALSE}
 library(DiagrammeR)
