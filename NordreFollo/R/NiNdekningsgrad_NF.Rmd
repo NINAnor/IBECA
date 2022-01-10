@@ -237,10 +237,14 @@ bbox_new[4] <- bbox_new[4] + (0.1 * yrange)
 
 ```
 
+```{r}
+tmap_mode("view")
+
+```
+
 
 ```{r, fig.width=5, fig.height=7, message=F}
-tmap_mode("view")
-tm_shape(nf, bbox = bbox_new)+
+tm_shape(nf)+#, bbox = bbox_new)+
   tm_polygons(col = "grey",
               alpha=0.5)+
 tm_shape(dekCrop2)+
