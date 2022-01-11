@@ -21,6 +21,11 @@ library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+<br><br>
+
+# Fjellrapporten
+
 Her ligger diverse annen dokumentasjon om de andre analysene som er gjort i forbindelse med fjellrapporten. 
 <br><br>
 
@@ -35,7 +40,14 @@ Her ligger diverse annen dokumentasjon om de andre analysene som er gjort i forb
 
 
 ## Tilrettelegging av andre datasett
-[Her](tilrettelegge.html) tas inn datasett med skalerte indikatorverdier for ANO-deriverte indikatorer, NDVI, Fremmedarter og Vegetasjonens varmekrav. Indikatorene er regnet fram av Joachim Töpper.
+[Her](tilrettelegge.html) tas inn datasett med skalerte indikatorverdier for
+
+- ANO-deriverte indikatorer
+- NDVI
+- Fremmedarter
+- Vegetasjonens varmekrav. 
+
+Indikatorene er regnet fram av Joachim Töpper.
 <br><br><br>
 
 
@@ -43,64 +55,45 @@ Her ligger diverse annen dokumentasjon om de andre analysene som er gjort i forb
 ## Behandling av klimadata
 Klimadata hentes fra SeNorge datasettet. Noen av disse variblene brukes som tilstandsindikatorer, og noen brukes som påvirkningsindikatorer. Behandlingen av disse dataene er ganske omfattende, og de gjøres samtidig for alle de variablene vi ønsker å inkludere. Noe av prosessen skjer i Google Earth Engine. Vi har derfor å ikke inkludere denne infoamsjonen på de enekelte sidene til tilstandsvariablene, men samler heller all dokumentasjonen på [denne siden. ](klima-databehandling.html) 
 
-
-
-
-### Nedbør
-[Klikk her](nedbor.html) for mer informasjon.
-<br>
-
-### Temperatur
-[Klikk her](temperatur.html) for mer informasjon.
-<br>
-
-### Vekstsesong
-[Klikk her](vekstsesong.html) for mer informasjon.
-
+- [Nedbør](nedbor.html)
+- [Temperatur](temperatur.html)
+- [Vekstsesong](vekstsesong.html)
 <br><br><br>
-
-
-
 
 
 
 ## Supplerende variabler
-### Fugler i fjellet
-Dette er en supplerende variabl/indikator som viser tilstanden/utviklingen til fem, vanlige alpine fuglearter. Indikatoren er ikke med i hovedindikatorsettet siden datagrunnlaget overlapper i stor grad med naturindeksen for fjell. ![](../figures/magnifyingglas.png){width=1cm}[Klikk her](https://ninanor.github.io/IBECA/fuglerifjellet.html) for å se tekniske detaljer analysene.
-<br>
 
-### Trofiske grupper i Naturindeks for fjell
-[Dette er en inndeling av indikatorene i fjellindeksen i trofiske grupper.](trofiske_grupper.html)
+- [Fugler i fjellet](https://ninanor.github.io/IBECA/fuglerifjellet.html).
+  Dette er en supplerende variabl/indikator som viser tilstanden/utviklingen til fem, vanlige alpine fuglearter. Indikatoren er ikke med i hovedindikatorsettet siden datagrunnlaget overlapper i stor grad med naturindeksen for fjell.
+  
+- [Trofiske grupper i Naturindeks for fjell](trofiske_grupper.html). 
+  Dette er en inndeling av indikatorene i fjellindeksen i trofiske grupper.
 
+- Dekning av busker og trær
 
-
-### Dekning av busker og trær
-Kommer snart....
-
-
-
-
-<br><br><br>
+<br><br>
 
 ## Påvirkningsindikatorer
-### Nitrogen
-En tidsserie for [N nedfall i fjellet](nitrogen.html).
+
+- [Nitrogen](nitrogen.html). 
+  En tidsserie for N nedfall i fjellet.
 
 
-
-<br><br><br>
+<br><br>
 
 
 ## Plotting
 [Her](plotting.html) er skriptet som produserer de aggregerte figurene og tabellene. En gruppering av indikatorer knyttet til ulike påvirkningsfaktorer undersøkes visere [her](paavirkninger.html).
 
 
-<br><br><br>
+<br><br>
 
 
 ## Metadata og rutiner
 
-Figuren under viser den grunnleggende arbeidsflyten rundt fremskaffelsen av tilstandsindikatorer:
+Figuren under viser den grunnleggende, ideell, arbeidsflyt rundt fremskaffelsen av tilstandsindikatorer. Merk at det ikke nødvendigvis er slik det har blit gjort i alle tilfeller. For eksempel har utfylling av sjekklisten fra ekspertpanelet ikke blitt operasjonalisert.
+
 ```{r, echo=F}
 grViz("digraph{
 
@@ -165,13 +158,5 @@ grViz("digraph{
 }")
 
 ```
-
-<br><br><br>
-
-### Sjekkliste for tilstandsindikatorer
-Her er et utakt til en sjekkliste som var ment å fylles ut for hver indikator. Det ble ikke brukt.
-
-[Klikk her](https://github.com/NINAnor/IBECA/tree/main/output/sjekkliste.pdf) for å gå rett til sjekklisten som fylles ut av ekspertpanelet for hver indikator (jf. figuren over).
-
 
 
