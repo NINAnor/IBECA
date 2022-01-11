@@ -20,13 +20,15 @@ knit: (function(input_file, encoding) {
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+<br><br><br>
 
 # Introduksjon
 ... kommer snart
 
+<br><br><br>
+
 # Indikatorer
-## Naturtyper etter Miljørektoratets Instruks
-[Klikk her](Tilstand_NaturtyperMdir_NordreFollo.html) for mer informasjon og detajler om utregningene.
+1 [Naturtyper etter Miljørektoratets Instruks](naturtyperMdir_NordreFollo.html)
 
 
 

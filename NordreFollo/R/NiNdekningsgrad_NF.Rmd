@@ -10,7 +10,7 @@ knit: (function(input_file, encoding) {
   out_dir <- '../../docs';
   rmarkdown::render(input_file,
  encoding=encoding,
- output_file=file.path(dirname(input_file), out_dir, 'Tilstand_NaturtyperMdir_NordreFollo.html'))})
+ output_file=file.path(dirname(input_file), out_dir, 'naturtyperMdir_NordreFollo.html'))})
 ---
 
 
@@ -322,21 +322,28 @@ catsDF <- data.frame(
 )
 ```
 
+```{r}
+tmap_mode("plot")
+```
 
-```{r, message=F}
-tmap_mode("view")
+
+```{r, fig.width=5, fig.height=7, message=F}
 tm_shape(elc)+
  tm_raster(
    style = "fixed", 
    breaks = seq(-0.5,8.5,1),
    labels = catsNorsk,
    palette = colElc,
-   alpha=1
+   alpha=1,
+   title = "Arealbruk (ELC10) i\nNordre Follo"
    )+
   tm_shape(nf)+
   tm_polygons(col = "grey",
               alpha=0.5)+
-tm_layout(title.position = c('right', 'top'))
+tm_layout(title.position = c('right', 'top'),
+          legend.position = c("left","bottom"),
+          legend.bg.color = "white",
+          legend.bg.alpha = .8)
 ```
 
 
@@ -353,14 +360,14 @@ dek <- st_transform(dekCrop2, crs(elc)) # surveyed area
 
 
 ## Extract land use statistics for each polyon
-All of Nordre Follo
+- All of Nordre Follo
 ```{r}
 nf_elc <- raster::extract(elc, nf2)
 #test <- raster::extract(elc, nf) # this also works, but the function will automatically transform nf to the crs of elc
 (nf_elc <- table(nf_elc))
 ```
 
-All nature type polygons
+- All nature type polygons
 ```{r}
 nf_nt <- raster::extract(elc, nt)
 nf_nt2 <- lapply(nf_nt, table)
@@ -388,21 +395,19 @@ nf_nt2 <- rbind.fill(nf_nt2)
 ntyp <- as.data.frame(colSums(nf_nt2, na.rm = T)/10000)
 names(ntyp) <- "sqKm"
 ntyp$num <- row.names(ntyp)
-ntyp
 ```
 
-All the surveyed area
+- All the surveyed area
 ```{r}
 sur <- raster::extract(elc, dek)
 sur <- lapply(sur, table)
-(sur <- rbind.fill(sur))
-
+sur <- rbind.fill(sur)
 sur <- as.data.frame(colSums(sur, na.rm = T)/10000)
 names(sur) <- "sqKm"
 sur$num <- row.names(sur)
-sur
 ```
 
+- Combine them and show table
 ```{r}
 nf_elc2 <- as.data.frame(nf_elc)
 names(nf_elc2) <- c("num", "freq")
@@ -414,13 +419,11 @@ nf_elc2$mapped <- ntyp$sqKm[match(nf_elc2$num, ntyp$num)]
 nf_elc2$mapped[is.na(nf_elc2$mapped)] <- 0
 nf_elc2$mapped <- round(nf_elc2$mapped, 2)
 nf_elc2$proportion <- round(nf_elc2$mapped/nf_elc2$km2, 2)
-nf_elc2
 
 # add the surveyed area
 nf_elc2$surveyed <- sur$sqKm[match(nf_elc2$num, sur$num)]
 nf_elc2$proportionSurveyed <- round(nf_elc2$surveyed/nf_elc2$km2, 2)
 
-nf_elc2
 DT::datatable(
   dplyr::select(nf_elc2, 
                 "Arealbruk" = LandUse,
@@ -434,14 +437,12 @@ DT::datatable(
     scrollY=T,
     pageLength = 10
   ))
-nf_elc2
 ```
 
 Both the proportion and the absolute of area which is actually mapped is very low.
 Here's a figure f the overall area statistics for Nordre Follo
 ```{r}
 nf_elc2$kmRounded <- as.character(round(nf_elc2$km2, 1))
-
 nf_elc2$lab <- paste(nf_elc2$kmRounded, " (", nf_elc2$mapped, ")")
 ```
 
