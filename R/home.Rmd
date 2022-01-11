@@ -15,25 +15,15 @@ knit: (function(input_file, encoding) {
 ---
 
 ```{r setup, include=FALSE}
-
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r, echo=F}
-library(knitr)
-```
+<br>
 
+Denne nettsiden fungerer som en dokumentasjon av arbeidet som NINA gjør i forbindelse vurdering av økologisk tilstand etter indeksmetoden, inkludert  utregninger av indikatorer. Sidene oppdateres kontinuerlig ettersom arbeidet pågår og for upubliserte indikatorer vil sidene også fungere som  arbeidsdokument.
 
-
-
-På denne siden vil du finne informasjon om hvordan NINA har jobber med å vurdere økologisk tilstand i Norge økosystemer. 
-
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) ![test](../figures/fjellLogo.png){width=1cm} (under arbeid)  
-
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog) ![test](../figures/skogLogo.png){width=0.5cm} (planlagt)
-
-
-
+<br><br>
 
 
 ## GitHub
