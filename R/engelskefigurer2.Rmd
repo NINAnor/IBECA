@@ -1,0 +1,723 @@
+---
+title: "Engelske figurer side 2"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurer2.html'))})
+ 
+---
+
+Forsettelse fra engelskeFigurer.Rmd
+
+
+Fortsetter med skograpporten og indikatorfigurene der.
+
+Fra indicator_plots.R skal jeg lage nye figurer for et utvalg variabler.
+
+# Indicator_plots
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Packages
+library(dplyr)
+library(tidyr)
+
+```
+
+```{r}
+# Set resolution
+resout <- 300
+```
+
+##NI
+```{r, warning=F}
+setwd("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Forest")
+### Nature index indicators
+forest <- read.csv("forestsamp.csv", header=T,  row.names = 1)
+mpred <- read.csv("Index_Mellompredator.csv", header=T,  row.names = 1)
+tpred <- read.csv("Index_Topp-predator.csv", header=T,  row.names = 1)
+nedbr <- read.csv("Index_Nedbryter.csv", header=T,  row.names = 1)
+herbi <- read.csv("Index_Plante- og filterspisere.csv", header=T,  row.names = 1)
+primp <- read.csv("Index_Primærprodusent.csv", header=T,  row.names = 1)
+
+```
+
+
+Combine
+```{r}
+
+forest$X <- "Nature Index Forest"
+mpred$X  <- "Meso-predators"
+tpred$X  <- "Top-predators"
+nedbr$X  <- "Decomposers"
+herbi$X  <- "Herbivores"
+primp$X  <- "Primary producers"
+ni <- rbind(forest,
+             mpred,
+             tpred,
+             nedbr,
+             herbi,
+             primp) 
+```
+
+
+```{r}
+ni <- ni[ni$reg=="Norge",]
+```
+
+```{r}
+yAxisTitle = "Index"
+lowYlimit = 0
+upperYlimit = 1.1
+yStep = .2
+minyear = 1980
+maxyear = 2021
+colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+legendPosition = "topleft"
+legendInset = 0.03
+horizontal = F
+legendTextSize = 1.25
+move = 0.1
+```
+
+```{r}
+dat <- ni
+  
+
+  
+dat2 <- aggregate(data=dat,
+                    val~year+X,
+                    FUN = function(x) quantile(x, c(0.025, .5, .975)))
+  
+dat2 <- do.call(data.frame, dat2)
+  names(dat2)[3] <- "low"
+  names(dat2)[4] <- "med"
+  names(dat2)[5] <- "upp"
+  
+  
+  ### PLOT meso-predators first first (I dont bother changing the name from Norway)
+  
+  Norge <- subset(dat2, X=="Meso-predators")
+  
+  
+  
+  # Order data (by the position of the lines)
+  regOrder = c(
+               "Primary producers",
+               "Herbivores",
+               "Nature Index Forest",
+               "Decomposers",
+               "Top-predators",
+               "Meso-predators"
+               )
+  dat <- dat[order(match(dat$X,regOrder),dat$year),]
+  
+  # Create loop factors
+  uniq1 <- unique(unlist(dat$year))
+  uniq2 <- unique(unlist(dat$X))
+```
+
+
+```{r}
+png("../output/indicatorPlots/englishPlots/naturindekser.png", 
+    units="in", width=12, height=7, res=300)
+
+  # Plot windows par
+par(mfrow=c(1,1), 
+    mar=c(4.5,5.5,0,2))
+
+
+  plot(
+    Norge$med~Norge$year, 
+    ylab=yAxisTitle,
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(minyear, Norge$year, maxyear), labels=c("",Norge$year, ""), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(Norge$year+(move*(-2.5)), Norge$med, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = Norge$year, med = Norge$med)
+  
+  
+  
+  
+  
+  
+  
+  # Add quantiles to plot
+  for(i in 1:nrow(Norge)){
+    arrows(Norge$year[i]+(move*(-2.5)),Norge$med[i],Norge$year[i]+(move*(-2.5)),Norge$upp[i], angle=90, length=0.05, col=colours[6], lwd=1)
+    arrows(Norge$year[i]+(move*(-2.5)),Norge$med[i],Norge$year[i]+(move*(-2.5)),Norge$low[i], angle=90, length=0.05, col=colours[6], lwd=1)
+    
+  }   
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    quants <- subset(dat2, X==uniq2[n])
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$med, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$med, X = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+    # Add quantiles to plot
+    for(i in 1:nrow(quants)){
+      arrows(quants$year[i]+move*(n-2.5),quants$med[i],quants$year[i]+move*(n-2.5),quants$upp[i], angle=90, length=0.05, col=colours[n], lwd=1)
+      arrows(quants$year[i]+move*(n-2.5),quants$med[i],quants$year[i]+move*(n-2.5),quants$low[i], angle=90, length=0.05, col=colours[n], lwd=1)
+    }
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$X==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$med, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$med, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(legendPosition, legendPositionY, legend = c(uniq2[6], uniq2[1:5]), col = c(colours[6], colours[1:5]), bg = c(colours), pch=16, lty=2,
+         lwd=1.5, bty="n", inset=legendInset, title="", horiz = horizontal,
+         cex=legendTextSize)
+  
+  
+dev.off()
+  
+```
+
+
+# LSK data
+
+```{r, warning=F}
+setwd("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Forest")
+
+### National forest inventory (NFI) data (reduced, without Finnmark and above the treeline)
+lsk <- read.csv("LSK_data_bootstrapped-reduced.csv", header=T,  row.names = 1)
+
+# Subset NFI data
+lsk <- lsk %>% dplyr::select(reg, year, ros, dw10, dw30, old_prop, blb,
+                             biomass_trees, alien_trees, GRAN_PR, INTRO_GRAN_PR, FURU_PR, INTRO_FURU_PR,
+                             BJORK_PR, OSP_PR, EIK_PR, EDELLAUV_PR, GRAAOR_PR, ANNET_LAUV_PR)
+
+lsk$year <- as.numeric(as.character(lsk$year))
+
+# Separate data files
+ros <- lsk %>% dplyr::select(reg, year, ros) %>%
+  dplyr::rename(val=ros)
+#dw10 <- lsk %>% dplyr::select(reg, year, dw10) %>%
+#  dplyr::rename(val=dw10)
+dw30 <- lsk %>% dplyr::select(reg, year, dw30) %>%
+  dplyr::rename(val=dw30)
+old <- lsk %>% dplyr::select(reg, year, old_prop) %>%
+  dplyr::rename(val=old_prop)
+blb <- lsk %>% dplyr::select(reg, year, blb) %>%
+  dplyr::rename(val=blb)
+
+#biomasstrees <- lsk %>% dplyr::select(reg, year, biomass_trees) %>%
+
+#  dplyr::rename(val=biomass_trees)
+alientrees <- lsk %>% dplyr::select(reg, year, alien_trees) %>%
+  dplyr::rename(val=alien_trees)
+
+alientrees$val[alientrees$year==1996] <- NA # Needs adjustment in LSK script
+
+
+```
+```{r}
+#source("indicator_plots2.R")
+eval(parse("indicator_plots.R", encoding="UTF-8"))
+eval(parse("indicator_plots2.R", encoding="UTF-8"))
+eval(parse("indicator_plots4.R", encoding="UTF-8"))
+
+```
+
+# Functinally important species and structures
+```{r}
+summary(blb$val)
+summary(blb$year)
+summary(dw30$val)
+summary(dw30$year)
+summary(ros$val)
+summary(ros$year)
+summary(old$val)
+summary(old$year)
+```
+##With regions
+```{r, eval=F, include=FALSE}
+png("../output/indicatorPlots/englishPlots/FunctionallyImportant.png", 
+    units="in", width=12, height=12, res=300)
+
+# Plot windows par
+par(mfrow=c(2,2), 
+    mar=c(4.5,5.5,0,2))
+
+#1
+indicator_plot2(dataset = blb,
+               yAxisTitle = "Bilberry cover (%)",
+               lowYlimit = 0,
+               upperYlimit = 13,
+               yStep = 2,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "left",
+               legendInset = 0.2,
+               move = 0.1,
+               horizontal = F,
+               legendTextSize = 1.25)
+#2
+indicator_plot2(dataset = dw30,
+               yAxisTitle = bquote("Coarse woody debis " ~ (m^3 ~ ha^-1)),
+               lowYlimit = 0,
+               upperYlimit = 6,
+               yStep = 1,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "left",
+               legendInset = -50,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+
+
+#3
+indicator_plot2(dataset = ros,
+               yAxisTitle = bquote("Rowan-aspen-goat willow " ~ (m~3 ~ ha~-1)),
+               lowYlimit = 0,
+               upperYlimit = 13,
+               yStep = 2,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = -50,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+
+#4
+indicator_plot2(dataset = old,
+               yAxisTitle = "Biologically old forest (prop.)",
+               lowYlimit = 0,
+               upperYlimit = 0.25,
+               yStep = 0.05,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = -50,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+#dev.off()
+
+```
+
+## Without regions
+```{r, eval=F, include=FALSE}
+png("../output/indicatorPlots/englishPlots/FunctionallyImportant_noRegions.png", 
+    units="in", width=10, height=10, res=300)
+
+# Plot windows par
+par(mfrow=c(2,2), 
+    mar=c(4.5,5.5,0,2))
+
+#1
+indicator_plot4(dataset = blb,
+               yAxisTitle = "Bilberry cover (%)",
+               lowYlimit = 0,
+               upperYlimit = 13,
+               yStep = 2,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = "dark grey",
+               legendPosition = "left",
+               legendInset = 0.2,
+               move = 0.1,
+               horizontal = F,
+               legendTextSize = 1.25)
+#2
+indicator_plot4(dataset = dw30,
+               yAxisTitle = bquote("Coarse woody debis " ~ (m^3 ~ ha^-1)),
+               lowYlimit = 0,
+               upperYlimit = 4,
+               yStep = 1,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = "dark grey",
+               legendPosition = "left",
+               legendInset = -50,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+
+
+#3
+indicator_plot4(dataset = ros,
+               yAxisTitle = bquote("Rowan-aspen-goat willow " ~ (m~3 ~ ha~-1)),
+               lowYlimit = 0,
+               upperYlimit = 6,
+               yStep = 2,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = "dark grey",
+               legendPosition = "top",
+               legendInset = -50,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+
+#4
+indicator_plot4(dataset = old,
+               yAxisTitle = "Biologically old forest (prop.)",
+               lowYlimit = 0,
+               upperYlimit = 0.2,
+               yStep = 0.05,
+               minyear = 1992,
+               maxyear = 2021,
+               colours = "dark grey",
+               legendPosition = "top",
+               legendInset = -50,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+
+```
+
+
+
+
+
+# Alien trees
+```{r}
+summary(alientrees$val)
+summary(alientrees$year)
+
+```
+
+```{r}
+png("../output/indicatorPlots/englishPlots/alienTrees.png", 
+    units="in", width=12, height=7, res=300)
+
+# Plot windows par
+par(mfrow=c(1,1), 
+    mar=c(4.5,5.5,0,2))
+
+#1
+indicator_plot2(dataset = alientrees,
+               yAxisTitle = "Alien conifers (%)",
+               lowYlimit = 0,
+               upperYlimit = 7,
+               yStep = 2,
+               minyear = 2000,
+               maxyear = 2019,
+               colours = c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+dev.off()
+```
+
+
+
+
+
+
+
+
+# OLD
+
+```{r}
+################################
+### Step 2: Plot preparation ###
+################################
+
+# Before potential replotting (if rerunning from here)
+rm(quants, sub1, sub2, dat_plot, 
+   i, j, k,uniq1, uniq2, upp, low, med, maxval, 
+   indfiles, temp_names, 
+   sub2T, lowT, medT, uppT, quantsT, test)
+
+### List indicator data files
+indfiles_raw <- ls()
+indfiles <- indfiles_raw[indfiles_raw!="resout"&indfiles_raw!="comptree"]
+rm(indfiles_raw)
+
+### Indicator temp names for matching/plot labeling
+temp_names <- data.frame(indfiles)
+temp_names$indnames <- c("Fremmede treslag (bartrær; %)", 
+                         "Fravær fremmede arter (%)", 
+                         "Blåbærdekning (%; ANO)", 
+                         "Ellenberg F (indeks)", 
+                         "Ellenberg N (indeks)", 
+                         "Stående biomasse trær (volum pr ha)",
+                         "Blåbærdekning (%)", 
+                         "Mengde død ved (volum pr ha)", 
+                         "Mengde grov død ved (volum pr ha)", 
+                         "Naturindeks (skalert)", 
+                         "Naturindeks - herbivorer (skalert)", 
+                         "Arealandel uten tekniske inngrep (prop.)", 
+                         "Naturindeks - mellompredatorer (skalert)", 
+                         "NDVI (avvik fra modellert prediksjon (0))", 
+                         "Naturindeks - nedbrytere (skalert)", 
+                         "Tilført nitrogen fra luft (kg N/ha)", 
+                         "Arealandel biologisk gammelskog (prop.)", 
+                         "Naturindeks - primærprodusenter (skalert)",
+                         "Rogn, osp og selje (volum pr ha)", 
+                         "Naturindeks - topp-predatorer (skalert)")
+
+### Plotting values per indicator
+temp_names$min <-c(0, 98, 0, 5.5, 2, 0, 0, 0, 0, 0, 0, 0, 0, -0.15, 0,0,0,0,0,0)
+temp_names$max <-c(6, 100, 30, 6.5, 3, 150, 20, 20, 10, 1, 1, 1, 1, 0.15, 1, 15,1,1,12,1)
+temp_names$by <- c(2,0.5,5,0.2, 0.2, 30,5,5,2.5,0.2,0.2,0.2,0.2,0.05,0.2,5,0.2,0.2,4,0.2)
+```
+
+
+
+```{r}
+########################
+### Step 3: Plotting ###
+########################
+
+# Set colours for plotting
+colours <- c("#FFB25B", "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey")
+````
+
+
+
+# Loop plotting through indicator files
+for (k in 1:length(indfiles)){
+  
+  # Get indicator data [k]
+  dat_plot <- data.frame(mget(indfiles[k]))
+  
+  # Adjust names
+  names(dat_plot) <- gsub(paste(indfiles[k], ".", sep=""), "", names(dat_plot))
+  
+  # Year as integer 
+  dat_plot$year <- as.integer(as.character(dat_plot$year))
+  
+  # Adjust regions and sort (not all are 'wrong', but then just no replacement take place)
+  dat_plot$reg <- as.character(dat_plot$reg)
+  dat_plot$reg[dat_plot$reg=="C"] <- "Midt-Norge"
+  dat_plot$reg[dat_plot$reg=="N"] <- "Nord-Norge"
+  dat_plot$reg[dat_plot$reg=="E"] <- "Østlandet"
+  dat_plot$reg[dat_plot$reg=="S"] <- "Sørlandet"
+  dat_plot$reg[dat_plot$reg=="W"] <- "Vestlandet"
+  
+  # Order data (regOrder = manual region order; year ordered as integer order)
+  regOrder = c("Østlandet","Sørlandet","Vestlandet","Midt-Norge","Nord-Norge","Norge")
+  dat_plot <- dat_plot[order(match(dat_plot$reg,regOrder),dat_plot$year),]
+  
+  # Set min/max val as  number (from temp_names table)
+  maxval <- temp_names$max[k]
+  minval <- temp_names$min[k]
+  
+  # Set min/max year as number
+  maxyear <- 2021
+  minyear <- min(dat_plot$year)-2
+  
+  # Create loop factors
+  uniq1 <- unique(unlist(dat_plot$year))
+  uniq2 <- unique(unlist(dat_plot$reg))
+  
+  # Directory and file for saving plots
+  path <- "../output/indicatorPlots/englishPlots/"
+  setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_plots/Unscaled/regions_together/v5")
+  png(paste("plot_IND_", indfiles[k], ".png", sep=""), units="in", width=12, height=7, res=resout)
+  
+  ### PLOT first Norway
+  
+  # Subset for region 'Norge'
+  sub1 <- subset(dat_plot, reg=="Norge")
+  
+  # Empty quantile vectors
+  low <- NULL
+  med <- NULL
+  upp <- NULL
+  
+  # Loop per year [j]
+  for(j in 1:length(uniq1)){
+    
+    # Subset for year j
+    sub2 <- subset(sub1, year==uniq1[j])
+    
+    # Extract quantiles, add to quantile vectors
+    low[j] <- quantile((sub2$val), c(0.025), na.rm=TRUE)
+    med[j] <- quantile((sub2$val), c(0.5), na.rm=TRUE)
+    upp[j] <- quantile((sub2$val), c(0.975), na.rm=TRUE)
+  }
+  
+  # Quantile data frame for plotting
+  quants <- data.frame(cbind(low, med, upp))
+  quants$year <- as.numeric(as.character(c(uniq1)))
+  quants$reg <- "Norway"
+  
+  # Plot windows par
+  par(mfrow=c(1,1), mar=c(4.5,5.5,2,0))
+  
+  # Plot for region = 'Norge'
+  plot(quants$med~quants$year, 
+       ylab=paste(temp_names$indnames[k]),
+       xlab="",
+       main="",
+       xlim=c(minyear, maxyear),
+       ylim=c(minval, maxval),
+       cex.main=1,
+       cex.lab=1.5,
+       cex.axis=1.5,
+       type="n", 
+       frame.plot=FALSE,
+       axes=FALSE)
+  
+  # Axis 1 options
+  if(k==19) { # issue with 1980 coming too close to xmin? 
+    
+    axis(side=1, at=c(minyear, quants$year, maxyear), labels=c(rep("", 2+length(quants$year))), cex.axis=1.5) 
+    axis(side=1, at=c(quants$year), labels=c(quants$year), cex.axis=1.5) 
+    
+  } else {
+    
+    axis(side=1, at=c(minyear, quants$year, maxyear), labels=c("",quants$year, ""), cex.axis=1.5) 
+    
+  }
+  
+  # Axis 2 options
+  axis(side=2, at=seq(temp_names$min[k], temp_names$max[k], temp_names$by[k]), 
+       labels=seq(temp_names$min[k], temp_names$max[k], temp_names$by[k]), 
+       cex.axis=1.5)
+  
+  # Move parameter in plot (avoid overlapping)
+  move <- if(k==2|k==3|k==4|k==5) {
+    0.05 
+  } else if(k==17) {
+    0.05
+  } else {
+    0.15
+  }
+  
+  # Add lines
+  lines(quants$year+(move*(-2.5)), quants$med, col=colours[6], lwd=2, lty=3) 
+  
+  # Save temp points for later addition to plot
+  temppoints <- data.frame(year = quants$year, med = quants$med)
+  
+  # Add quantiles to plot
+  for(i in 1:nrow(quants)){
+    arrows(quants$year[i]+(move*(-2.5)),quants$med[i],quants$year[i]+(move*(-2.5)),quants$upp[i], angle=90, length=0.05, col=colours[6], lwd=1)
+    arrows(quants$year[i]+(move*(-2.5)),quants$med[i],quants$year[i]+(move*(-2.5)),quants$low[i], angle=90, length=0.05, col=colours[6], lwd=1)
+    
+  }   
+  
+  # Empty temporary points data frame
+  temppoints3 <- data.frame()
+  
+  ### Then plot loop per region
+  for(n in 1:(length(uniq2)-1)){
+    
+    # Subset for region i
+    sub1 <- subset(dat_plot, reg==uniq2[n])
+    
+    # Empty quantile vectors
+    low <- NULL
+    med <- NULL
+    upp <- NULL
+    
+    # Loop per year
+    for(j in 1:length(uniq1)){
+      
+      # Subset for year j
+      sub2 <- subset(sub1, year==uniq1[j])
+      
+      # Extract quantiles, add to quantile vectors
+      low[j] <- quantile((sub2$val), c(0.025), na.rm=TRUE) 
+      med[j] <- quantile((sub2$val), c(0.5), na.rm=TRUE)
+      upp[j] <- quantile((sub2$val), c(0.975), na.rm=TRUE)
+    }
+    
+    # Quantile data frame for plotting
+    quants <- data.frame(cbind(low, med, upp))
+    quants$year <- as.numeric(as.character(c(uniq1)))
+    quants$reg <- uniq2[n]
+    
+    # Add lines
+    lines(quants$year+move*(n-2.5), quants$med, col=colours[n], lwd=2, lty=3) 
+    
+    # Save temp points for later addition to plot
+    temppoints2 <- data.frame(year = quants$year, med = quants$med, reg = uniq2[n])
+    temppoints3 <- rbind(temppoints3, temppoints2)
+    
+    # Add quantiles to plot
+    for(i in 1:nrow(quants)){
+      arrows(quants$year[i]+move*(n-2.5),quants$med[i],quants$year[i]+move*(n-2.5),quants$upp[i], angle=90, length=0.05, col=colours[n], lwd=1)
+      arrows(quants$year[i]+move*(n-2.5),quants$med[i],quants$year[i]+move*(n-2.5),quants$low[i], angle=90, length=0.05, col=colours[n], lwd=1)
+    }
+    
+  }
+  
+  # Add points for regions
+  for(n in 1:(length(uniq2)-1)){
+    temppoints4 <- temppoints3[temppoints3$reg==uniq2[n],]
+    points(temppoints4$year+move*(n-2.5),temppoints4$med, pch=21, bg=colours[n], cex=1.5)
+  }
+  
+  # Add points for Norge
+  points(temppoints$year+(move*(-2.5)),temppoints$med, pch=21, bg=colours[6], cex=1.5)
+  
+  # Add legend to plot
+  legend(ifelse(k==2, "bottom", "top"), legend = c(uniq2[6], uniq2[1:5]), , col = c(colours[6], colours[1:5]), bg = c(colours), pch=16, lty=2,
+         lwd=1.5, bty="n", inset=ifelse(k==2, 0.1,0), title="", horiz = TRUE,
+         cex=1.25)
+  
+  # Finsih off png save
+  dev.off()
+}
+
+```
+

@@ -23,6 +23,7 @@ library(fasterize)
 library(rgdal)
 library(tmap)
 library(sf)
+library(DT)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -260,8 +261,8 @@ tm_shape(dat2)+
 ```
 
 ## ELC10
-Zander sent em a cropped file. The full tile is in the same folder, but called ELC10_2018_NF_fullTile.
-```{r}
+Zander sent me a cropped file. The full tile is in the same folder, but called ELC10_2018_NF_fullTile.
+```{r, cache=T}
 elc <- raster("../data/ELC10_2018_nordreFollo_10m.tif")
 elc2 <- projectRaster(elc,
               crs = crs(nf)) # not sure I actually need this re-projected version because this will combine raster cells, creating decimal values where they really should be categorical.
@@ -361,14 +362,14 @@ dek <- st_transform(dekCrop2, crs(elc)) # surveyed area
 
 ## Extract land use statistics for each polyon
 - All of Nordre Follo
-```{r}
+```{r, cache=T}
 nf_elc <- raster::extract(elc, nf2)
 #test <- raster::extract(elc, nf) # this also works, but the function will automatically transform nf to the crs of elc
-(nf_elc <- table(nf_elc))
+nf_elc <- table(nf_elc)
 ```
 
 - All nature type polygons
-```{r}
+```{r,cache=T}
 nf_nt <- raster::extract(elc, nt)
 nf_nt2 <- lapply(nf_nt, table)
 ```
@@ -398,7 +399,7 @@ ntyp$num <- row.names(ntyp)
 ```
 
 - All the surveyed area
-```{r}
+```{r, cache=T}
 sur <- raster::extract(elc, dek)
 sur <- lapply(sur, table)
 sur <- rbind.fill(sur)
@@ -424,20 +425,26 @@ nf_elc2$proportion <- round(nf_elc2$mapped/nf_elc2$km2, 2)
 nf_elc2$surveyed <- sur$sqKm[match(nf_elc2$num, sur$num)]
 nf_elc2$proportionSurveyed <- round(nf_elc2$surveyed/nf_elc2$km2, 2)
 
-DT::datatable(
-  dplyr::select(nf_elc2, 
+# subset
+temp <- dplyr::select(nf_elc2, 
                 "Arealbruk" = LandUse,
                 "Total areal (km-2) i Nordre Follo" = km2,
                 "Undersøkt areal som prosent av totalt areal" = proportionSurveyed,
                 "Kartlagt areal (km-2)" = mapped,
-                "Kartlagt areal som prosent av totalt areal" =proportion), 
+                "Kartlagt areal som prosent av totalt areal" =proportion)
+```
+
+```{r}
+DT::datatable(
+  temp, 
   extensions = "FixedColumns",
   options = list(
     scrollX = TRUE,
     scrollY=T,
-    pageLength = 10
+    pageLength = 8
   ))
 ```
+
 
 Both the proportion and the absolute of area which is actually mapped is very low.
 Here's a figure f the overall area statistics for Nordre Follo
