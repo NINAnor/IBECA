@@ -1,0 +1,127 @@
+---
+title: "Engelske figurer side 2"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurer3.html'))})
+ 
+---
+
+Forsettelse fra engelskeFigurer.Rmd og engelskeFigurer3.Rmd 
+
+
+Fortsetter med skograpporten og indikatorfigurene der.
+
+
+# Indicator_plots
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Packages
+library(dplyr)
+library(tidyr)
+eval(parse("indicator_plots4.R", encoding="UTF-8"))
+eval(parse("indicator_plots2.R", encoding="UTF-8"))
+
+```
+
+```{r}
+path <- "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/NI2020-data/Script-based/Forest/Indicators/"
+
+
+elg <- read.csv(paste0(path, "Index_noimputes_Elg.csv"))
+unique(elg$reg)
+#elg <- elg[elg$reg == "Norge",]
+#elg$X <- "Moose"
+
+```
+
+```{r, fig.width=12, fig.height=12}
+indicator_plot2(dataset = elg,
+               yAxisTitle = bquote("Moose (individuals " ~ km^-2 ~ ")"), 
+               lowYlimit = 0,
+               upperYlimit = 4,
+               yStep = 0.5,
+               minyear = 1988,
+               maxyear = 2021,
+               #colours = "dark grey",
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+```
+
+
+```{r}
+png("../output/indicatorPlots/englishPlots/moose.png", 
+    units="in", width=10, height=10, res=300)
+
+# Plot windows par
+par(mfrow=c(1,1), 
+    mar=c(4.5,5.5,0,2))
+
+#1
+indicator_plot4(dataset = elg,
+               yAxisTitle = bquote("Moose (individuals " ~ km^-2 ~ ")"), 
+               lowYlimit = 0,
+               upperYlimit = 2,
+               yStep = 0.2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = "dark grey",
+               legendPosition = "left",
+               legendInset = 0.2,
+               move = 0.1,
+               horizontal = F,
+               legendTextSize = 1.25)
+```
+
+Verdiene er for høye ift figuren i rapporten. Jeg tror jeg må generere dataene på nytt, slik som i NI_deer_trend.R (script på P:/)
+Det kan være imputerte data som har så stor påvirkning.
+
+```{r}
+library(gamlss)
+library(msm)
+library(NIcalc)
+library(plyr)
+library(mice)
+library(RJSONIO)
+library(tibble)
+library(distr)
+library(lattice)
+```
+
+```{r}
+setwd("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/NI2020-data/Script-based")
+op <- options("echo","warn")
+options(echo = FALSE,warn = -1)
+source("functionsToNICalculation.R") # Mulig dette er NI_calk, før det ble en pakke.
+options(op)
+
+Xsim = 10000
+```
+
+```{r}
+
+# Load region key data ## IKKE TILGANG
+setwd("R:/Data/ecolcond_fastlands_norge/Geografisk_oppdeling")
+key <- read.csv2("key_areas_regions.csv", header=T, sep=";")
+
+# Levels key$Region
+levels(key$Region) # "Midt-Norge" "Nord-Norge" "Østlandet" "Sørlandet"  "Vestlandet" 
+
+key$Fylke <- revalue(key$Fylke, c("Møre_og_Romsdal"="Møre og Romsdal", "Sogn_og_Fjordane"="Sogn og Fjordane"))
+```
+

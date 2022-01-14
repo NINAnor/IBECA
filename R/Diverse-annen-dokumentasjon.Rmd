@@ -86,6 +86,24 @@ Klimadata hentes fra SeNorge datasettet. Noen av disse variblene brukes som tils
 ## Plotting
 [Her](plotting.html) er skriptet som produserer de aggregerte figurene og tabellene. En gruppering av indikatorer knyttet til ulike påvirkningsfaktorer undersøkes visere [her](paavirkninger.html).
 
+<br><br>
+
+### Engelske figurer
+Her er lenker til skript for å lage de engelse figurene i den engelske samlerapporten.
+
+#### Skograpporten
+
+- [Aggregerte figurer](https://github.com/NINAnor/IBECA/blob/main/R/engelskefigurer.Rmd)
+- [Naturindeks(er), Funksjonelt viktige arter (fire indikatorer), og fremmede bartrær](https://github.com/NINAnor/IBECA/blob/main/R/engelskefigurer2.Rmd)
+- [Elg, hjort, bjørn, ulv og gaupe]()
+- [Klimavariabler, 6 stk]()
+- [Treslagsfordeling]()
+
+#### Fjellrapporten
+
+- [Aggregerte figurer]()
+
+
 
 <br><br>
 

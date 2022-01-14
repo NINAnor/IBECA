@@ -2864,13 +2864,33 @@ div.tocify {
 <div id="plotting" class="section level2">
 <h2>Plotting</h2>
 <p><a href="plotting.html">Her</a> er skriptet som produserer de aggregerte figurene og tabellene. En gruppering av indikatorer knyttet til ulike påvirkningsfaktorer undersøkes visere <a href="paavirkninger.html">her</a>.</p>
+<div id="engelske-figurer" class="section level3">
+<h3>Engelske figurer</h3>
+<p>Her er lenker til skript for å lage de engelse figurene i den engelske samlerapporten.</p>
+<div id="skograpporten" class="section level4">
+<h4>Skograpporten</h4>
+<ul>
+<li><a href="https://github.com/NINAnor/IBECA/blob/main/R/engelskefigurer.Rmd">Aggregerte figurer</a></li>
+<li><a href="https://github.com/NINAnor/IBECA/blob/main/R/engelskefigurer2.Rmd">Naturindeks(er), Funksjonelt viktige arter (fire indikatorer), og fremmede bartrær</a></li>
+<li><a href>Elg, hjort, bjørn, ulv og gaupe</a></li>
+<li><a href>Klimavariabler, 6 stk</a></li>
+<li><a href>Treslagsfordeling</a></li>
+</ul>
+</div>
+<div id="fjellrapporten-1" class="section level4">
+<h4>Fjellrapporten</h4>
+<ul>
+<li><a href>Aggregerte figurer</a></li>
+</ul>
 <p><br><br></p>
+</div>
+</div>
 </div>
 <div id="metadata-og-rutiner" class="section level2">
 <h2>Metadata og rutiner</h2>
 <p>Figuren under viser den grunnleggende, ideell, arbeidsflyt rundt fremskaffelsen av tilstandsindikatorer. Merk at det ikke nødvendigvis er slik det har blit gjort i alle tilfeller. For eksempel har utfylling av sjekklisten fra ekspertpanelet ikke blitt operasjonalisert.</p>
-<div id="htmlwidget-d122b5cab8f51bab2f08" style="width:672px;height:480px;" class="grViz html-widget"></div>
-<script type="application/json" data-for="htmlwidget-d122b5cab8f51bab2f08">{"x":{"diagram":"digraph{\n\n     graph [compound = true, nodesep = .5, ranksep = .5,\n         color = crimson, rankdir = TB]\n\n  node [fontname = Helvetica, fontcolor = darkslategray,\n        shape = rectangle, fixedsize = true, width = 2,\n        color = darkslategray]\n        \n  Forslag[label = \"Forslag på indikator og\nreferanseverdier\"]\n  Datasett[label = \"Mulige datasett\"]\n  Indikatorer[label = \"Mulige indikatorer\"]\n  Ekspert[label=\"Indikatorekspert(er)\"]\n  Umulig[label = \"Umulig\" shape=plaintext, fontcolor=red, fontsize=20]\n  Sjekkliste[label = \"Utfylling\nav sjekkliste\"]\n  Ekskludert[shape = plaintext, fontcolor=red, fontsize=20]\n  Mulig[shape = plaintext, fontcolor=darkgreen, fontsize=20]\n  OK[shape = plaintext, fontcolor=darkgreen, fontsize=20]\n  Rapport[label=\"Ferdig rapport\"]\n  Ekspert1[label=Ekspertpanel]\n  Ekspert2[label=Ekspertpanel]\n  Metadata[label = \"Dokumentasjon\n(metadata)\"]\n\n  \n  edge [color = black]\n  \n  subgraph cluster0 {\n       label = Scoping;\n       node [fixedsize = true, width = 2];\n      Datasett\n      Indikatorer\n      \n      edge[dir = both]\n      Datasett -> Indikatorer\n  }\n  \n  \n  subgraph cluster {\n       label = Analyse;\n       node [fixedsize = true, width = 2];\n      Utregninger\n      Metadata\n      \n      edge[dir = both]\n      Utregninger -> Metadata\n  }\n       \n       Datasett -> Forslag [ltail = cluster0, headport = w, tailport = e]\n       Ekspert -> Forslag\n       Forslag -> Umulig\n       Forslag -> Mulig\n       Mulig -> Sjekkliste\n       Ekspert1 -> Sjekkliste\n       Sjekkliste -> Ekskludert\n       Sjekkliste -> OK\n       OK -> Utregninger[lhead = cluster, tailclip=false]\n       Utregninger -> Rapportutkast\n       Rapportutkast -> Rapport\n       Ekspert2 -> Rapportutkast\n       Metadata -> \"GitHub-pages\"\n}","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-35e97993eaddb1e43639" style="width:672px;height:480px;" class="grViz html-widget"></div>
+<script type="application/json" data-for="htmlwidget-35e97993eaddb1e43639">{"x":{"diagram":"digraph{\n\n     graph [compound = true, nodesep = .5, ranksep = .5,\n         color = crimson, rankdir = TB]\n\n  node [fontname = Helvetica, fontcolor = darkslategray,\n        shape = rectangle, fixedsize = true, width = 2,\n        color = darkslategray]\n        \n  Forslag[label = \"Forslag på indikator og\nreferanseverdier\"]\n  Datasett[label = \"Mulige datasett\"]\n  Indikatorer[label = \"Mulige indikatorer\"]\n  Ekspert[label=\"Indikatorekspert(er)\"]\n  Umulig[label = \"Umulig\" shape=plaintext, fontcolor=red, fontsize=20]\n  Sjekkliste[label = \"Utfylling\nav sjekkliste\"]\n  Ekskludert[shape = plaintext, fontcolor=red, fontsize=20]\n  Mulig[shape = plaintext, fontcolor=darkgreen, fontsize=20]\n  OK[shape = plaintext, fontcolor=darkgreen, fontsize=20]\n  Rapport[label=\"Ferdig rapport\"]\n  Ekspert1[label=Ekspertpanel]\n  Ekspert2[label=Ekspertpanel]\n  Metadata[label = \"Dokumentasjon\n(metadata)\"]\n\n  \n  edge [color = black]\n  \n  subgraph cluster0 {\n       label = Scoping;\n       node [fixedsize = true, width = 2];\n      Datasett\n      Indikatorer\n      \n      edge[dir = both]\n      Datasett -> Indikatorer\n  }\n  \n  \n  subgraph cluster {\n       label = Analyse;\n       node [fixedsize = true, width = 2];\n      Utregninger\n      Metadata\n      \n      edge[dir = both]\n      Utregninger -> Metadata\n  }\n       \n       Datasett -> Forslag [ltail = cluster0, headport = w, tailport = e]\n       Ekspert -> Forslag\n       Forslag -> Umulig\n       Forslag -> Mulig\n       Mulig -> Sjekkliste\n       Ekspert1 -> Sjekkliste\n       Sjekkliste -> Ekskludert\n       Sjekkliste -> OK\n       OK -> Utregninger[lhead = cluster, tailclip=false]\n       Utregninger -> Rapportutkast\n       Rapportutkast -> Rapport\n       Ekspert2 -> Rapportutkast\n       Metadata -> \"GitHub-pages\"\n}","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 
