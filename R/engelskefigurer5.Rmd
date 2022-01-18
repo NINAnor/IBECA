@@ -136,9 +136,9 @@ dat4$species[dat4$species=="Furu"] <- "Scots pine"
 dat4$species[dat4$species=="Bjørk"] <- "Birch"
 dat4$species[dat4$species=="Osp"] <- "Aspen"
 dat4$species[dat4$species=="Eik"] <- "Oak"
-dat4$species[dat4$species=="Edellauv"] <- "Warm-adapted\ndecidious trees"
+dat4$species[dat4$species=="Edellauv"] <- "Temperate\ndeciduous"
 dat4$species[dat4$species=="Gråor"] <- "Grey alder"
-dat4$species[dat4$species=="Annet lauv"] <- "Other\ndecidious species"
+dat4$species[dat4$species=="Annet lauv"] <- "Other deciduous"
 
 ```
 

@@ -685,7 +685,7 @@ temp_names$plot <- c("Absence of alien species ",
                      "Rowan-aspen-goat willow", 
                      "Primary production",
                      "Functionally important species and structures", 
-                     "Biomass composition across trophic levels",
+                     "Biomass composition within trophic levels",
                      "Functional composition within trophic levels", 
                      "Biological diversity",
                      "Landscape ecological patterns", 
@@ -730,6 +730,45 @@ all_Q <- dplyr::select(all_Q,
 
 ## Step 9: Plotting ###
 
+Define plotting order
+```{r}
+unique(temp_names$plot)
+myOrder <- c(
+  "NDVI (upper lv*)"                            ,
+  "NDVI (lower lv*)"                            ,
+ "Ellenberg N (upper lv*)"                     ,
+ "Ellenberg N (lower lv*)"                     ,
+  "Ellenberg F (upper lv*)"                     ,
+ "Ellenberg F (lower lv*)"                     ,
+ "Large cervids (upper lv*)"                   ,
+
+ "Large carnivores"                            ,
+ "Absence of alien species "                   ,
+ "Bilberry cover "                             ,
+ "Rowan-aspen-goat willow"                     ,
+ "Dead wood total"                             ,
+ "Coarse woody debris"                         ,
+ "Biologically old forest"                     ,
+"Area without technical infrastructure"       ,
+ "Nature Index for forests"                    ,
+ 
+ "Overall Ecological Condition"                ,
+ "Overall Ecological Condition (weighted)"     ,
+
+ "Primary production" ,
+ "Biomass composition between trophic levels" ,
+ "Functional composition within trophic levels",
+ "Functionally important species and structures",
+  "Landscape ecological patterns"               ,
+ "Biological diversity"                        ,
+ "Abiotic conditions"                          ,
+
+
+  "Large cervids"                               ,
+ "Large cervids (lower lv*)"
+)
+```
+
 ```{r}
 periods <- unlist(unique(allind$a_period))
 regions <- unlist(unique(allind$a_reg))
@@ -754,15 +793,16 @@ for (i in 1:length(periods)){
       NA
     }
     
-    TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
     TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
-    
+    TEMP_Q <- TEMP_Q[order(match(TEMP_Q$ind, myOrder)),]
+    TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+
     # Change to 300 or 600 res
     #setwd("../output/aggregated_plots/englishPlots/")
     png(paste("../output/aggregated_plots/englishPlots/skog/region_", regions[j],"_",temp_per, ".png", sep=""), units="in", width=8, height=14, res=600)
      
     par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
-    plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Skalerte indikatorverdier", xlab="",
+    plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Scaled indicator values", xlab="",
          type="n", ylim=c(0,1.15), cex.lab=1.2)
     abline(h=1, col="blue", lwd=2)
     abline(h=0.6, col="red", lwd=2, lty=2)

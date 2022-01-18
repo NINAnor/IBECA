@@ -246,8 +246,8 @@ lsk$year <- as.numeric(as.character(lsk$year))
 # Separate data files
 ros <- lsk %>% dplyr::select(reg, year, ros) %>%
   dplyr::rename(val=ros)
-#dw10 <- lsk %>% dplyr::select(reg, year, dw10) %>%
-#  dplyr::rename(val=dw10)
+dw10 <- lsk %>% dplyr::select(reg, year, dw10) %>%
+  dplyr::rename(val=dw10)
 dw30 <- lsk %>% dplyr::select(reg, year, dw30) %>%
   dplyr::rename(val=dw30)
 old <- lsk %>% dplyr::select(reg, year, old_prop) %>%
@@ -265,6 +265,7 @@ alientrees$val[alientrees$year==1996] <- NA # Needs adjustment in LSK script
 
 
 ```
+
 ```{r}
 #source("indicator_plots2.R")
 eval(parse("indicator_plots.R", encoding="UTF-8"))
@@ -277,6 +278,8 @@ eval(parse("indicator_plots4.R", encoding="UTF-8"))
 ```{r}
 summary(blb$val)
 summary(blb$year)
+summary(dw10$val)
+summary(dw10$year)
 summary(dw30$val)
 summary(dw30$year)
 summary(ros$val)
@@ -359,7 +362,7 @@ indicator_plot2(dataset = old,
 ## Without regions
 ```{r, eval=F, include=FALSE}
 png("../output/indicatorPlots/englishPlots/skog/FunctionallyImportant_noRegions.png", 
-    units="in", width=10, height=10, res=300)
+    units="in", width=12, height=12, res=300)
 
 # Plot windows par
 par(mfrow=c(2,2), 
@@ -380,21 +383,67 @@ indicator_plot4(dataset = blb,
                horizontal = F,
                legendTextSize = 1.25)
 #2
+#indicator_plot4(dataset = dw30,
+#               yAxisTitle = bquote("Coarse woody debis " ~ (m^3 ~ ha^-1)),
+#               lowYlimit = 0,
+#               upperYlimit = 4,
+#               yStep = 1,
+#               minyear = 1992,
+#               maxyear = 2021,
+#               colours = "dark grey",
+#               legendPosition = "left",
+#               legendInset = -50,
+#               move = 0.1,
+#               horizontal = T,
+#               legendTextSize = 1.25)
+#
+
+
+### Prepare dw10 data
+  temp <- aggregate(data=dw10[dw10$reg=="Norge",],
+                    val~year,
+                    FUN = function(x) quantile(x, c(0.025, .5, .975)))
+  
+  temp <- do.call(data.frame, temp)
+  names(temp)[2] <- "low"
+  names(temp)[3] <- "med"
+  names(temp)[4] <- "upp"
+  
 indicator_plot4(dataset = dw30,
-               yAxisTitle = bquote("Coarse woody debis " ~ (m^3 ~ ha^-1)),
+               yAxisTitle = bquote("Dead wood" ~ (m^3 ~ ha^-1)),
                lowYlimit = 0,
-               upperYlimit = 4,
-               yStep = 1,
+               upperYlimit = 11,
+               yStep = 2,
                minyear = 1992,
                maxyear = 2021,
-               colours = "dark grey",
+               colours = "#2DCCD3",
                legendPosition = "left",
                legendInset = -50,
                move = 0.1,
                horizontal = T,
                legendTextSize = 1.25)
-
-
+# Add lines
+  lines(temp$year+(0.1*(-2.5)), temp$med, col="#FFB25B", lwd=4, lty=3) 
+   
+  # Add quantiles to plot
+  for(i in 1:nrow(temp)){
+    arrows(temp$year[i]+(0.1*(-2.5)),temp$med[i],temp$year[i]+(0.1*(-2.5)),temp$upp[i], angle=90, length=0.05, col="#FFB25B", lwd=2)
+    arrows(temp$year[i]+(0.1*(-2.5)),temp$med[i],temp$year[i]+(0.1*(-2.5)),temp$low[i], angle=90, length=0.05, col="#FFB25B", lwd=2)
+  }   
+  
+  points(temp$year+(0.1*(-2.5)),temp$med, pch=21, bg="#FFB25B", cex=1.5)
+  
+  # Add legend to plot
+legend(x = 2008, y = 8, 
+       legend = c("Total dead wood", "Coarse woody debris"), 
+       col = c("#FFB25B", "#2DCCD3"), 
+       bg = c("#FFB25B", "#2DCCD3"), pch=16, lty=2,
+         lwd=1.5, bty="n", 
+       #inset=legendInset, 
+       title="", 
+       horiz = F,
+         cex=1.25)
+ 
 #3
 indicator_plot4(dataset = ros,
                yAxisTitle = bquote("Rowan-aspen-goat willow " ~ (m~3 ~ ha~-1)),
@@ -409,6 +458,7 @@ indicator_plot4(dataset = ros,
                move = 0.1,
                horizontal = T,
                legendTextSize = 1.25)
+
 
 #4
 indicator_plot4(dataset = old,
