@@ -759,7 +759,7 @@ for (i in 1:length(periods)){
     
     # Change to 300 or 600 res
     #setwd("../output/aggregated_plots/englishPlots/")
-    png(paste("../output/aggregated_plots/englishPlots/region_", regions[j],"_",temp_per, ".png", sep=""), units="in", width=8, height=14, res=600)
+    png(paste("../output/aggregated_plots/englishPlots/skog/region_", regions[j],"_",temp_per, ".png", sep=""), units="in", width=8, height=14, res=600)
      
     par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
     plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Skalerte indikatorverdier", xlab="",
@@ -1023,7 +1023,7 @@ for (i in 1:length(periods)){
     
     # Change to 300 or 600 res
     #setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Pressure_plots/vertical")
-    png(paste("../output/aggregated_plots/englishPlots/pressures_region_", regions[j],"_",temp_per, ".png", sep=""), units="in", width=4, height=11, res=600)
+    png(paste("../output/aggregated_plots/englishPlots/skog/pressures_region_", regions[j],"_",temp_per, ".png", sep=""), units="in", width=4, height=11, res=600)
     
     par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
     plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Skalerte indikatorverdier", xlab="",
@@ -1092,7 +1092,7 @@ for (i in 1:length(periods)){
   
   # Change to 300 or 600 res
 
-  png(paste("../output/aggregated_plots/englishPlots/comb_", temp_per, ".png", sep=""), units="in", width=6, height=11, res=600)
+  png(paste("../output/aggregated_plots/englishPlots/skog/comb_", temp_per, ".png", sep=""), units="in", width=6, height=11, res=600)
   
   par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
   plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Skalerte indikatorverdier", xlab="",
