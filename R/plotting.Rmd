@@ -952,7 +952,44 @@ temp_names$plot <- c("Fravær av fremmede arter",
                      "Total", 
                      "Total (vektet pr. egenskap)")
 ```
+Engelske navn
 
+```{r, eval=F}
+temp_names2 <- data.frame(c(unique(allind$X), names(ind_char[,-1]),
+                           "Total", "Total_w"))
+names(temp_names2) <- "work"
+temp_names2$plot <- c("Absence of alien species",
+                     "Area of glaciers",
+                     "Ellenberg L (upper)",
+                     "Ellenberg L (lower)",
+                     "Ellenberg N (upper)",
+                     "Ellenberg N (lower)",
+                     "Nature Index for mountains (mod.)",
+                     "Artic fox",
+                     "Ptarmigan",
+                     "Connectivity",  # Fragmentering
+                     "Area without technical infrastructure",
+                     "Wolverine",
+                     "Golden eagle",
+                     "Willow grouse",
+                     "NDVI (upper)",
+                     "NDVI (lower)",
+                     "Reindeer",
+                     "Snow cover duration",
+                     "Snow depth",
+                     "Small rodents",
+                     "Vegetation heat requirement",
+                     "Winter rain",
+                     "Primary production",
+                     "Functionally important species and structures", 
+                     "Biomass composition between trophic levels",
+                     "Functional composition within trophic levels", 
+                     "Biological diversity",
+                     "Landscape ecological patterns", 
+                     "Abiotic conditions",
+                     "Overall Ecological Condition", 
+                     "Overall Ecological Condition (weighted)")
+```
 # Saving 
 
 Extra column for name, matched from temp_names
@@ -969,10 +1006,29 @@ write.csv(agg_ind,      "../output/tables/agg_ind.csv")
 #write.csv(weights_all,  "../output/tables/weights_all.csv")
 ```
 
+```{r}
+all_Q <- read.csv("../output/tables/all_Q.csv", encoding = "UTF-16")
+all_Q <- all_Q[,-1]
+tot_ind <- read.csv("../output/tables/tot_ind.csv")
+tot_ind <- tot_ind[,-1]
+tot_ind_w <- read.csv("../output/tables/tot_ind_w.csv")
+tot_ind_w <- tot_ind_w[,-1]
+agg_ind <- read.csv("../output/tables/agg_ind.csv")
+agg_ind <- agg_ind[,-1]
+ind_char <- read.csv("../output/ind_char.csv")
+ind_char <- ind_char[,-1]
+allind <- read.csv("../output/allind_temp.csv")
+allind <- allind[,-1]
+weights <- read.csv("../output/weights_temp.csv")
+weights <- weights[,-1]
+```
+
 
  Omit the extra name column (only for better understanding of backup csv file)
 ```{r, eval=F}
-all_Q <- all_Q[,-7]
+all_Q <- dplyr::select(all_Q, 
+                       -names_plot)
+
 ```
 
 
@@ -980,7 +1036,7 @@ all_Q <- all_Q[,-7]
 
 Ignorer per(iodene)
 ```{r,  eval=F}
-all_Q <- select(all_Q, -per)
+all_Q <- dplyr::select(all_Q, -per)
 ```
 
 Define plotting order
@@ -1022,7 +1078,7 @@ myOrder <- c(
 )
 ```
 
-
+Norsk figure
 ```{r, eval=F}
 
 regions <- unlist(unique(allind$reg))
@@ -1116,3 +1172,96 @@ for (j in 1:length(regions)){
 
 ![](../output/aggregated_plots/region_Norge_.png)
 
+Engelsk figur
+```{r, eval=F}
+
+regions <- unlist(unique(allind$reg))
+
+for (j in 1:length(regions)){
+
+    TEMP_Q <- rbind(
+                    all_Q[all_Q$reg==regions[j],], 
+                    tot_ind[tot_ind$reg==regions[j],],
+                    tot_ind_w[tot_ind_w$reg==regions[j],],
+                    agg_ind[agg_ind$reg==regions[j],])
+    TEMP_Q$temp <- temp_names$plot[match(TEMP_Q$ind, temp_names$work)]
+    TEMP_Q$ind <- temp_names2$plot[match(TEMP_Q$ind, temp_names2$work)]
+
+    TEMP_Q <- TEMP_Q[order(match(TEMP_Q$temp, myOrder)),]
+    
+    TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+    
+  png(paste("../output/aggregated_plots/englishPlots/fjell/","region_", regions[j],"_", ".png", sep=""), 
+        units="in", width=8, height=14, res=600)
+     
+    par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
+    plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Scaled indicator values", xlab="",
+         type="n", ylim=c(0,1.15), cex.lab=1.2)
+    abline(h=1, col="blue", lwd=2)
+    abline(h=0.6, col="red", lwd=2, lty=2)
+    abline(v=length(unique(allind$X))+0.5, col="black", lwd=2)
+    abline(v=length(unique(allind$X))+1.5, col="grey", lwd=1, lty=2)
+    abline(v=length(unique(allind$X))+2.5, col="black", lwd=2)
+    
+    pex <- 1.8 # median point cex
+    lar <- 0.0 # length of CI arrows
+    war <- 5 # width of CI arrows
+    lcol <- "dark grey"
+    bg1 <- "white" # ind point col
+    bg2 <- "black" # char point col
+    
+    
+    # add values and CI's
+    
+    arrows(TEMP_Q$ind_2[1:(nind)],TEMP_Q$med[1:(nind)],TEMP_Q$ind_2[1:(nind)],
+           TEMP_Q$upp[1:(nind)], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[1:(nind)],TEMP_Q$med[1:(nind)],TEMP_Q$ind_2[1:(nind)],
+           TEMP_Q$low[1:(nind)], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[1:(nind)],TEMP_Q$med[1:(nind)], 
+           pch=21, bg=bg1, cex=pex)
+
+    # unweighted
+    arrows(TEMP_Q$ind_2[nind+1],TEMP_Q$med[nind+1],TEMP_Q$ind_2[nind+1],
+           TEMP_Q$upp[nind+1], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[nind+1],TEMP_Q$med[nind+1],TEMP_Q$ind_2[nind+1],
+           TEMP_Q$low[nind+1], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[nind+1],TEMP_Q$med[nind+1], 
+           pch=23, bg=bg1, cex=pex)
+    
+    # weighted
+    arrows(TEMP_Q$ind_2[nind+2],TEMP_Q$med[nind+2],TEMP_Q$ind_2[nind+2],
+           TEMP_Q$upp[nind+2], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[nind+2],TEMP_Q$med[nind+2],TEMP_Q$ind_2[nind+2],
+           TEMP_Q$low[nind+2], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[nind+2],TEMP_Q$med[nind+2], 
+           pch=23, bg=bg2, cex=pex)
+    
+    arrows(TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],TEMP_Q$med[nind+3:nrow(TEMP_Q)],TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],
+           TEMP_Q$upp[nind+3:nrow(TEMP_Q)], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],TEMP_Q$med[nind+3:nrow(TEMP_Q)],TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],
+           TEMP_Q$low[nind+3:nrow(TEMP_Q)], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],TEMP_Q$med[nind+3:nrow(TEMP_Q)], 
+           pch=21, bg=bg2, cex=pex)
+    
+    # Name axes #
+    lablist.x<-as.vector(TEMP_Q$ind)
+    
+    axis(1, at=seq(1,  nrow(TEMP_Q), by=1), labels = FALSE)
+    
+    # Change first command number to align labels
+    text(TEMP_Q$ind_2+0.40, par("usr")[3]-0.02, labels = lablist.x,pos=2,srt = 90,  xpd = TRUE, cex=1.2)
+    
+    dev.off()
+  
+}
+
+
+#rm(list=ls())
+## tempdir()
+#dir(tempdir())
+#unlink(paste0(normalizePath(tempdir()), "/", dir(tempdir())), recursive = TRUE)
+#dir(tempdir())
+
+```
+
+For plotting av indikatorverdier gruppert etter påvirkningsfaktor, se [her](paavirkninger.html)
