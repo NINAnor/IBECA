@@ -1,5 +1,5 @@
 # Indicator plots for bootstrapped data
-# Same as indicator_plots2.R, just without the regions (national trends only)
+# Same as indicator_plots4.R (national trends only) but for pre-aggregated data
 
 # Plot time series of scaled indicators as in P:\41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly\FINAL\Scripts\Plotting\indicator_plots.R
 
@@ -7,7 +7,7 @@
 library(readxl)
 
 
-indicator_plot4 <- function(
+indicator_plot5 <- function(
   dataset = NULL,
   yAxisTitle = "DEFULT Y AXIS TEXT",
   lowYlimit = 0,
@@ -20,8 +20,6 @@ indicator_plot4 <- function(
   legendInset = 0,
   horizontal = TRUE,
   legendTextSize = 1.25,
-  ticks = NA,
-  myLas = 2,
   move = 0 # Move parameter (to avoid overlapping)
 ){
   
@@ -62,15 +60,7 @@ indicator_plot4 <- function(
   
   
   ### Summary stats table
-  dat2 <- aggregate(data=dat,
-                    val~year,
-                    FUN = function(x) quantile(x, c(0.025, .5, .975)))
-  
-  dat2 <- do.call(data.frame, dat2)
-  names(dat2)[2] <- "low"
-  names(dat2)[3] <- "med"
-  names(dat2)[4] <- "upp"
-  
+  dat2 <- dat
   
   ### PLOT first Norway
   
@@ -98,7 +88,7 @@ indicator_plot4 <- function(
   )
   
   # Axis 1 options
-  axis(side=1, at=c(minyear, ticks, maxyear), labels=c("",ticks, ""), cex.axis=1.5, las = myLas) 
+  axis(side=1, at=c(minyear, Norge$year, maxyear), labels=c("",Norge$year, ""), cex.axis=1.5, las=2) 
   
   
   # Axis 2 options

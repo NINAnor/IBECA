@@ -1,0 +1,293 @@
+---
+title: "Engelske figurer - fjellrapporten, side 4"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurerFjell4.html'))})
+ 
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(data.table)
+library(matrixStats)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Figurene for [aggregert tilstand](plotting.html) og [påvirkningsfaktorer](paavirkninger.html) lages i de opprinnelige scriptene. 
+
+
+
+
+# Klimavariabler
+
+
+# Regn
+```{r}
+winterRain <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vinterregn/winterRain_med.xlsx")
+
+```
+
+```{r}
+winterRain$year <- as.numeric(winterRain$year)
+winterRain$reg  <- as.factor(winterRain$reg)
+```
+
+
+
+Arealvekting
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+```
+
+
+
+Put dataset in same order as the weights
+```{r}
+#regOrder = c(
+#  "Nord-Norge",
+#  "Midt-Norge",
+#  "Østlandet",
+#  "Vestlandet",
+#   "Sørlandet"
+#             )
+#
+#winterRain <- winterRain[order(match(winterRain$reg, regOrder)),]
+```
+
+
+```{r}
+regn <- data.table::dcast(data = winterRain,
+                          year ~reg,
+                          value.var="value")
+```
+
+Put weight in same order as the columns in regn
+```{r}
+regOrder = c(
+  
+  "Midt-Norge",
+  "Nord-Norge",
+  "Sørlandet",
+  "Vestlandet",
+  "Østlandet"
+   
+             )
+
+wgt <- wgt[order(match(wgt$Region, regOrder)),]
+```
+
+
+```{r}
+mat <- as.matrix(regn[,2:6])
+regn$Norge <- rowWeightedMeans(mat, w = wgt$Fjellareal2)
+```
+
+```{r}
+regn <- dplyr::select(regn, 
+                      year,
+                      val = Norge)
+```
+
+Her kunne jeg brukt regionale gjennomsnitt som referaser, men velger å bruke det nasjonale. Det blir litt rart uansett hva man gjør.
+```{r}
+ref <- mean(regn$val[regn$year %between% c(1961, 1990)])
+regn$val <- regn$val-ref
+summary(regn$val)
+```
+
+
+
+
+
+
+# Snødybde
+
+```{r}
+sno <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snodybde/snowDepth_med.xlsx")
+```
+
+
+```{r}
+sno$year <- as.numeric(substr(sno$year, 6, 10))
+sno$reg <- factor(sno$reg)
+```
+
+```{r}
+sno <- data.table::dcast(data = sno,
+                          year ~reg,
+                          value.var="value")
+
+snom <- as.matrix(sno[,2:6])
+sno$Norge <- rowWeightedMeans(snom, w = wgt$Fjellareal2)
+```
+
+```{r}
+ref2 <- mean(sno$Norge[sno$year %between% c(1961,1990)])
+sno$Norge <- sno$Norge-ref2
+summary(sno$Norge)
+```
+
+
+# Snødekkets varighet
+```{r}
+dat <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Snodekning/mediansnowCover.xlsx")
+```
+
+
+```{r}
+dat$year <- as.numeric(substr(dat$year, 6, 10))
+dat$reg  <- as.factor(dat$reg)
+dat$value <- as.numeric(dat$value)
+```
+
+```{r}
+dat <- data.table::dcast(data = dat,
+                          year ~reg,
+                          value.var="value")
+
+datm <- as.matrix(dat[,2:6])
+dat$Norge <- rowWeightedMeans(datm, w = wgt$Fjellareal2)
+```
+
+```{r}
+ref3 <- mean(dat$Norge[dat$year %between% c(1961,1990)])
+#mean(dat$Norge)
+dat$Norge <- dat$Norge-ref3
+
+summary(dat$Norge)
+```
+
+
+# Plotting
+
+
+```{r}
+
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 26
+lowYlimit   <- -2
+yStep <- 5
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = "grey30"
+# Create loop factors
+
+
+
+png("../output/indicatorPlots/englishPlots/fjell/klimaindikatorer.png", 
+    units="in", width=13, height=6, res=300)  
+    
+par(mar=c(4.5,6.5,2,2), mfrow=c(1,3))
+
+# Vinterregn
+  plot(
+    regn$val~regn$year, 
+    ylab="Winter rain (mm)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(regn$year, regn$val, col=colours, lwd=3, lty=1) 
+  
+   abline(h=0, col="grey", lty=1, lwd=1)
+  
+# Snødybde  
+ plot(
+    sno$Norge~sno$year, 
+    ylab="Snow depth (mm)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(-450, 450),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(-450, 450, 200), 
+       labels=seq(-450, 450, 200), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(sno$year, sno$Norge, col=colours, lwd=3, lty=1) 
+   abline(h=0, col="grey", lty=1, lwd=1)
+
+  
+# Snødekkets varighet
+  
+  plot(
+    dat$Norge~dat$year, 
+    ylab="Snow cover duration (days)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(-40, 30),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(-40, 30, 10), 
+       labels=seq(-40, 30, 10), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  lines(dat$year, dat$Norge, col=colours, lwd=3, lty=1) 
+   abline(h=0, col="grey", lty=1, lwd=1)
+
+dev.off()
+```
+
+

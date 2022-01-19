@@ -1,0 +1,197 @@
+---
+title: "Engelske figurer - fjellrapporten, side 2"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurerFjell2.html'))})
+ 
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Figurene for [aggregert tilstand](plotting.html) og [påvirkningsfaktorer](paavirkninger.html) lages i de opprinnelige scriptene. 
+
+
+
+
+# NI index for trofiske nivå
+
+Dette er en forkortet og modifisert versjon av det [opprinnelige skriptet](trofiske_grupper.html).
+
+```{r}
+eval(parse("indicator_plots4.R", encoding="UTF-8"))
+
+```
+
+
+Data:
+```{r}
+mellom <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Mellompredator.csv", header=T)
+
+herb <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Plante- og filterspisere.csv", header=T)
+
+prim <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Primærprodusent.csv", header=T)
+
+topp <- read.csv("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Alpine/Index_Topp-predator.csv", header=T)
+
+NI <- read.csv("../output/indicator_values/fjellindeks.csv")
+```
+
+
+```{r}
+herb <- aggregate(data=herb,
+                    val~year,
+                    FUN = function(x) quantile(x, c(0.025, .5, .975)))
+  
+  herb <- do.call(data.frame, herb)
+  names(herb)[2] <- "low"
+  names(herb)[3] <- "med"
+  names(herb)[4] <- "upp"
+  
+prim <- aggregate(data=prim,
+                    val~year,
+                    FUN = function(x) quantile(x, c(0.025, .5, .975)))
+  
+prim <- do.call(data.frame, prim)
+names(prim)[2] <- "low"
+names(prim)[3] <- "med"
+names(prim)[4] <- "upp"
+
+topp <- aggregate(data=topp,
+                    val~year,
+                    FUN = function(x) quantile(x, c(0.025, .5, .975)))
+  
+topp <- do.call(data.frame, topp)
+names(topp)[2] <- "low"
+names(topp)[3] <- "med"
+names(topp)[4] <- "upp"
+
+NI <- aggregate(data=NI,
+                    val~year,
+                    FUN = function(x) quantile(x, c(0.025, .5, .975)))
+  
+NI <- do.call(data.frame, NI)
+  names(NI)[2] <- "low"
+  names(NI)[3] <- "med"
+  names(NI)[4] <- "upp"
+
+```
+
+
+```{r}
+
+png("../output/indicatorPlots/englishPlots/fjell/trofiskeNivå.png", 
+    units="in", width=7, height=7, res=300)
+
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+indicator_plot4(dataset = mellom,
+               yAxisTitle = "Index",
+               lowYlimit = 0,
+               upperYlimit = 1,
+               yStep = .2,
+               minyear = 1985,
+               maxyear = 2021,
+               colours = "#FFB25B", # "#2DCCD3", "#004F71", "#7A9A01", "#93328E", "dark grey"),
+               legendPosition = "top",
+               legendInset = 0.8,
+               move = 0,
+               horizontal = T,
+               ticks = mellom$year,
+               myLas = 1,
+               legendTextSize = 1.25)
+
+# add herb
+  lines(herb$year+(0.1*(-2.5)), herb$med, col="#2DCCD3", lwd=4, lty=3) 
+   
+  # Add quantiles to plot
+  for(i in 1:nrow(herb)){
+    arrows(herb$year[i]+(0.1*(-2.5)),
+           herb$med[i],herb$year[i]+(0.1*(-2.5)),
+           herb$upp[i], angle=90, length=0.05, col="#2DCCD3", lwd=2)
+    arrows(herb$year[i]+(0.1*(-2.5)),
+           herb$med[i],herb$year[i]+(0.1*(-2.5)),
+           herb$low[i], angle=90, length=0.05, col="#2DCCD3", lwd=2)
+  }   
+  
+  points(herb$year+(0.1*(-2.5)),herb$med, pch=21, bg="#2DCCD3", cex=1.5)
+  
+  
+
+# add prim
+  lines(prim$year+(0.1*(-2.5)), prim$med, col="#004F71", lwd=4, lty=3) 
+   
+  # Add quantiles to plot
+  for(i in 1:nrow(prim)){
+    arrows(prim$year[i]+(0.1*(-2.5)),
+           prim$med[i],prim$year[i]+(0.1*(-2.5)),
+           prim$upp[i], angle=90, length=0.05, col="#004F71", lwd=2)
+    arrows(prim$year[i]+(0.1*(-2.5)),
+           prim$med[i],prim$year[i]+(0.1*(-2.5)),
+           prim$low[i], angle=90, length=0.05, col="#004F71", lwd=2)
+  }   
+  
+  points(prim$year+(0.1*(-2.5)),prim$med, pch=21, bg="#004F71", cex=1.5)
+  
+  
+# add topp
+  lines(topp$year+(0*(-2.5)), topp$med, col="#7A9A01", lwd=4, lty=3) 
+   
+  # Add quantiles to plot
+  for(i in 1:nrow(topp)){
+    arrows(topp$year[i]+(0*(-2.5)),
+           topp$med[i],topp$year[i]+(0*(-2.5)),
+           topp$upp[i], angle=90, length=0.05, col="#7A9A01", lwd=2)
+    arrows(topp$year[i]+(0*(-2.5)),
+           topp$med[i],topp$year[i]+(0*(-2.5)),
+           topp$low[i], angle=90, length=0.05, col="#7A9A01", lwd=2)
+  }   
+  
+  points(topp$year+(0*(-2.5)),topp$med, pch=21, bg="#7A9A01", cex=1.5)
+  
+  
+# add fjellindeksen
+  lines(NI$year+(-0.1*(-2.5)), NI$med, col="#93328E", lwd=4, lty=3) 
+   
+  # Add quantiles to plot
+  for(i in 1:nrow(NI)){
+    arrows(NI$year[i]+(-0.1*(-2.5)),
+           NI$med[i],NI$year[i]+(-0.1*(-2.5)),
+           NI$upp[i], angle=90, length=0.05, col="#93328E", lwd=2)
+    arrows(NI$year[i]+(-0.1*(-2.5)),
+           NI$med[i],NI$year[i]+(-0.1*(-2.5)),
+           NI$low[i], angle=90, length=0.05, col="#93328E", lwd=2)
+  }   
+  
+  points(NI$year+(-0.1*(-2.5)),NI$med, pch=21, bg="#93328E", cex=1.5)
+  
+  
+  
+  # Add legend to plot
+legend("bottomleft", 
+       legend = c("Primary producers", "Meso predators", "Nature Index for mountains", "Herbivores", "Top predators"), 
+       col = c("#004F71", "#FFB25B", "#93328E", "#2DCCD3", "#7A9A01"), 
+       bg = c("#004F71", "#FFB25B", "#93328E", "#2DCCD3", "#7A9A01"), pch=16, lty=2,
+         lwd=1.5, bty="n", 
+       #inset=legendInset, 
+       title="", 
+       horiz = F,
+         cex=1.25)
+```
+
