@@ -29,10 +29,11 @@ library(sf)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+Sist oppdatert: `r Sys.time()`
 <br>
 
 
-# Introduskjon
+# Introduksjon
 
 Hvilken oppløsning kan vi forvente fra økologisk tilstand?
 Kan økologisk tilstand brukes som kunnskapsgrunnlag i arealbrukssaker? Her ser vi på ett konkret eksempel med 12 aktueller prosjektområder/boligområder i Nordre Follo kommune.
