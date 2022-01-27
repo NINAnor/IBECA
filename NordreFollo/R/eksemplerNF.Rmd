@@ -100,18 +100,18 @@ Arealet til prosjektområdene er fra 0.01 til 0.2 km2.
 Indikatorene bør også oppfylle så mange av de følgende punktene som mulig (liste hentet fra fagsystemet):
 
 
-1 gi et representativt bilde av miljøets tilstand, miljøpåvirkninger eller samfunnets respons
-1 være enkel, lett å tolke og i stand til å vise trender over tid
-1 respondere på endringer i miljøet og relaterte menneskelige aktiviteter
-1 gi grunnlag for internasjonale sammenligninger
-1 være relevant for det arealet som vurderes
-1 ha en terskelverdi eller referanseverdi som den kan sammenlignes mot, slik at brukere kan vurdere betydningen av indikatorens verdi 
-1 være teoretisk godt fundert i tekniske og vitenskapelige termer
-1 være basert på internasjonale standarder og internasjonal konsensus om gyldighet
-1 være egnet til å kobles mot økonomiske modeller, prognoser og informasjonssystemer
-1 være lett tilgjengelig eller kunne gjøres tilgjengelig på en kostnadseffektiv måte
-1 være godt dokumentert og av kjent kvalitet
-1 oppdateres jevnlig i samsvar med utarbeidede prosedyrer
+1. gi et representativt bilde av miljøets tilstand, miljøpåvirkninger eller samfunnets respons
+1. være enkel, lett å tolke og i stand til å vise trender over tid
+1. respondere på endringer i miljøet og relaterte menneskelige aktiviteter
+1. gi grunnlag for internasjonale sammenligninger
+1. være relevant for det arealet som vurderes
+1. ha en terskelverdi eller referanseverdi som den kan sammenlignes mot, slik at brukere kan vurdere betydningen av indikatorens verdi 
+1. være teoretisk godt fundert i tekniske og vitenskapelige termer
+1. være basert på internasjonale standarder og internasjonal konsensus om gyldighet
+1. være egnet til å kobles mot økonomiske modeller, prognoser og informasjonssystemer
+1. være lett tilgjengelig eller kunne gjøres tilgjengelig på en kostnadseffektiv måte
+1. være godt dokumentert og av kjent kvalitet
+1. oppdateres jevnlig i samsvar med utarbeidede prosedyrer
 
 
 Se også [denne artikkelen](https://www.sciencedirect.com/science/article/pii/S1470160X21010414) for andre kriterier til indikatorer.
