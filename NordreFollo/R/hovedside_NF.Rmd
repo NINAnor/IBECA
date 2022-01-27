@@ -25,10 +25,17 @@ knitr::opts_chunk$set(echo = TRUE)
 # Introduksjon
 ... kommer snart
 
+<br>
+
+# Eksempler
+
+[Klikk her](eksempler_NordreFollo.html) for å se noen eksempler på indikatorer og på hva et økologisk tilstandsregnskap kan være for noe, og hva det ikke kan være for noe.
+
 <br><br><br>
 
 # Indikatorer
-1 [Naturtyper etter Miljørektoratets Instruks](naturtyperMdir_NordreFollo.html)
+1 [Tilstand i naturtyper](naturtyperMdir_NordreFollo.html)
+1 [Rovdyr](rovdyr_NordreFollo.html)
 
 
 
