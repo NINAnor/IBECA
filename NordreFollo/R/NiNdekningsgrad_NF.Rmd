@@ -52,17 +52,11 @@ dat2$tilstand[dat2$tilstand == "DÃ¥rlig"] <- "Dårlig"
 ```
 
 
-Import outlines of municipalities and make a cropped version as well which is smaller and easier to work with
+Import outlines of municipality
 ```{r}
-kom <- sf::st_read("R:/GeoSpatialData/AdministrativeUnits/Norway_AdministrativeUnits/Converted/Norway_Municipalities/Kommune_polygon_2020.shp")
-kom_crop <- st_crop(kom, dat2)
-
+nf <- readRDS("../data/outlineNF.rds")
 ```
 
-Instrad of cropping, we can single out Nordre Follo
-```{r}
-nf <- kom[kom$NAVN== "Nordre Follo",]
-```
 
 Reorder factor levels
 ```{r}
@@ -499,6 +493,22 @@ table(exp2[])
 ```{r, eval=F}
 st_write(exp, "../output/scaledIndicatorMaps/shp/naturtyperMdir.shp")
 writeRaster(exp2,"../output/scaledIndicatorMaps/raster/naturtyperMdir.tif")
+```
+# Export variable (unscaled)
+```{r}
+names(dat2)
+var <- dplyr::select(dat2, 
+                     identifikasjon_lokalid,
+                     Hovedøkosystem,
+                     kartleggingsdato,
+                     naturtype,
+                     tilstand)
+```
+
+```{r, eval=F}
+st_write(var, "../output/unscaledVariables/shp/naturtyperMdir.shp")
+
+
 ```
 
 
