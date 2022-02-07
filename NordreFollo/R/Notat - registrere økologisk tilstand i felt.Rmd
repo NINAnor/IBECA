@@ -1,0 +1,42 @@
+---
+title: "Notat - registrere økologisk tilstand i felt"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    fig_caption: yes
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'notat_okologiskTilstandIFelt.html'))})
+---
+
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(dplyr)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Sist oppdatert: `r Sys.time()`
+<br>
+
+
+# Registrer økologisk tilstand i felt
+
+Dersom en skal beregne økologsik tilstand etter fagsystemet vil dette av flere grunner ha begrenset oppløsning, og derfor begreset nytteverdi for arealbruksvurderinger i kommunene. Det som kan være en løsning for å dekke dette behovet er lokal datainnsamling av tilpassede tilstandsindikatorer knyttet til naturtyper eller arealtyper. Det beste eksempelt på dette som vi vet om er [the biodiversity metric](http://nepubprod.appspot.com/publication/6049804846366720). 
+
+## The Biodiversity Metric
+Dette er en feltprotokoll og regneverktøy utviklet av eller med Natural England og skal brukes for å overvåke i hvilken grad nye byggeprosjekter i England oppfyller kravene i Biodiversity Net Gain strategien. Det gjøres en arealdekkende naturtypekrtlegging (i motsettnign til Naturtyper etter Miljødirektoratets instruks, som er det som benyttes i norske konsekvensutredninger blant annet) av interesseområdet og så bestemmes den økolgiske tilstanded ved hjelp av en kriterieliste. Kriterielisten er en liste med ja-nei spørsmål, noe som gjør feltinnsamlingen mye raskere enn om det skulle taes kvantitative mål. Listen av kriterier for god økologisk tilstand er unik for hver naturtype og kan være circa 7 punkter lang. Under kan du se kriteriene for noen kystnære, terrestriske økosystemer.
+
+![](../figures/tilstandskriterier_biodiversityMetric_coastalHabitatType.png)
+
+
+## Naturtyper etter Miljødirektoratets Instruks 
+
+Ett annet eksempel på feltregistreringer av tilstand  er naturtyper etter Miljødirektoratets instruks hvor tilstand er registrert i felt på grunnlag av en liste med kriterier (typisk 2-4 kriterier). Hvert av disse kriteriene er på en måte en indikator i seg selv, men det er noe problematisk å behandle de som individuelle indikatorer  . Det er derimot [andre utfordringer](naturtyperMdir_NordreFollo.html) med dette datasette knyttet til dekkningsgraden og arealrepresntativiteten. De eksisterende dataene vil ikke dekke behovet for å vurdere de tolv byggeområdene mot hverande. Dette datasetet viser derimot forkomster av økologisk viktige og rødlistede naturtyper, som bør vurderes i arealbrukssaker på lik linje med artsfunn og lignende punktinformasjon som finnes i portalen for økologiske grunnkart. 
+

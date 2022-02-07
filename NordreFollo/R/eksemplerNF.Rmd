@@ -125,7 +125,7 @@ Her er det 19 indikatorer. Merk at de fleste, om ikke alle, av disse indikatoren
 
 # Utfordringer ved nedskaleringen av økologisk tilstand 
 
-I Nordre Follo skal det gjøres et vegg-til-vegg regnskap, i motsettning til i de nasjonele vurderingene hvor man har gjort ett og ett økosystem om gangen. Det vil si at man i Nordre Follo må ha indikatorer for alle de økosystemene eller arealtypene som finnes der. Som vi ser under så er det ganske mange. 
+I Nordre Follo skal det gjøres et vegg-til-vegg regnskap, i motsettning til i de nasjonale vurderingene hvor man har gjort ett og ett økosystem om gangen. Det vil si at man i Nordre Follo må ha indikatorer for alle de økosystemene eller arealtypene som finnes der. Som vi ser under så er det ganske mange. 
 
 
 ```{r, cache=T, include=F}
@@ -200,19 +200,6 @@ tm_layout(title.position = c('right', 'top'),
 
 Spesielt vannskelig blir det å finne indikatorer for våtmark, sterkt endret mark (inkl. bebygd areal) og semi-naturlig mark.  Realistisk sett vil det ikke bli mulig å få samme indikatordekning på alle arealer, som vi hadde i de nasjonale vurderingene. Samtidig vil oppløsning på den holistiske tilstandsvurderingen, basert på indikatorer som ligner de vi har brukt i de nasjonel tilstandsvurderingen, ikke gi grunnlag for sikkert å skille lokale områder. 
 
-# Registrer økologisk tilstand i felt
-
-Det vi derimot ser som en løsning for å dekke dette behoved er lokal datainnsamling av tilpassede tilstandsindikatorer knyttet til naturtyper eller arealtyper. Det beste eksempelt på dette som vi vet om er [the biodiversity metric](http://nepubprod.appspot.com/publication/6049804846366720). 
-
-## The Biodiversity Metric
-Dette er en feltprotokoll og regneverktøy utviklet av eller med Natural England og skal brukes for å overvåke i hvilken grad nye byggeprosjekter i England oppfyller kravene i Biodiversity Net Gain strategien. Det gjøres en arealdekkende naturtypekrtlegging (i motsettnign til Naturtyper etter Miljødirektoratets instruks, som er det som benyttes i norske konsekvensutredninger blant annet) av interesseområdet og så bestemmes den økolgiske tilstanded ved hjelp av en kriterieliste. Kriterielisten er en liste med ja-nei spørsmål, noe som gjør feltinnsamlingen mye raskere enn om det skulle taes kvantitative mål. Listen av kriterier for god økologisk tilstand er unik for hver naturtype og kan være circa 7 punkter lang. Under kan du se kriteriene for noen kystnære, terrestriske økosystemer.
-
-![](../figures/tilstandskriterier_biodiversityMetric_coastalHabitatType.png)
-
-
-## Naturtyper etter Miljødirektoratets Instruks 
-
-Ett annet eksempel på feltregistreringer av tilstand  er naturtyper etter Miljødirektoratets instruks hvor tilstand er registrert i felt på grunnlag av en liste med kriterier (typisk 2-4 kriterier). Hvert av disse kriteriene er på en måte en indikator i seg selv, men det er noe problematisk å behandle de som individuelle indikatorer  . Det er derimot [andre utfordringer](naturtyperMdir_NordreFollo.html) med dette datasette knyttet til dekkningsgraden og arealrepresntativiteten. De eksisterende dataene vil ikke dekke behovet for å vurdere de tolv byggeområdene mot hverande. Dette datasetet viser derimot forkomster av økologisk viktige og rødlistede naturtyper, som bør vurderes i arealbrukssaker på lik linje med artsfunn og lignende punktinformasjon som finnes i portalen for økologiske grunnkart. 
 
 
 # Eksempler på skalerte karlag
@@ -257,4 +244,19 @@ tm_shape(ulv)+
               style = "fixed", breaks = seq(0,1,0.2))+
   tm_layout(legend.outside = TRUE)
 ```
+
+# Veien videre
+
+Ved å følge rådene fra fagsystemet for økologsik tilstand kan vi lage et tilstandsregnskap for Nordre Follo kommune som kan brukes i nasjonal rapportering og i 4-årige kommuneplaner. Dermed fyller vi hovedbehovet som er identifisert i prosjektet.
+Men vi ser at det blir vanskelig, om ikke umulig, å bruke samme tilnærming for å lage et høyoppløselig kart over økologisk tilstand som kan brukes i konkrete arealbrukssaker på størrelse med de tolv boligområdene i dette eksempelet. For å dekke dette behovet ser vi for oss følgene tilnærminger.
+
+- Et større fokus på kartfesting av naturgoder. Disse kartene kan ha finere oppløsning. Samtidig kan vi ha et større fokus på fremstilling av variabler som kan forklare eller prediktere naturens evne til å levere naturgoder.
+
+- Et større fokus på fremstilling av kart av ikke-skalerte variabler som er relevante for økologisk tilstand, men som ikke er egnet som indikatorer. Det er derimot usikkert  hvilken grad de er forenlige med et naturregnskap etter SEEA EA. Forvaltningverdien er betraktelig mindre enn for et komplett tilstandsregnskap siden dekningen av de ulike økosystemegenskapene blir mer tilfeldig og datastyrt.
+
+- Lokal finskala naturtypekartlegging og vurdering av et forenklet indikatorsett gjennom *the Biodiversity Metric*, (se [eget notat](notat_okologiskTilstandIFelt.html)).
+
+Det første og siste punktet virker mest fornuftig fra mitt ståsted. Men det vil i alle tilfeller være stort læreutbytte av å gjøre et tilstandsregnskap for hele kommunen etter fagsystemet da dette vil blant annet gi oss øving i kommunikasjon og i sammenstiling av regnskap på tvers av økosystemer. Om vi vil holde på den planen, så kan gjennomføring av det første punktet og andre fjerne viktige ressurser fra denne arbeidsoppgaven.
+
+Forslaget mitt er å lage et *minimum working example* for et vegg-til-vegg tilstandsregnskap i Nordre Follo. Dvs. i praksis at vi reduserer indikatorsettet til et minimum av hva som trengs for å teste funksjonaliteten i regnskapssystemet. Eventuelle midler som blir frigjort av denne reduserte ambisjonsstillingen vil brukes på uttesting av Biodiversity Metric 3.0, siden dette er mer relevant for å dekke kommunens behov for økt kunnskapsgrunnlag i arealbrukssaker. 
 

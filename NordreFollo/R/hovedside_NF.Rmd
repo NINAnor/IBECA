@@ -31,11 +31,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 [Klikk her](eksempler_NordreFollo.html) for å se noen eksempler på indikatorer og på hva et økologisk tilstandsregnskap kan være for noe, og hva det ikke kan være for noe.
 
+<br>
+[Notat](notat_okologiskTilstandIFelt.html) rundt mulighetene for feltregistrering av økologisk tilstand.
+
 <br><br><br>
 
 # Indikatorer
-1 [Tilstand i naturtyper](naturtyperMdir_NordreFollo.html)
-1 [Rovdyr](rovdyr_NordreFollo.html)
+1. [Tilstand i naturtyper](naturtyperMdir_NordreFollo.html)
+1. [Rovdyr](rovdyr_NordreFollo.html)
 
 
 
