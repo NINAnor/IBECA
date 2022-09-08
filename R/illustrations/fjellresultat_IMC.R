@@ -46,27 +46,20 @@ tm_shape(reg) +
   tm_polygons(alpha = 0,border.col = "black")
 
 
+regionNames_en <- c("North","Central","East","West","South")
+
 # fjellmasken
 file <- "data/fjellmasken.tif"
 fjell <- raster::raster(file, proxy=F)
 fjell
 plot(fjell)
 
-# redusere oppløsningen fra 50m til 1km
-#fjell[fjell[]>0] <- 1
-#fjell_low <- aggregate(fjell, fact=20)
-#saveRDS(fjell_low, "../output/fjell_1km.rds")
-# tar noen minutter...
-#writeRaster(fjell_low, "../output/fjell_1km.tif")
-fjell_low <- readRDS("output/fjell_1km.rds")
 
-fjell_low_star <- st_as_stars(fjell_low)
-fjell_low_star[fjell_low_star[]==0] <- NA # for plotting
+plot(reg$geometry, add=T, border = "black", 
+     col = scales::alpha(myColours, .1))
+#legend("bottom",   
+#       legend = regionNames_en, 
+#       fill = myColours)
 
-fjell_low_poly = as.polygons(fjell_low)
-fjell_low_poly_sf = st_as_sf(fjell_low_poly)
 
-fjell_low <-   st_transform(fjell_low, crs = crs(reg))
-reg.f <- st_intersection(reg, fjell_low)
 
-st_as_sf(fjell)
