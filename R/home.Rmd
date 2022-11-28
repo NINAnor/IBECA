@@ -21,7 +21,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 <br>
 
-Denne nettsiden fungerer som en dokumentasjon av arbeidet som NINA gjør i forbindelse vurdering av økologisk tilstand etter indeksmetoden, inkludert  utregninger av indikatorer. Sidene oppdateres kontinuerlig ettersom arbeidet pågår og for upubliserte indikatorer vil sidene også fungere som  arbeidsdokument.
+**_ARKIVERT / DEPRACTED_**
+
+Denne nettsiden fungerer som en dokumentasjon av arbeidet som NINA gjorde i forbindelse vurdering av økologisk tilstand i fjell i 2021 etter indeksmetoden, inkludert  utregninger av indikatorer. Nettsiden _OPPDATERES IKKE LENGRE_. Arbeid gjort fra og med 2022 dokumenteres på en [annen side](https://ninanor.github.io/ecosystemCondition/) 
+
+This website is _NOT BEING UPDATED ANYMORE_. See [this site](https://ninanor.github.io/ecosystemCondition/) for information about our work from year 2022 onwards.
 
 <br><br>
 
