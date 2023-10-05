@@ -260,6 +260,23 @@ ggplot(ndviTrends3, aes(x = slope, y = region2, fill = region2)) +
   labs(x='Årlig NDVI-endring',y='Region')
 ```
 
+the same in English
+```{r slope plot English, echo=FALSE}
+
+ndviTrends3$region2 <- ndviTrends3$region
+levels(ndviTrends3$region2) <- c("Eastern","Central","Northern","Southern","Western")
+ndviTrends3$region2 <- factor(ndviTrends3$region2, levels = rev(c("Northern","Western","Central","Eastern","Southern")))
+
+ggplot(ndviTrends3, aes(x = slope, y = region2, fill = region2)) +
+  geom_density_ridges(alpha=1) +
+  theme_ridges() + 
+  theme(legend.position = "none") +
+  xlim(-0.006, 0.008) +
+  labs(x='Annual NDVI change',y='Region in Norway')
+
+```
+
+
 ## Bootstrapping
 We bootstrap the indices 10000 times for each region and calculate the mean
 ```{r}
