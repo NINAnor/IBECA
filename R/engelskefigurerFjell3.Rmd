@@ -1,0 +1,87 @@
+---
+title: "Engelske figurer - fjellrapporten, side 3"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurerFjell3.html'))})
+ 
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Figurene for [aggregert tilstand](plotting.html) og [påvirkningsfaktorer](paavirkninger.html) lages i de opprinnelige scriptene. 
+
+
+
+
+# Areal uten tekniske inngrep
+
+Dette er en forkortet og modifisert versjon av det [opprinnelige skriptet](inon.html).
+
+```{r}
+inon <- read.csv("../output/indicator_values/inon.csv")
+```
+
+```{r}
+inon <- inon[inon$reg=="Norge",]
+```
+
+
+```{r}
+names(inon)[3] <- "med"
+inon$year <- as.numeric(inon$year)
+```
+
+```{r, fig.width=12, eval=F}
+png("../output/indicatorPlots/englishPlots/fjell/inon.png", 
+    units="in", width=7, height=7, res=300)
+
+par(mfrow=c(1,1), mar=c(4.5,
+                        5.5,
+                        0,
+                        2))
+
+
+# Plot for region = 'Norge'
+  plot(
+    inon$med~inon$year, 
+    ylab="Area without technical\ninfrastructure (prop.)",
+    xlab="",
+    main="",
+    xlim=c(1985, 2021),
+    ylim=c(0, 1),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(1986, sort(inon$year), 2021), labels=c("",sort(inon$year), ""), cex.axis=1.5, las=2) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(0, 1, 0.2), 
+       labels=seq(0, 1, 0.2), 
+       cex.axis=1.5)
+  
+  lines(inon$year, inon$med, col="grey", lwd=5, lty=3) 
+  points(inon$year,inon$med, pch=21, bg="grey", cex=3)
+  
+```
+
+

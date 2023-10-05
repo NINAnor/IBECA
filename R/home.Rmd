@@ -15,25 +15,19 @@ knit: (function(input_file, encoding) {
 ---
 
 ```{r setup, include=FALSE}
-
+library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r, echo=F}
-library(knitr)
-```
+<br>
 
+**_ARKIVERT / DEPRACTED_**
 
+Denne nettsiden fungerer som en dokumentasjon av arbeidet som NINA gjorde i forbindelse vurdering av økologisk tilstand i fjell i 2021 etter indeksmetoden, inkludert  utregninger av indikatorer. Nettsiden _OPPDATERES IKKE LENGRE_. Arbeid gjort fra og med 2022 dokumenteres på en [annen side](https://ninanor.github.io/ecosystemCondition/) 
 
+This website is _NOT BEING UPDATED ANYMORE_. See [this site](https://ninanor.github.io/ecosystemCondition/) for information about our work from year 2022 onwards.
 
-På denne siden vil du finne informasjon om hvordan NINA har jobber med å vurdere økologisk tilstand i Norge økosystemer. 
-
-[Økosystem Fjell](https://ninanor.github.io/IBECA/fjell) ![test](../figures/fjellLogo.png){width=1cm} (under arbeid)  
-
-[Økosystem Skog](https://ninanor.github.io/IBECA/skog) ![test](../figures/skogLogo.png){width=0.5cm} (planlagt)
-
-
-
+<br><br>
 
 
 ## GitHub

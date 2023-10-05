@@ -1,0 +1,325 @@
+---
+title: "Engelske figurer side 2"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurer3.html'))})
+ 
+---
+
+Forsettelse fra engelskeFigurer.Rmd.
+
+
+Fortsetter med skograpporten og indikatorfigurene der.
+
+Dette scriptet funker ikke nå. Elg_import og Hjort_import har ikke forest cover lagret på riktig måte, så jeg får ikke gjenskapt den opprinnelige vektignen uten at jeg må bruke ganske mye tid på det.
+
+# Elg og hjort
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Packages
+library(dplyr)
+library(tidyr)
+eval(parse("indicator_plots4.R", encoding="UTF-8"))
+eval(parse("indicator_plots2.R", encoding="UTF-8"))
+
+```
+
+```{r, eval=F}
+path <- "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/NI2020-data/Script-based/Forest/Indicators/"
+
+
+elg <- read.csv(paste0(path, "Index_noimputes_Elg.csv"))
+unique(elg$reg)
+#elg <- elg[elg$reg == "Norge",]
+#elg$X <- "Moose"
+
+```
+
+```{r, fig.width=12, fig.height=12}
+indicator_plot2(dataset = elg,
+               yAxisTitle = bquote("Moose (individuals " ~ km^-2 ~ ")"), 
+               lowYlimit = 0,
+               upperYlimit = 4,
+               yStep = 0.5,
+               minyear = 1988,
+               maxyear = 2021,
+               #colours = "dark grey",
+               legendPosition = "top",
+               legendInset = 0,
+               move = 0.1,
+               horizontal = T,
+               legendTextSize = 1.25)
+```
+
+
+```{r}
+#png("../output/indicatorPlots/englishPlots/moose.png", 
+#    units="in", width=10, height=10, res=300)
+
+# Plot windows par
+par(mfrow=c(1,1), 
+    mar=c(4.5,5.5,0,2))
+
+#1
+indicator_plot4(dataset = elg,
+               yAxisTitle = bquote("Moose (individuals " ~ km^-2 ~ ")"), 
+               lowYlimit = 0,
+               upperYlimit = 2,
+               yStep = 0.2,
+               minyear = 1988,
+               maxyear = 2021,
+               colours = "dark grey",
+               legendPosition = "left",
+               legendInset = 0.2,
+               move = 0.1,
+               horizontal = F,
+               legendTextSize = 1.25)
+```
+
+Verdiene er for høye ift figuren i rapporten. Jeg tror jeg må generere dataene på nytt, slik som i NI_deer_trend.R (script på P:/)
+Det kan være imputerte data som har så stor påvirkning.
+
+```{r, message=F, warning=F}
+library(gamlss)
+library(msm)
+library(NIcalc)
+library(plyr)
+library(mice)
+library(RJSONIO)
+library(tibble)
+library(distr)
+library(lattice)
+```
+
+```{r}
+setwd("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/NI2020-data/Script-based")
+op <- options("echo","warn")
+options(echo = FALSE,warn = -1)
+source("functionsToNICalculation.R") # Mulig dette er NI_calk, før det ble en pakke.
+options(op)
+
+Xsim = 10000
+```
+
+```{r}
+
+# Load region key data ## IKKE TILGANG
+setwd("R:/Data/ecolcond_fastlands_norge/Geografisk_oppdeling")
+key <- read.csv2("key_areas_regions.csv", header=T, sep=";", encoding = "UTF-8")
+
+```
+```{r}
+
+# Levels key$Region
+key$Region <- factor(key$Region)
+levels(key$Region) # "Midt-Norge" "Nord-Norge" "Østlandet" "Sørlandet"  "Vestlandet" 
+key$Fylke <- factor(key$Fylke)
+levels(key$Fylke)
+
+key$Fylke <- revalue(key$Fylke, c("Møre_og_Romsdal"="Møre og Romsdal", "Sogn_og_Fjordane"="Sogn og Fjordane"))
+```
+
+```{r}
+### Weighting ###
+
+# With ES data (Erling Solberg) = USE! ("Suitable area under forest line")
+p1 <- ("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Raw_data/Ecosystems/")
+
+for_hjort2 <- read.csv(paste0(p1,"sum_for_fyl-v3-ES.csv"), sep=";")
+
+# Only ref values ("1950")
+for_hjort2 <- for_hjort2[for_hjort2$per==1950 & (for_hjort2$art=="elg" | for_hjort2$art=="hjort"),]
+
+# Create county data frame # See: https://en.wikipedia.org/wiki/Counties_of_Norway#/media/File:Norges_valgkretser.png
+
+fylkesnr <- data.frame(nr = c(1:20)[-13])
+
+fylkesnr$fylke <- c("Østfold", "Akershus", "Oslo",
+                    "Hedmark", "Oppland", "Buskerud",
+                    "Vestfold", "Telemark", "Aust-Agder",
+                    "Vest-Agder", "Rogaland", "Hordaland",
+                    "Sogn og Fjordane", "Møre og Romsdal",
+                    "Sør-Trøndelag", "Nord-Trøndelag",
+                    "Nordland", "Troms", "Finnmark")
+
+# Connect to ecological condition regions
+fylkesnr$region <- c("Østlandet", "Østlandet", "Østlandet", "Østlandet", "Østlandet", "Østlandet",
+                     "Sørlandet", "Sørlandet", "Sørlandet", "Sørlandet",
+                     "Vestlandet", "Vestlandet", "Vestlandet",
+                     "Midt-Norge", "Midt-Norge", "Midt-Norge",
+                     "Nord-Norge", "Nord-Norge", "Nord-Norge")
+
+# Match with forest cover data from for_hjort2
+fylkesnr$forest <- for_hjort2$sqkm[match(fylkesnr$nr, for_hjort2$fylkenr)]
+
+# Exclude fylkesnr 3
+fylkesnr <- fylkesnr[fylkesnr$nr!=3,]
+
+# Pick one as ref
+#for_hjort <- for_hjort1
+for_hjort <- fylkesnr
+```
+
+```{r}
+pwd <- "ak"
+```
+
+```{r}
+
+# Moose and deer data from NI database
+
+ElgImport <- importDatasetApi(username = "anders.kolstad@nina.no",
+                              password = pwd,
+                              eco = NULL,
+                              indic = "Elg",
+                              year = c("1990","2000","2010","2014","2019"),
+                              norwegian = TRUE,
+                              refYearCode = 0)
+
+HjortImport <- importDatasetApi(username = "anders.kolstad@nina.no",
+                                password = pwd,
+                                eco = NULL,
+                                indic = "Hjort",
+                                year = c("1990","2000","2010","2014","2019"),
+                                norwegian = TRUE,
+                                refYearCode = 0)
+
+```
+
+```{r}
+
+# View Indicator Values table
+#View(HjortImport$indicatorObservations$indicatorValues)
+
+# Add region and forest cover to NI Import objects
+ElgImport$indicatorObservations$indicatorValues$region <- key$Region_clean[match(ElgImport$indicatorObservations$indicatorValues$ICunitName, key$Fylke)]
+ElgImport$indicatorObservations$indicatorValues$forest <- for_hjort$forest[match(ElgImport$indicatorObservations$indicatorValues$ICunitName, for_hjort$fylke)]
+
+HjortImport$indicatorObservations$indicatorValues$region <- key$Region_clean[match(HjortImport$indicatorObservations$indicatorValues$ICunitName, key$Fylke)]
+HjortImport$indicatorObservations$indicatorValues$forest <- for_hjort$forest[match(HjortImport$indicatorObservations$indicatorValues$ICunitName, for_hjort$fylke)]
+
+#View(ElgImport$indicatorObservations$indicatorValues)
+
+# Counties and years, use moose data because of complete coverage
+
+elg <- data.frame(ElgImport$indicatorObservations$indicatorValues) # Easier to handle for some operations
+years <- unique(ElgImport$indicatorObservations$indicatorValues$yearName)
+regions <- unique(elg$region)
+
+# Empty quantile data frames
+all_Q1 <- data.frame()
+all_Q2 <- data.frame()
+```
+
+```{r}
+# Loop through regions and add Norway (no selection)
+for(m in 1:(length(regions)+1)){
+
+  # Empty temp data
+  all_Q1t <- data.frame()
+  all_Q2t <- data.frame() 
+
+# Counties within region (m==6 => Norway)
+counties <- if(m==6){
+  unique(elg$ICunitName)
+} else { 
+  unique(elg$ICunitName[elg$region==regions[m]])
+}
+
+# Region 
+reg <-  if(m==6){
+  "Norge"
+} else { 
+  regions[m]
+}
+
+# Loop through years
+for (k in 1:length(years)){
+    
+year <- years[k]
+
+# Empty temp vectors
+temp12 <- NULL
+temp22 <- NULL
+
+# Loop through simulations (Xsim; defined above)
+for (i in 1:Xsim){
+  
+  # Empty temp vectors
+  temp11 <- NULL
+  temp21 <- NULL
+  temp11w <- NULL
+  temp21w <- NULL
+  
+for (j in 1:length(counties)){
+
+  # Define rows in data where ICunitName = counties[j] & yearName = years[k]
+  nr_H <- which(HjortImport$indicatorObservations$indicatorValues$ICunitName==counties[j]&HjortImport$indicatorObservations$indicatorValues$yearName==years[k])
+  nr_E <- which(ElgImport$indicatorObservations$indicatorValues$ICunitName==counties[j]&ElgImport$indicatorObservations$indicatorValues$yearName==years[k])
+  
+  # For deer: sample distribution if county with data, otherwise NA
+  if(counties[j]%in%HjortImport$ICunits$name){
+   temp11[j] <- NIcalc::sampleDistribution(HjortImport$indicatorObservations$customDistributions[[nr_H]], 1)
+  } else {
+   temp11[j] <- NA
+  }
+  
+  # Moose: sample distribution
+  temp21[j] <- NIcalc::sampleDistribution(ElgImport$indicatorObservations$customDistributions[[nr_E]], 1)
+   
+  # For deer: extract weights (forest cover) if county with data, otherwise NA
+   if(counties[j]%in%HjortImport$ICunits$name){
+     temp11w[j] <- HjortImport$indicatorObservations$indicatorValues$forest[nr_H]
+   } else {
+     temp11w[j] <- NA
+   }
+   
+  # Moose: weights
+   temp21w[j] <- ElgImport$indicatorObservations$indicatorValues$forest[nr_E]
+}
+
+# Weighted means for Xsim[i]
+temp12[i] <- weighted.mean(na.omit(temp11), w = na.omit(temp11w)) # Includes forest area as weight
+temp22[i] <- weighted.mean(na.omit(temp21), w = na.omit(temp21w)) # Includes forest area as weight
+
+}
+
+# Quantiles for the Xsim large objects
+temp_Q1 <- tryCatch(quantile(temp12,c(0.025, 0.5, 0.975)), error=function(e){})
+temp_Q2 <- tryCatch(quantile(temp22,c(0.025, 0.5, 0.975)), error=function(e){})
+
+# Add year[k] data to temp results for region
+all_Q1t <- rbind(all_Q1t, data.frame("Hjort", reg, year, 
+                                 ifelse(is.null(temp_Q1), NA, temp_Q1[1]),
+                                 ifelse(is.null(temp_Q1), NA, temp_Q1[2]),
+                                 ifelse(is.null(temp_Q1), NA, temp_Q1[3]))) 
+
+all_Q2t <- rbind(all_Q2t, data.frame("Elg", reg, year, 
+                                 ifelse(is.null(temp_Q2), NA, temp_Q2[1]),
+                                 ifelse(is.null(temp_Q2), NA, temp_Q2[2]),
+                                 ifelse(is.null(temp_Q2), NA, temp_Q2[3]))) 
+}
+
+# Add region[j] data to summary output for all regions
+all_Q1 <- rbind(all_Q1, all_Q1t)
+all_Q2 <- rbind(all_Q2, all_Q2t)
+}
+
+# Rename columns
+names(all_Q1)[c(1, 4:6)] <- c("ind", "low", "med", "upp")
+names(all_Q2)[c(1, 4:6)] <- c("ind", "low", "med", "upp")
+
+```
+

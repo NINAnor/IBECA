@@ -1,0 +1,370 @@
+---
+title: "Engelske figurer side 5"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurer5.html'))})
+ 
+---
+
+Forsettelse fra engelskeFigurer.Rmd.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Packages
+library(dplyr)
+library(tidyr)
+
+```
+
+# Tresammensettning
+
+```{r}
+setwd("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Forest")
+#list.files(pattern=".csv")
+
+### Load NFI data (reduced, without Finnmark and above the treeline)
+dat <- read.csv("LSK_data_bootstrapped-reduced.csv", header=T, row.names=1)
+```
+
+```{r}
+
+# Omit first year (no data)
+dat <- dat[dat$year!=1996,]
+
+### Regions and coloring scheme
+
+cor_reg <- data.frame(c("W", "S", "E",
+                        "C", "N", "Norge"),
+                      c("Vestlandet", 
+                        "Sørlandet", 
+                        "Østlandet", 
+                        "Midt-Norge", 
+                        "Nord-Norge", 
+                        "Norge"))
+
+names(cor_reg) <- c("short", "long")
+
+colours <- c("dark green", "green", "yellow",
+             "orange", "light blue", "blue", "dark grey", "grey", 
+             "red", "dark red")
+
+
+dat$reg <- cor_reg$long[match(dat$reg, cor_reg$short)]
+
+comptemp <- data.frame(names(dat)[16:25])
+names(comptemp) <- "species_orig"
+comptemp$species <- c("Gran", "Intr. gran", "Furu", "Intr. furu", "Bjørk", "Osp", 
+                      "Eik", "Edellauv", "Gråor", "Annet lauv")
+
+comptemp$colours <- c("#7A9A01", "#A2AAAD", "#7A9A01", "#A2AAAD", "#E57200", 
+                      "#E57200","#008C95", "#008C95", "#93328E","#93328E")
+
+temp_colours <- adjustcolor(comptemp$colours, alpha.f = 0.4)
+
+temp_colours2 <- c(temp_colours[1],temp_colours[2],
+                   comptemp$colours[3], comptemp$colours[4],
+                   comptemp$colours[5], temp_colours[6],
+                   comptemp$colours[7], temp_colours[8],
+                   comptemp$colours[9], temp_colours[10])
+
+comptemp$colours <- temp_colours2
+
+comptemp$sort <- c(2,10,1,9,3,4,5,6,7,8)
+
+regions <- c("Midt-Norge", "Nord-Norge", "Vestlandet","Sørlandet","Østlandet","Norge")
+years <- unlist(unique(dat$year))
+
+
+```
+
+```{r}
+### Summary quantiles per region and year
+
+dat4 <- data.frame()
+for (i in 1:length(regions)){
+  
+  temp01 <- subset(dat, reg==regions[i])
+  
+  for (j in 1:length(years)){
+    temp02 <- subset(temp01, year==years[j])
+    
+    reg <- regions[i]
+    year <- years[j]
+    
+    for (k in 16:25){
+    q_comp <- quantile(temp02[,k], c(0.025, 0.5, 0.975))
+    species_orig <- names(temp02)[k]
+    dat4 <- rbind(dat4, data.frame(reg, year, species_orig, q_comp[1],q_comp[2], q_comp[3]))
+    }
+  }}
+
+names(dat4)[4:ncol(dat4)] <- c("low", "med", "upp")
+
+# Add additional data to dat4
+dat4$species <- comptemp$species[match(dat4$species_orig, comptemp$species_orig)]
+dat4$sort <- comptemp$sort[match(dat4$species_orig, comptemp$species_orig)]
+dat4$colours <- comptemp$colours[match(dat4$species_orig, comptemp$species_orig)]
+
+# Omit introduces species (accounted for in pressure visualisation)
+dat4 <- dat4[dat4$species_orig!="INTRO_FURU_PR"&dat4$species_orig!="INTRO_GRAN_PR",]
+  
+
+
+```
+
+```{r}
+dat4$species2 <- dat4$species
+```
+
+```{r}
+unique(dat4$species)
+```
+```{r}
+dat4$species[dat4$species=="Gran"] <- "Norway spruce"
+dat4$species[dat4$species=="Furu"] <- "Scots pine"
+dat4$species[dat4$species=="Bjørk"] <- "Birch"
+dat4$species[dat4$species=="Osp"] <- "Aspen"
+dat4$species[dat4$species=="Eik"] <- "Oak"
+dat4$species[dat4$species=="Edellauv"] <- "Temperate\ndeciduous"
+dat4$species[dat4$species=="Gråor"] <- "Grey alder"
+dat4$species[dat4$species=="Annet lauv"] <- "Other deciduous"
+
+```
+
+
+Bare Norge
+```{r, eval =F}
+
+### PLOT 
+  
+png(paste("../output/paavirkningsindikatorer/englishPlots/skog/treecomp.png", sep=""), units="in", width=10, height=7, res=300)
+
+par(mfrow=c(1,2))
+
+for (i in length(regions)){
+    
+sub <- dat4[dat4$reg==regions[i],]
+sub <- sub[order(sub$sort, sub$year),]
+uniq <- unlist(unique(sub$species))
+
+temp1 <- data.frame(sub[1:length(years),2])
+
+for (j in 1:length(uniq)){
+  temp1[,1+j] <- sub$med[sub$species==uniq[j]][1:length(years)]
+}
+
+temp2 <- data.frame(sub[1:length(years),2])
+
+for (j in 1:length(uniq)){
+  temp2[,1+j] <- sub$low[sub$species==uniq[j]][1:length(years)]
+}
+
+temp3 <- data.frame(sub[1:length(years),2])
+
+for (j in 1:length(uniq)){
+  temp3[,1+j] <- sub$upp[sub$species==uniq[j]][1:length(years)]
+}
+
+names(temp1)[2:ncol(temp1)] <- uniq
+names(temp2)[2:ncol(temp2)] <- uniq
+names(temp3)[2:ncol(temp3)] <- uniq
+
+rownames(temp1) <- temp1[,1]
+rownames(temp2) <- temp2[,1]
+rownames(temp3) <- temp3[,1]
+
+temp1 <- as.matrix(temp1[,-1])
+temp2 <- as.matrix(temp2[,-1])
+temp3 <- as.matrix(temp3[,-1])
+
+
+
+par(mar=c(12,5,1.1,2))
+
+
+barCenters <- barplot(temp1[,1:3], beside=TRUE, 
+                      #legend=rownames(test), 
+                      col=sub$colours,
+                      ylim=c(0,80),
+                      density=c(rep(c(10, 25, 40, 100), length(sub$colours))),
+                      ylab= "Proportion (%)",
+                     #xaxt=ifelse(i==5|i==6,'t','n'),
+                      cex=1.5,
+                      cex.main=1.5,
+                      cex.lab=1.5,
+                      cex.axis=1.2,
+                      #main=paste(regions[i]), 
+                      las=2)
+
+#title(paste(regions[i]), adj=0.2, line = 0.2, cex.main=1.5)
+                      
+
+arrows(barCenters, temp2[,1:3], barCenters,
+       temp3[,1:3], lwd = 0.8, angle = 90,
+       code = 3, length = 0.015)
+
+
+
+par(mar=c(12,0,1.1,0))
+
+barCenters <- barplot(temp1[,4:ncol(temp1)], beside=TRUE, 
+                      #legend=rownames(test), 
+                      col=sub$colours[-(1:12)], ylim=c(0,6),
+                      density=c(rep(c(10, 25, 40 ,100), length(sub$colours))),
+                      ylab="",
+                      xaxt=ifelse(i==5|i==6,'t','n'),
+                      cex=1.5,
+                      cex.main=1.5,
+                      cex.lab=1.5,
+                      cex.axis=1.2,
+                      #main=paste(regions[i]), 
+                      las=2)
+
+arrows(barCenters, temp2[,4:ncol(temp2)], barCenters,
+       temp3[,4:ncol(temp3)], lwd = 0.8, angle = 90,
+       code = 3, length = 0.015)
+
+if(i==6){
+legend("top", legend = rownames(temp1), 
+       #pch=22, 
+       cex=1.2,
+       inset=0.0, bg="white", density=c(10, 25, 40, 100), bty="n")
+} else {
+  NULL  
+}
+
+}
+dev.off()
+
+
+```
+
+
+Alle regionene
+```{r, eval =F}
+
+### PLOT 
+  
+
+png(paste("../output/paavirkningsindikatorer/englishPlots/skog/treecomp.png", sep=""), units="in", width=10, height=7, res=300)
+
+par(mfrow=c(3,4), mar=c(5,3,3,1))
+
+for (i in 1:length(regions)){
+    
+sub <- dat4[dat4$reg==regions[i],]
+sub <- sub[order(sub$sort, sub$year),]
+uniq <- unlist(unique(sub$species))
+
+temp1 <- data.frame(sub[1:length(years),2])
+
+for (j in 1:length(uniq)){
+  temp1[,1+j] <- sub$med[sub$species==uniq[j]][1:length(years)]
+}
+
+temp2 <- data.frame(sub[1:length(years),2])
+
+for (j in 1:length(uniq)){
+  temp2[,1+j] <- sub$low[sub$species==uniq[j]][1:length(years)]
+}
+
+temp3 <- data.frame(sub[1:length(years),2])
+
+for (j in 1:length(uniq)){
+  temp3[,1+j] <- sub$upp[sub$species==uniq[j]][1:length(years)]
+}
+
+names(temp1)[2:ncol(temp1)] <- uniq
+names(temp2)[2:ncol(temp2)] <- uniq
+names(temp3)[2:ncol(temp3)] <- uniq
+
+rownames(temp1) <- temp1[,1]
+rownames(temp2) <- temp2[,1]
+rownames(temp3) <- temp3[,1]
+
+temp1 <- as.matrix(temp1[,-1])
+temp2 <- as.matrix(temp2[,-1])
+temp3 <- as.matrix(temp3[,-1])
+
+
+if(i>4){
+  par(mar=c(7,5,1.1,2))
+} else if (i>2){
+  par(mar=c(3.6,5,4.5,2))
+} else {
+  par(mar=c(0,5,8.1,2))
+}
+barCenters <- barplot(temp1[,1:3], beside=TRUE, 
+                      #legend=rownames(test), 
+                      col=sub$colours,
+                      ylim=c(0,80),
+                      density=c(rep(c(10, 25, 40, 100), length(sub$colours))),
+                      ylab=ifelse((i==1|i==3|i==5), "Andel (%)",""),
+                      xaxt=ifelse(i==5|i==6,'t','n'),
+                      cex=1.5,
+                      cex.main=1.5,
+                      cex.lab=1.5,
+                      cex.axis=1.2,
+                      #main=paste(regions[i]), 
+                      las=2)
+
+title(paste(regions[i]), adj=0.2, line = 0.2, cex.main=1.5)
+                      
+
+arrows(barCenters, temp2[,1:3], barCenters,
+       temp3[,1:3], lwd = 0.8, angle = 90,
+       code = 3, length = 0.015)
+
+
+if(i>4){
+  par(mar=c(7,0,1.1,0))
+} else if (i>2) {
+  par(mar=c(3.6,0,4.5,0))
+} else {
+  par(mar=c(0,0,8.1,0))
+}
+
+barCenters <- barplot(temp1[,4:ncol(temp1)], beside=TRUE, 
+                      #legend=rownames(test), 
+                      col=sub$colours[-(1:12)], ylim=c(0,6),
+                      density=c(rep(c(10, 25, 40 ,100), length(sub$colours))),
+                      ylab="",
+                      xaxt=ifelse(i==5|i==6,'t','n'),
+                      cex=1.5,
+                      cex.main=1.5,
+                      cex.lab=1.5,
+                      cex.axis=1.2,
+                      #main=paste(regions[i]), 
+                      las=2)
+
+arrows(barCenters, temp2[,4:ncol(temp2)], barCenters,
+       temp3[,4:ncol(temp3)], lwd = 0.8, angle = 90,
+       code = 3, length = 0.015)
+
+if(i==6){
+legend("top", legend = rownames(temp1), 
+       #pch=22, 
+       cex=1.2,
+       inset=0.0, bg="white", density=c(10, 25, 40, 100), bty="n")
+} else {
+  NULL  
+}
+
+}
+dev.off()
+
+
+```
+
+

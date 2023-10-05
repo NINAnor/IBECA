@@ -1,0 +1,29 @@
+---
+title: "Økologisk tilstand i Nordre Follo kommune"
+
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'nordrefollo.html'))})
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<br><br><br>
+
+Det jobbes for tiden med å lage et naturregnskap for Nordre Follo kommune. 
+Les mer om dette [her](https://ninanor.github.io/naturregnskap/).
+
+
+

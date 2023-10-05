@@ -64,6 +64,12 @@ pressures <- c("are", "kli", "fef", "bes", "fre")
 ```{r}
 pressures2 <- c("Arealbruk/inngrep", "Klima", "Forurensing",
                      "Bestandsregulering", "Fremmede arter")
+
+pressuresEng <- c("Land use", 
+                     "Climate change", 
+                     "Pollution",
+                     "Population management", 
+                     "Alien species")
 ```
 
 
@@ -178,7 +184,7 @@ ind_press$fre <- ifelse(
 ```
 
 
-```{r, eval=T}
+```{r, eval=F}
 write.csv(ind_press, "../output/ind_press.csv")
 ```
 
@@ -195,7 +201,7 @@ agg_ind <- data.frame()
 w_boot <- data.frame()
 ```
 
-```{r}
+```{r, eval=F}
 for (n in 1:length(pressures)){
   
   # Select by ind_press data frame
@@ -290,16 +296,18 @@ names(agg_ind) <- c("ind", "reg",  "low", "med", "upp")
 ```
 
 ## Names
-```{r}
+```{r, eval=F}
 temp_names <- data.frame(names(ind_press[,-1]))
 names(temp_names) <- "work"
 temp_names$plot <- pressures2
+temp_names$plotEng <- pressuresEng
+
 ```
 
 
 # Step 9: Plotting separate     
-
-```{r}
+Norsk figur
+```{r, eval=F}
 
 for (j in 1:length(regions)){
 
@@ -362,9 +370,78 @@ for (j in 1:length(regions)){
 
 ```
 
-# Step 10: Plotting combined 
 
-```{r}
+![alt](../output/aggregated_plots/pressure plots/region_Norge_.png)
+
+
+
+Engelsk figur
+```{r, eval=F}
+
+for (j in 1:length(regions)){
+
+  TEMP_Q <- agg_ind[
+    agg_ind$reg==regions[j],]
+    
+  TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+  
+  TEMP_Q$ind <- factor(temp_names$plotEng[match(TEMP_Q$ind, temp_names$work)])
+  
+    
+    temp_per <- 2021
+    
+    write.csv(TEMP_Q, paste("../output/tables/TEMP_Q_", regions[j], "_", temp_per, ".csv", sep=""))
+    
+    png(paste("../output/aggregated_plots/englishPlots/fjell/pressures_region_", regions[j],"_", ".png", sep=""), units="in", width=4, height=11, res=600)
+    
+    par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
+    plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Scaled indicator values", xlab="",
+         type="n", ylim=c(0,1.1), xlim=c(0.5,5.5), cex.lab=1.2)
+    abline(h=1, col="blue", lwd=2)
+    abline(h=0.6, col="red", lwd=2, lty=2)
+    
+    # add values and CI's
+  arrs <- data.frame(
+           x  = TEMP_Q$ind_2[1:nrow(TEMP_Q)],
+           y = TEMP_Q$med[1:nrow(TEMP_Q)],
+           high = TEMP_Q$upp[1:nrow(TEMP_Q)],
+           low = TEMP_Q$low[1:nrow(TEMP_Q)]
+  )   
+  arrs$diff <- arrs$y-arrs$high
+  arrs$diff2 <- arrs$y-arrs$low
+  arrs2 <- arrs
+  arrs <- arrs[arrs$diff != 0,]    
+  arrs <- arrs[arrs$diff2 != 0,]    
+  
+  arrows(arrs$x, arrs$y,
+        arrs$x, arrs$high, 
+            angle=90, length=0.05, col="grey")
+    
+  arrows(arrs$x, arrs$y,
+        arrs$x, arrs$low, 
+            angle=90, length=0.05, col="grey")
+    
+  points(
+    arrs2$x, arrs2$y, 
+           pch=21, bg="dark grey", cex=1.5)
+    
+    # Name axes #
+    lablist.x<-as.vector(TEMP_Q$ind)
+    
+    axis(1, at=seq(1,  nrow(TEMP_Q), by=1), labels = FALSE)
+    
+    # Change first command number to align labels
+    text(TEMP_Q$ind_2+0.2, par("usr")[3]-0.02, labels = lablist.x,pos=2,srt = 90,  xpd = TRUE, cex=1.2)
+    
+    dev.off()
+  
+}
+
+```
+
+# Step 10: Plotting combined 
+Norsk figur
+```{r, eval=F}
 regions <- data.frame(ord = c(5,6,4,3,2,1))
 regions$navn <- unlist(unique(allind$reg))
 regions <- regions[order(regions$ord),]
@@ -443,6 +520,123 @@ div <- 8
     temp_per <- 2021
     
     write.csv(TEMP_Q, paste("../output/tables/TEMP_Q_comb_", regions$navn[j], "_", temp_per, ".csv", sep=""))
+    
+    
+    # add values and CI's
+    arrs <- data.frame(
+           x  = TEMP_Q$ind_2[1:nrow(TEMP_Q)],
+           y = TEMP_Q$med[1:nrow(TEMP_Q)],
+           high = TEMP_Q$upp[1:nrow(TEMP_Q)],
+           low = TEMP_Q$low[1:nrow(TEMP_Q)]
+  )   
+  arrs$diff <- arrs$y-arrs$high
+  arrs$diff2 <- arrs$y-arrs$low
+  arrs2 <- arrs
+  arrs <- arrs[arrs$diff != 0,]    
+  arrs <- arrs[arrs$diff2 != 0,] 
+  
+  arrows(arrs$x+(j-move)/div,
+         arrs$y,
+         arrs$x+(j-move)/div,
+         arrs$high, 
+          angle=90, length=0.05, col=regions$colours[j])
+  
+  arrows(arrs$x+(j-move)/div,
+         arrs$y,
+         arrs$x+(j-move)/div,
+         arrs$low, 
+          angle=90, length=0.05, col=regions$colours[j])
+  
+  points(arrs2$x+(j-move)/div,
+         arrs2$y, 
+         pch=21, bg=regions$colours[j], cex=1.5)
+    
+  }    
+  
+  dev.off()
+```
+![](../output/aggregated_plots/pressure plots/comb_2021.png)
+
+Engelsk figur
+```{r, eval=F}
+regions <- data.frame(ord = c(5,6,4,3,2,1))
+regions$navn <- unlist(unique(allind$reg))
+regions <- regions[order(regions$ord),]
+regions$colours <- c("dark grey", "#FFB25B", "#2DCCD3","#004F71", "#7A9A01", "#93328E")
+
+move <- 4
+div <- 8
+
+  
+  TEMP_Q <- agg_ind[
+    agg_ind$reg==regions$navn[2],]
+  
+  TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+  TEMP_Q$ind <- factor(temp_names$plotEng[match(TEMP_Q$ind, temp_names$work)])
+  
+  temp_per <- 2021
+  
+  #write.csv(TEMP_Q, paste("../output/tables/TEMP_Q_comb_", regions$navn[2], "_", temp_per, ".csv", sep=""))
+  
+
+  png(paste("../output/aggregated_plots/englishPlots/fjell/comb_", temp_per, ".png", sep=""), units="in", width=6, height=11, res=600)
+  
+  par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
+  plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Scaled indicator values", xlab="",
+       type="n", ylim=c(0,1.1), xlim=c(0.5,5.5), cex.lab=1.2)
+  abline(h=1, col="blue", lwd=2)
+  abline(h=0.6, col="red", lwd=2, lty=2)
+  
+  # add values and CI's
+  arrs <- data.frame(
+           x  = TEMP_Q$ind_2[1:nrow(TEMP_Q)],
+           y = TEMP_Q$med[1:nrow(TEMP_Q)],
+           high = TEMP_Q$upp[1:nrow(TEMP_Q)],
+           low = TEMP_Q$low[1:nrow(TEMP_Q)]
+  )   
+  arrs$diff <- arrs$y-arrs$high
+  arrs$diff2 <- arrs$y-arrs$low
+  arrs2 <- arrs
+  arrs <- arrs[arrs$diff != 0,]    
+  arrs <- arrs[arrs$diff2 != 0,] 
+  
+  arrows(arrs$x+(2-move)/div,
+         arrs$y,
+         arrs$x+(2-move)/div,
+         arrs$high, 
+          angle=90, length=0.05, col=regions$colours[2])
+  
+  arrows(arrs$x+(2-move)/div,
+         arrs$y,
+         arrs$x+(2-move)/div,
+         arrs$low, 
+          angle=90, length=0.05, col=regions$colours[2])
+  
+  points(arrs2$x+(2-move)/div,
+         arrs2$y, 
+         pch=21, bg=regions$colours[2], cex=1.5)
+  
+  # Name axes #
+  lablist.x<-as.vector(TEMP_Q$ind)
+  
+  axis(1, at=seq(1,  nrow(TEMP_Q), by=1), labels = FALSE)
+  
+  # Change first command number to align labels
+  text(TEMP_Q$ind_2+0.2, par("usr")[3]-0.02, labels = lablist.x,pos=2,srt = 90,  xpd = TRUE, cex=1.2)
+  
+  
+  for (j in 3:length(regions$navn)){
+    
+    TEMP_Q <- agg_ind[
+      agg_ind$reg==regions$navn[j],]
+    
+    TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+    TEMP_Q$ind <- factor(
+      temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
+    
+    temp_per <- 2021
+    
+    #write.csv(TEMP_Q, paste("../output/tables/TEMP_Q_comb_", regions$navn[j], "_", temp_per, ".csv", sep=""))
     
     
     # add values and CI's

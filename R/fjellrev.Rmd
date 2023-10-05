@@ -78,7 +78,7 @@ rev_assemeble <- NIcalc::assembleNiObject(
   indexType = "thematic",
   part = "ecosystem",
   total = "terrestrial")  
-saveRDS(jerv_assemeble, "../data/rev_assemble.rds")
+saveRDS(rev_assemeble, "../data/rev_assemble.rds")
 
 ```
 

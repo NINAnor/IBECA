@@ -1,0 +1,16 @@
+   
+name: "Økologisk tilstand"
+navbar:
+  title: "Økologisk tilstand"
+  left:
+    - text: "Fjell"
+      href: fjell.html
+    - text: "Skog"
+      href: skog.html
+    - text: "Nordre Follo"
+      href: nordrefollo.html
+    - text: Faktaark for indikatorer
+      href: "faktaark.html"
+    - text: Annen dokumentasjon
+      href: "diverse.dtml"
+output_dir: "../../docs"

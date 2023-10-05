@@ -1,0 +1,120 @@
+---
+title: "Indikator - Rovdyr i Nordre Follo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'rovdyr_NordreFollo.html'))})
+---
+
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(dplyr)
+#library(ggplot2)
+library(raster)
+#library(fasterize)
+library(rgdal)
+library(tmap)
+library(sf)
+#library(DT)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Start
+Denne indikatoren skal reflektere den (metabolske) biomassen av de større rovdyre ulv, bjørn, jerv, kongeørn, havørn og gaupe.
+
+# Ulv
+
+Fyll inn ditt eget passord og brukernavn
+```{r}
+myUser <- "anders.kolstad@nina.no"
+myPwd  <- "" # hemmelig passord
+```
+
+
+Importerer data fra NI-databasen. Siste året med data er 2019, så her kan vi kanskje finne nyere data senere.
+```{r import, eval=F}
+
+ulv <- NIcalc::importDatasetApi(
+  username = myUser,
+  password = myPwd,
+  indic = "Ulv",
+  year = c(1990,2000,2010,2014,2019))
+```
+
+
+Spesifiser hele landarealet til Norge, samt de tre regionene, som NIunits:
+```{r}
+myNIunits <- c(allArea = T, parts = T, counties = F)
+```
+
+Inkludrer alle BSunits (kommuner):
+```{r}
+myPartOfTotal <- 0
+```
+
+
+Siden denne opperasjonen tar litt tid så lagrer jeg outputen på server og henter det tilbake etterpå, så slipper jeg å kjøre gjennom hver gang.
+```{r, eval=FALSE}
+ulv_assemeble <- NIcalc::assembleNiObject(
+  inputData = ulv,
+  predefNIunits = myNIunits, 
+  partOfTotal = myPartOfTotal, 
+  indexType = "thematic",
+  part = "ecosystem",
+  total = "terrestrial")  
+saveRDS(ulv_assemeble, "../data/ulv_assemble.rds")
+```
+
+```{r}
+ulv_assemeble <- readRDS("../data/ulv_assemble.rds")
+```
+
+
+Her må jeg jobbe videre seinere, men for nå vil jeg bare hente ut gjennomsnittlig indikatorveri og ref. verdi for rovviltregion 4 som dekker hele Nordre Follo kommune.
+
+```{r}
+(antallUlv <- ulv_assemeble$indicatorValues$'2019'$expectedValue[ulv_assemeble$indicatorValues$'2019'$ICunitName =="Rovviltregion 4"])
+```
+Enhenten her er antall dyr.
+
+```{r}
+(ref <- ulv_assemeble$referenceValues$expectedValue[ulv_assemeble$referenceValues$ICunitName =="Rovviltregion 4"])
+```
+
+Henter inn kart over norfre follo og hele laget samme verdi:
+```{r}
+(val <- antallUlv/ref)
+```
+
+```{r, echo=F}
+ulv_nf <- readRDS("../data/outlineNF.rds") %>%
+  dplyr::select(geometry)
+
+ulv_nf$val <- val
+```
+
+```{r}
+tmap_mode("plot")
+```
+
+```{r}
+tm_shape(ulv_nf)+
+  tm_polygons(col = "val",
+              title = "Ulv (skalert mot referanseverdi)",
+              alpha=1,
+              legend.hist = F,
+              palette = "RdYlGn")+
+  tm_layout(legend.outside = TRUE)
+```
+
+```{r, eval=F}
+saveRDS(ulv_nf, "../output/scaledIndicatorMaps/shp/ulv.rds")
+```

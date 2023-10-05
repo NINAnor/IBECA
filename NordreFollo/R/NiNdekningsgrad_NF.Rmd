@@ -1,0 +1,514 @@
+---
+title: "Naturtyper etter Miljødirektoratetsinnstruks - dekkningsdrad i Nordre Follo"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'naturtyperMdir_NordreFollo.html'))})
+---
+
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(raster)
+library(fasterize)
+library(rgdal)
+library(tmap)
+library(sf)
+library(DT)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Start
+
+
+
+Import Naturtyper dataset (exported from Naturbase 20 dec 2021)
+```{r}
+dat <- readOGR(dsn = "../data/Natur_Naturtyper_NiN_3020_nordre_follo_25833.gdb")
+dat2 <- sf::st_as_sf(dat)
+names(dat2)[3] <- "Hovedøkosystem"
+```
+
+
+```{r}
+unique(dat2$Hovedøkosystem)
+dat2$Hovedøkosystem[dat2$Hovedøkosystem=="Naturlig Ã¥pne omrÃ¥der i lavlandet"] <- "Naturlig åpne områder"
+dat2$Hovedøkosystem[dat2$Hovedøkosystem=="VÃ¥tmark"] <- "Våtmark"
+```
+
+```{r}
+unique(dat2$tilstand)
+dat2$tilstand[dat2$tilstand == "SvÃ¦rt redusert"] <- "Svært redusert"
+dat2$tilstand[dat2$tilstand == "DÃ¥rlig"] <- "Dårlig"
+```
+
+
+Import outlines of municipality
+```{r}
+nf <- readRDS("../data/outlineNF.rds")
+```
+
+
+Reorder factor levels
+```{r}
+unique(dat2$tilstand)
+dat2$tilstand <- factor(dat2$tilstand, levels = c("Svært redusert", "Dårlig","Moderat", "God"))
+```
+
+
+## Summarise the number of localities per hovedøkosystem and condition
+```{r}
+dat3 <- as.data.frame(table(dat2$tilstand, dat2$Hovedøkosystem))
+names(dat3) <- c("Tilstand", "Hovedøkosystem", "Freq")
+```
+
+```{r, fig.width=7, fig.height=7}
+ggplot(data = dat3)+
+  geom_bar(aes(y = Freq, x = Hovedøkosystem, group=Tilstand, fill=Tilstand),
+           stat = "identity", position="dodge",
+           colour="black")+
+  theme_bw(base_size = 20)+
+  xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  ylab("Antall lokaliteter")
+```
+
+Calculate the rea of each polygon (Naturtyper and municipality)
+```{r}
+dat2$area <- st_area(dat2)
+#kom_crop$area <- st_area(kom_crop)
+nf$area <- st_area(nf)
+```
+
+The area of Nordre Follo in km2 is
+```{r}
+tot <- round(as.numeric(nf$area/1000000),2)
+tot
+```
+[Wikipedia](https://no.wikipedia.org/wiki/Nordre_Follo) says it's 203 km2, but that's fairly close.
+
+##Calculate Naturtype area for each hovedøkosystem
+```{r}
+dat4 <- aggregate(data = dat2,
+                  area~Hovedøkosystem,
+                  FUN = sum)
+
+# convert to km2
+dat4$area2 <- as.numeric(dat4$area/1000000)
+```
+
+
+```{r}
+# convert to km2
+dat2$area3 <- as.numeric(dat2$area)/1000000
+```
+
+
+```{r, fig.width=7, fig.height=7}
+datTemp <- aggregate(data=dat2,
+                     area3~tilstand+Hovedøkosystem,
+                     FUN = sum)
+
+(areal <- ggplot(data = datTemp)+
+  geom_bar(aes(x = Hovedøkosystem, 
+               y = area3,
+               group = tilstand,
+               fill = tilstand),
+           stat = "sum",
+           colour="black", size=1)+
+  theme_bw(base_size = 20)+
+  xlab("")+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))+
+  ylab(bquote("Areal " (km^-2)))+
+   theme(legend.position = "none")
+)
+
+
+
+```
+
+
+
+```{r, fig.width=7, fig.height=7}
+(antall <- ggplot(data = dat3)+
+  geom_bar(aes(y = Freq, 
+               x = Hovedøkosystem, 
+               group=Tilstand, 
+               fill=Tilstand),
+           stat = "identity",
+           colour="black")+
+  theme_bw(base_size = 20)+
+  xlab("")+
+  theme(axis.text.x = element_blank())+
+  ylab("Antall lokaliteter")+
+   theme(legend.position=c(0.2,0.7))
+)
+```
+
+
+
+
+```{r, fig.height=12, fig.width=7, eval=F}
+png("../output/Naturtypelokaliteter etter tilstand.png", width = 500, height = 1000, units = "px")
+ggpubr::ggarrange(
+  antall, 
+  areal,
+ncol=1,nrow=2)
+dev.off()
+```
+The information can be put into a table like this
+```{r}
+dat5 <- aggregate(data = dat2,
+                  area~Hovedøkosystem+tilstand,
+                  FUN = sum,
+                  drop = F)
+
+dat5$area <- as.numeric(dat5$area/1000000)
+dat5$area[is.na(dat5$area)] <- 0
+dat5$area <- round(dat5$area, 4)
+dat6 <- data.table::dcast(data = dat5,
+                          Hovedøkosystem~tilstand)
+dat7 <- ggpubr::ggtexttable(dat6, rows = NULL)
+dat7
+```
+
+We could add this table to the ggarrange plot along with a caption
+```{r, fig.height=1, fig.width=3}
+text <- paste("Tabell: Areal (km-2) utfigurerte naturtyper etter Miljødireltoratets instruks i Nordre Follo kommune.", sep = " ")
+text.p <- ggpubr::ggparagraph(text = text, face = "italic", size = 11, color = "black")
+text.p
+```
+
+Or perhaps just as a png output by itself.
+```{r, fig.height=3, fig.width=5, eval=F}
+png("../output/Areal naturtyper etter tilstand.png", width = 400, height = 200, units = "px")
+ggpubr::ggarrange(text.p, 
+  dat7,
+ncol=1,nrow=4,
+heights = c(0.2,0.1))
+dev.off()
+```
+
+
+
+# Dekningskart
+Dette dekningskartet fikk jeg på mail 21 desember 2021 av Stig Arne Karlsen, men dekningskartet akn også eksporteres fra Naturbase. Pål Theodorsen skriver 7 jan: Du kan også hente disse i shapeformat fra Naturbase kart, så kan du ta dem ned når det passer. Slå på bare dekningskartet og ha hele Norge i kartvisningen, kjør et geografisk søk for hele landet vha rektangel eller polygon og bruk menyen knyttet til søkeresultatet til å velge Eksporter til shapefil. 
+```{r}
+dek <- readOGR(dsn = "../data/Naturtyper_nin.gdb")
+dek <- sf::st_as_sf(dek)
+names(dek)[1] <- "Prosjektområdenavn"
+```
+
+Cropping by extent
+```{r}
+dekCrop <- st_crop(dek, nf)
+```
+
+I can also 'crop' even further using intersection
+```{r}
+dekCrop2 <- st_intersection(dekCrop, nf)
+```
+
+#Plotting map
+
+First fix bbox (for static maps only (mode = plot))
+```{r}
+bbox_new <- st_bbox(nf)
+
+xrange <- bbox_new$xmax - bbox_new$xmin # range of x values
+yrange <- bbox_new$ymax - bbox_new$ymin # range of y values
+
+#increase ymax 10%
+bbox_new[4] <- bbox_new[4] + (0.1 * yrange) 
+
+```
+
+```{r}
+tmap_mode("view")
+
+```
+
+
+```{r, fig.width=5, fig.height=7, message=F}
+tm_shape(nf)+#, bbox = bbox_new)+
+  tm_polygons(col = "grey",
+              alpha=0.5)+
+tm_shape(dekCrop2)+
+ tm_polygons(col = "Prosjektområdenavn", 
+            alpha = .8,
+            palette = "viridis",
+            legend.show = T)+
+tm_shape(dat2)+
+ tm_polygons(col = "Hovedøkosystem")+
+   tm_layout(
+    title= 'Naturtyper etter Miljødirektoratets instruks\ni Nordre Follo kommune, anno desember 2021', 
+    title.position = c('right', 'top'))
+```
+
+## ELC10
+Zander sent me a cropped file. The full tile is in the same folder, but called ELC10_2018_NF_fullTile.
+```{r, cache=T}
+elc <- raster("../data/ELC10_2018_nordreFollo_10m.tif")
+elc2 <- projectRaster(elc,
+              crs = crs(nf)) # not sure I actually need this re-projected version because this will combine raster cells, creating decimal values where they really should be categorical.
+```
+
+The data can be downloaded from [here](https://zenodo.org/record/4407051#.Ydvz2WDMIuU).
+The pixel values, their definitions and suggested hex color codes include: 
+
+0 not mapped                  #000000
+1 Artificial land,            #CC0303
+2 Cropland,                   #CDB400
+3 Woodland,                   #235123
+4 Shrubland,                  #B76124
+5 Grassland,                  #92AF1F
+6 Bare land,                  #F7E174
+7 Water/permanent snow/ice,   #2019A4
+8 Wetland,                    #AEC3D6
+
+```{r}
+colElc <- c("#000000",
+            "#CC0303",
+            "#CDB400",
+            "#235123",
+            "#B76124",
+            "#92AF1F",
+            "#F7E174",
+            "#2019A4",
+            "#AEC3D6")
+
+cats <- c(
+  "not mapped",
+  "Artificial land",
+  "Cropland",
+  "Woodland",
+  "Shrubland",
+  "Grassland",
+  "Bare land",
+  "Water/permanent snow/ice",
+  "Wetland"                 
+)
+
+catsNorsk <- c(
+  "Ikke kartlagt",
+  "Sterkt endret mark",
+  "Dyrket mark",
+  "Skog",
+  "Hei",
+  "Eng",
+  "Åpen fastmark",
+  "Vann eller permanent is",
+  "Våtmark"                 
+)
+
+catsDF <- data.frame(
+  num = seq(0,8,1),
+  cat = cats,
+  catNorsk = catsNorsk
+)
+```
+
+```{r}
+tmap_mode("plot")
+```
+
+
+```{r, fig.width=5, fig.height=7, message=F}
+tm_shape(elc)+
+ tm_raster(
+   style = "fixed", 
+   breaks = seq(-0.5,8.5,1),
+   labels = catsNorsk,
+   palette = colElc,
+   alpha=1,
+   title = "Arealbruk (ELC10) i\nNordre Follo"
+   )+
+  tm_shape(nf)+
+  tm_polygons(col = "grey",
+              alpha=0.5)+
+tm_layout(title.position = c('right', 'top'),
+          legend.position = c("left","bottom"),
+          legend.bg.color = "white",
+          legend.bg.alpha = .8)
+```
+
+
+
+# Summary stats
+Getting the proportion of area that is mapped for each land use class
+
+Transforming the shape files
+```{r}
+nf2 <- st_transform(nf, crs(elc)) # the total areal of the municipality
+nt  <- st_transform(dat2, crs(elc)) # all the nature type polygons (c. 222 polygons)
+dek <- st_transform(dekCrop2, crs(elc)) # surveyed area
+```
+
+
+## Extract land use statistics for each polyon
+- All of Nordre Follo
+```{r, cache=T}
+nf_elc <- raster::extract(elc, nf2)
+#test <- raster::extract(elc, nf) # this also works, but the function will automatically transform nf to the crs of elc
+nf_elc <- table(nf_elc)
+```
+
+- All nature type polygons
+```{r,cache=T}
+nf_nt <- raster::extract(elc, nt)
+nf_nt2 <- lapply(nf_nt, table)
+```
+
+A function for organising the data output
+```{r}
+rbind.fill <- function(x) {
+  nam <- sapply(x, names)
+  unam <- unique(unlist(nam))
+  len <- sapply(x, length)
+  out <- vector("list", length(len))
+    for (i in seq_along(len)) {
+      out[[i]] <- unname(x[[i]])[match(unam, nam[[i]])]
+    }
+  setNames(as.data.frame(do.call(rbind, out), stringsAsFactors=FALSE), unam)
+}
+```
+
+```{r}
+nf_nt2 <- rbind.fill(nf_nt2)
+```
+
+```{r}
+ntyp <- as.data.frame(colSums(nf_nt2, na.rm = T)/10000)
+names(ntyp) <- "sqKm"
+ntyp$num <- row.names(ntyp)
+```
+
+- All the surveyed area
+```{r, cache=T}
+sur <- raster::extract(elc, dek)
+sur <- lapply(sur, table)
+sur <- rbind.fill(sur)
+sur <- as.data.frame(colSums(sur, na.rm = T)/10000)
+names(sur) <- "sqKm"
+sur$num <- row.names(sur)
+```
+
+- Combine them and show table
+```{r}
+nf_elc2 <- as.data.frame(nf_elc)
+names(nf_elc2) <- c("num", "freq")
+nf_elc2$LandUse <- catsDF$catNorsk[match(nf_elc2$num, catsDF$num)]
+nf_elc2$km2 <- nf_elc2$freq/10000
+
+# Add the mapped area
+nf_elc2$mapped <- ntyp$sqKm[match(nf_elc2$num, ntyp$num)]
+nf_elc2$mapped[is.na(nf_elc2$mapped)] <- 0
+nf_elc2$mapped <- round(nf_elc2$mapped, 2)
+nf_elc2$proportion <- round(nf_elc2$mapped/nf_elc2$km2, 2)
+
+# add the surveyed area
+nf_elc2$surveyed <- sur$sqKm[match(nf_elc2$num, sur$num)]
+nf_elc2$proportionSurveyed <- round(nf_elc2$surveyed/nf_elc2$km2, 2)
+
+# subset
+temp <- dplyr::select(nf_elc2, 
+                "Arealbruk" = LandUse,
+                "Total areal (km-2) i Nordre Follo" = km2,
+                "Undersøkt areal som prosent av totalt areal" = proportionSurveyed,
+                "Kartlagt areal (km-2)" = mapped,
+                "Kartlagt areal som prosent av totalt areal" =proportion)
+```
+
+```{r}
+DT::datatable(
+  temp, 
+  extensions = "FixedColumns",
+  options = list(
+    scrollX = TRUE,
+    scrollY=T,
+    pageLength = 8
+  ))
+```
+
+
+Both the proportion and the absolute of area which is actually mapped is very low.
+Here's a figure f the overall area statistics for Nordre Follo
+```{r}
+nf_elc2$kmRounded <- as.character(round(nf_elc2$km2, 1))
+nf_elc2$lab <- paste(nf_elc2$kmRounded, " (", nf_elc2$mapped, ")")
+```
+
+```{r, fig.width=7, fig.height=7, fig.cap="Arealbruksfordeling i Nordre Follo kommune (areal med kartlagte naturtyper etter Miljødirektoratets instruks i parentes) "}
+ggplot(data = nf_elc2, 
+       aes(x = LandUse, y = km2,
+           label = lab))+
+  geom_bar(stat="identity",
+           colour = "grey20", fill = "grey80")+
+  coord_flip()+
+  theme_bw(base_size = 16)+
+  geom_text(nudge_y = 20)+
+  labs(
+    y = bquote("Areal " (km^-2)),
+    x = "")+
+  ylim(c(0, 160))
+  
+```
+
+# Discussion
+We will likely have many similar cases like this, where we have important data sources that have only a very limited coverage. We don't want to discard this information, yet we cannot extrapolate the data to cover the areas that are not mapped. In this case, we also have a survey map (dekningskart) which tells us where people have been looking for the naturtypes that are selected for mapping, but we do not know anything about the ecological condition in the areas that are not mapped The survey map is actually not helpful in this case. 
+
+We will have to use a value of NA for the areas that are not mapped.
+
+There are no quantifiable uncertainties associated with this data set. We can only use the condition category that is recorded for each polygon.
+
+# Export scaled indicator map as vector and raster
+I will have to define numerical values to the categorical condition levels. Thes cut-off points will need to be discussed, but for now I will use 
+
+- God = 1
+- Moderat = 0.75
+- Dårlig = 0.5
+- Svært redusert = 0.25
+
+
+```{r}
+exp <- dplyr::select(dat2, tilstand)
+exp$val[exp$tilstand=="God"] <- 1
+exp$val[exp$tilstand=="Moderat"] <- 0.75
+exp$val[exp$tilstand=="Dårlig"] <- 0.5
+exp$val[exp$tilstand=="Svært redusert"] <- 0.25
+
+exp2 <- fasterize::fasterize(exp, elc2, field = "val") #ELC" is UTM33 with extent around NF  1km buffer, 10 m res.
+table(exp2[])
+```
+
+```{r, eval=F}
+st_write(exp, "../output/scaledIndicatorMaps/shp/naturtyperMdir.shp")
+writeRaster(exp2,"../output/scaledIndicatorMaps/raster/naturtyperMdir.tif")
+```
+# Export variable (unscaled)
+```{r}
+names(dat2)
+var <- dplyr::select(dat2, 
+                     identifikasjon_lokalid,
+                     Hovedøkosystem,
+                     kartleggingsdato,
+                     naturtype,
+                     tilstand)
+```
+
+```{r, eval=F}
+st_write(var, "../output/unscaledVariables/shp/naturtyperMdir.shp")
+
+
+```
+
+

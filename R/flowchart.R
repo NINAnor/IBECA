@@ -134,34 +134,42 @@ nodes2$br[nodes2$type=="ege"] <- c(
 #default URL:
 nodes2$URL <- "https://ninanor.github.io/IBECA/faktaark"
 
+nodes2$nodes
+
 # Custum URLs
 nodes2$URL[nodes2$nodes== "Fjellrev"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrev"
 nodes2$URL[nodes2$nodes== "Jerv"] <- "https://ninanor.github.io/IBECA/faktaark#jerv"
+nodes2$URL[nodes2$nodes== "Rein"] <- "https://ninanor.github.io/IBECA/faktaark#Rein"
 nodes2$URL[nodes2$nodes== "Kongeørn"] <- "https://ninanor.github.io/IBECA/faktaark#kongeørn"
 nodes2$URL[nodes2$nodes== "Ellenberg N"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-n"
 nodes2$URL[nodes2$nodes== "Ellenberg L"] <- "https://ninanor.github.io/IBECA/faktaark#ellenberg-l"
-nodes2$URL[nodes2$nodes== "Inngrepsfri natur"] <- "https://ninanor.github.io/IBECA/faktaark#areal-uten-tekniske-inngrep"
+nodes2$URL[nodes2$nodes== "Areal uten tekniske inngrep"] <- "https://ninanor.github.io/IBECA/faktaark#areal-uten-tekniske-inngrep"
 nodes2$URL[nodes2$nodes== "Smågnagere"] <- "https://ninanor.github.io/IBECA/faktaark#smågnagere"
+nodes2$URL[nodes2$nodes== "Vegetasjonens varmekrav"] <- "https://ninanor.github.io/IBECA/faktaark#Vegetasjonens_varmekrav"
+nodes2$URL[nodes2$nodes== "Fravær av fremmede arter"] <- "https://ninanor.github.io/IBECA/faktaark#Fravær_av_fremmede_arter"
 nodes2$URL[nodes2$nodes== "Lirype"] <- "https://ninanor.github.io/IBECA/faktaark#lirype"
 nodes2$URL[nodes2$nodes== "Fjellrype"] <- "https://ninanor.github.io/IBECA/faktaark#fjellrype"
 nodes2$URL[nodes2$nodes== "NI for fjell"] <- "https://ninanor.github.io/IBECA/faktaark#naturindeks-for-fjell"
 nodes2$URL[nodes2$nodes== "Areal av isbreer"] <- "https://ninanor.github.io/IBECA/faktaark#areal-av-isbreer"
-nodes2$URL[nodes2$nodes== "Snømengde"] <- "https://ninanor.github.io/IBECA/faktaark#snømengde"
+nodes2$URL[nodes2$nodes== "Snødybde"] <- "https://ninanor.github.io/IBECA/faktaark#Snødybde"
+nodes2$URL[nodes2$nodes== "Snødekkets varighet"] <- "https://ninanor.github.io/IBECA/faktaark#Snødekkets_varighet"
 nodes2$URL[nodes2$nodes== "Vinterregn"] <- "https://ninanor.github.io/IBECA/faktaark#vinterregn"
 nodes2$URL[nodes2$nodes== "NDVI"] <- "https://ninanor.github.io/IBECA/faktaark#NDVI"
+nodes2$URL[nodes2$nodes== "Konnektivitet"] <- "https://ninanor.github.io/IBECA/faktaark#Fragmentering__Konnektivitet"
 
 
 # Påvirkninger
-nodes2$URL[nodes2$nodes== "Beskatning"] <- 
-  "https://ninanor.github.io/IBECA/beskatning-fjell.html"
-nodes2$URL[nodes2$nodes== "Arealbruk/-inngrep"] <- 
-  "https://ninanor.github.io/IBECA/arealbruk-fjell.html"
-nodes2$URL[nodes2$nodes== "Forurensing"] <- 
-  "https://ninanor.github.io/IBECA/forurensing-fjell.html"
-nodes2$URL[nodes2$nodes== "Klima"] <- 
-  "https://ninanor.github.io/IBECA/klima-fjell.html"
-nodes2$URL[nodes2$nodes== "Fremmede arter"] <- 
-  "https://ninanor.github.io/IBECA/fremmede-arter-fjell.html"
+# tar vekk disse intill det er opprettet gode sider for de
+#nodes2$URL[nodes2$nodes== "Beskatning"] <- 
+#  "https://ninanor.github.io/IBECA/beskatning-fjell.html"
+#nodes2$URL[nodes2$nodes== "Arealbruk/-inngrep"] <- 
+#  "https://ninanor.github.io/IBECA/arealbruk-fjell.html"
+#nodes2$URL[nodes2$nodes== "Forurensing"] <- 
+#  "https://ninanor.github.io/IBECA/forurensing-fjell.html"
+#nodes2$URL[nodes2$nodes== "Klima"] <- 
+#  "https://ninanor.github.io/IBECA/klima-fjell.html"
+#nodes2$URL[nodes2$nodes== "Fremmede arter"] <- 
+#  "https://ninanor.github.io/IBECA/fremmede-arter-fjell.html"
 
 # DAG ---------------------------------------------------------------------
 

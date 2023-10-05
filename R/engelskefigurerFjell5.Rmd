@@ -1,0 +1,369 @@
+---
+title: "Engelske figurer - fjellrapporten, side 4"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurerFjell4.html'))})
+ 
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(data.table)
+library(matrixStats)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Figurene for [aggregert tilstand](plotting.html) og [påvirkningsfaktorer](paavirkninger.html) lages i de opprinnelige scriptene. 
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+
+library(dplyr)
+library(data.table)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Klimavariabler 
+Her kommer de fem påvirkningsvariablene
+Sommertemperature¨Vintertemperatur
+Årsnedbør
+Antall dager med nedbør
+Vekstsesong
+
+# Gjennomsnittlig sommertemperatur
+
+```{r}
+som <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt sommer/meanSummer_diff.xlsx")
+vin <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Gjennomsnitt vinter/meanWinter_diff.xlsx")
+ned <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Sum nedbør/sumPrecip_diff.xlsx")
+ned2 <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Dager med nedbør/daysPrecip_diff.xlsx")
+#ses <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/growthSeason_diff.xlsx")
+```
+
+Vekstsesong er litt anderledes. 'Diff'-fila har ikke med year.
+```{r}
+dat <- read_excel("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/Klima/Vekstsesong/growthSeason_med.xlsx")
+```
+
+
+```{r}
+dat$year <- as.numeric(dat$year)
+dat$value <- as.numeric(dat$value)
+```
+
+
+```{r}
+dat$reg  <- as.factor(dat$reg)
+```
+
+Regner ut referanseverdiene.
+```{r}
+ref <- aggregate(data = 
+      dat[dat$year %between% c(1961, 1990),],
+                 value~reg,
+                 FUN = mean)
+```
+
+# Trender
+
+```{r}
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+   "Sørlandet"
+             )
+```
+
+```{r}
+dat$ref <- ref$value[match(dat$reg, ref$reg)]
+dat$diff <- dat$value-dat$ref
+```
+
+```{r}
+ses <- data.table::dcast(data = dat,
+                          year ~reg,
+                          value.var="diff")
+ses$variable <- "vekstsesong"
+```
+
+
+```{r}
+names(som)
+names(vin)
+names(ned)
+names(ned2)
+```
+```{r}
+names(ses)
+
+```
+
+```{r}
+ses <- dplyr::select(ses,
+                     year, "Nord-Norge", "Midt-Norge", Østlandet, Vestlandet, Sørlandet, variable  )
+```
+
+Arealvekting
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+```
+Put weight in same order as the columns in the datasets 
+```{r}
+regOrder = c(
+  "Nord-Norge",
+  "Midt-Norge",
+  "Østlandet",
+  "Vestlandet",
+  "Sørlandet"
+  )
+
+wgt <- wgt[order(match(wgt$Region, regOrder)),]
+```
+
+```{r}
+mat <- as.matrix(som[,2:6])
+som$Norge <- rowWeightedMeans(mat, w = wgt$Fjellareal2)
+
+mat <- as.matrix(vin[,2:6])
+vin$Norge <- rowWeightedMeans(mat, w = wgt$Fjellareal2)
+
+mat <- as.matrix(ned[,2:6])
+ned$Norge <- rowWeightedMeans(mat, w = wgt$Fjellareal2)
+
+mat <- as.matrix(ned2[,2:6])
+ned2$Norge <- rowWeightedMeans(mat, w = wgt$Fjellareal2)
+
+mat <- as.matrix(ses[,2:6])
+ses$Norge <- rowWeightedMeans(mat, w = wgt$Fjellareal2)
+
+```
+
+```{r}
+
+minyear <- 1958
+maxyear <- 2021
+upperYlimit <- 3
+lowYlimit   <- -3
+yStep <- 1
+legendPosition <- "top"
+legendInset = 0
+horizontal = TRUE
+legendTextSize = 1.25
+colours = "black"
+# Create loop factors
+
+
+
+png("../output/paavirkningsindikatorer/englishPlots/fjell/klimaindikatorer.png", 
+    units="in", width=8, height=6, res=300)  
+    
+par(mar=c(4.5,6.5,2,2), mfrow=c(2,3))
+
+dat <- som
+
+# Sommertemp
+  plot(
+    dat$Norge~dat$year, 
+    ylab="Mean Summer Temperature (\u00B0C)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  abline(h=0, col="grey", lty=1, lwd=1)
+  lines(dat$year, dat$Norge, col=colours, lwd=2, lty=1) 
+  
+   
+  
+# Vintertempreatur
+   
+dat <- vin
+
+upperYlimit <- 10
+lowYlimit   <- -5
+yStep <- 5
+   
+plot(
+    dat$Norge~dat$year, 
+    ylab="Mean Winter Temperature (\u00B0C)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  abline(h=0, col="grey", lty=1, lwd=1)
+  lines(dat$year, dat$Norge, col=colours, lwd=2, lty=1) 
+  
+   
+  
+# Årsnedbør
+   
+dat <- ned
+
+upperYlimit <- 150
+lowYlimit   <- -150
+yStep <- 100
+   
+plot(
+    dat$Norge~dat$year, 
+    ylab="Annual Precipitation (mm)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  abline(h=0, col="grey", lty=1, lwd=1)
+  lines(dat$year, dat$Norge, col=colours, lwd=2, lty=1) 
+  
+   
+   
+   # Antall dager med nedbør
+   
+dat <- ned2
+
+upperYlimit <- 30
+lowYlimit   <- -20
+yStep <- 10
+   
+plot(
+    dat$Norge~dat$year, 
+    ylab="Days with Precipitation",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  abline(h=0, col="grey", lty=1, lwd=1)
+  lines(dat$year, dat$Norge, col=colours, lwd=2, lty=1) 
+  
+   
+   
+    # Vekstsesong
+   
+dat <- ses
+
+upperYlimit <- 30
+lowYlimit   <- -20
+yStep <- 10
+   
+plot(
+    dat$Norge~dat$year, 
+    ylab="Length of Growing Season (days)",
+    xlab="",
+    main="",
+    xlim=c(minyear, maxyear),
+    ylim=c(lowYlimit, upperYlimit),
+    cex.main=1,
+    cex.lab=1.5,
+    cex.axis=1.5,
+    type="n", 
+    frame.plot=FALSE,
+    axes=FALSE
+  )
+  
+  # Axis 1 options
+  axis(side=1, at=c(seq(1960, 2020, by=10)), cex.axis=1.5) 
+  
+  
+  # Axis 2 options
+  axis(side=2, at=seq(lowYlimit, upperYlimit, yStep), 
+       labels=seq(lowYlimit, upperYlimit, yStep), 
+       cex.axis=1.5)
+  
+  
+  # Add lines
+  abline(h=0, col="grey", lty=1, lwd=1)
+  lines(dat$year, dat$Norge, col=colours, lwd=2, lty=1) 
+  
+   
+
+dev.off()
+```
+

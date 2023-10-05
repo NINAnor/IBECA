@@ -1,0 +1,1204 @@
+---
+title: "Engelske figurer"
+
+output:
+  html_document:
+    toc: false
+    toc_depth: 3
+    toc_float: true
+    
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'engelskeFigurer.html'))})
+ 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+I dette skriptet lager jeg engelske versoner av et utvalg figurer fra skog- og fjellrapporten. Se [her](https://ninanor.github.io/IBECA/plotting.html) for hvordan jeg lagde de norske figurene til fjellrapporten.
+
+
+# Skograpporten
+
+Disse figurene ble laget av Simon og er ikke skrevet i Rmd. Skriptet er litt anderledes enn det jeg brukte i fjellrapporten. Det er mye mer basert på for-løkker, men i fjellrapporten brukte jeg funksjoner.
+
+## Aggregert tilstand
+
+```{r, message=F, warning=F}
+# Packages
+library(dplyr)
+library(tidyr)
+library(vegan)
+```
+
+Set-up
+```{r}
+# Number of simulations
+nsim <- 10000
+
+# Specify total number of indicators (incl. double counting of two-sided)
+nind <- 16 
+
+# Short names for ecosystem characteristics
+characteristics <- c("ppr", "isf", "bmb", "fgw", "bio", "lsp", "abf")
+
+###############################################################################
+### Step 1: indicator, characteristics, years and period summaries (manual) ###
+###############################################################################
+
+# Specify reporting year key to periods
+periods <- data.frame(c(1,1,1,1,1,1,1,1,
+                        2,2,2,2,2,
+                        3,3,3,3,3,
+                        4,4,4,4,4,
+                        5,5,5,5,5,
+                        6,6,6,6,6), 
+                      c(1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 
+                        1996, 1997, 1998, 1999, 2000, 
+                        2001, 2002, 2003, 2004, 2005, 
+                        2006, 2007, 2008, 2009, 2010, 
+                        2011, 2012, 2013, 2014, 2015, 
+                        2016, 2017, 2018, 2019, 2020))
+
+names(periods) <- c("period", "year")
+
+```
+
+Empty ind <-> char matrix (values added further down)
+```{r}
+ind_char <- data.frame(matrix(nrow=nind, ncol=8))
+names(ind_char) <- c("IND", characteristics)
+```
+
+
+## Step 2: load and adjust indicator data
+WD and files within
+```{r, warning=F}
+setwd("P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Forest")
+list.files(pattern=".csv")
+```
+
+```{r}
+path <- "P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Indicator_values/Forest/"
+
+### INON
+inon <- read.csv(paste0(path, "boot_inon_region_skog.csv"), header=T)
+inon$period <- periods$period[match(inon$year, periods$year)]
+inon$reg <- factor(inon$reg)
+levels(inon$reg) # OK
+#inon$reg <- plyr::revalue(inon$reg, c("Midt-Norge"="C", "Nord-Norge"="N","Norge" ="Norge",
+#                                              "Østlandet"="E", "Sørlandet"="S","Vestlandet"="W"))
+
+### NDVI
+ndvi_mod <- read.csv(paste0(path, "ndvi_mod_TEMP_10000.csv"), header=T, encoding = "UTF-8")  
+# already periods
+ndvi_mod$reg <- factor(ndvi_mod$reg)
+levels(ndvi_mod$reg) 
+ndvi_mod$reg <- plyr::revalue(ndvi_mod$reg, c("Midt-Norge"="C", "Nord-Norge"="N","Norge" ="Norge",
+                                      "Østlandet"="E", "Sørlandet"="S","Vestlandet"="W"))
+
+
+
+### Nature index
+forest <- read.csv(paste0(path, "forestsamp.csv"), header=T)
+forest$X <- "natureindex"
+names(forest)[1] <- "ind"
+forest$period <- periods$period[match(forest$year, periods$year)]
+forest$reg <- factor(forest$reg)
+levels(forest$reg) # OK
+#forest$reg <- plyr::revalue(forest$reg, c("Midt-Norge"="C", "Nord-Norge"="N","Norge" ="Norge",
+#                                              "Østlandet"="E", "Sørlandet"="S","Vestlandet"="W"))
+
+### Predators
+pred <- read.csv(paste0(path, "Index_pred_metabolic.csv"), header=T)
+pred$X <- "predators"
+names(pred)[1] <- "ind"
+pred$period <- periods$period[match(pred$year, periods$year)]
+pred$reg <- factor(pred$reg)
+levels(pred$reg)
+#pred$reg <- plyr::revalue(pred$reg, c("Midt-Norge"="C", "Nord-Norge"="N","Norge" ="Norge",
+#                                      "Østlandet"="E", "Sørlandet"="S","Vestlandet"="W"))
+
+### Deer 
+deer <- read.csv(paste0(path, "Index_deer_metabolic.csv"), header=T)
+deer$X <- "deer"
+names(deer)[1] <- "ind"
+deer$period <- periods$period[match(deer$year, periods$year)]
+deer$reg <- factor(deer$reg)
+levels(deer$reg)
+#deer$reg <- plyr::revalue(deer$reg, c("Midt-Norge"="C", "Nord-Norge"="N","Norge" ="Norge",
+#                                      "Østlandet"="E", "Sørlandet"="S","Vestlandet"="W"))
+
+
+### LSK data
+lsk <- read.csv(paste0(path, "LSK_data_bootstrapped.csv"), header=T)
+lsk$period <- periods$period[match(lsk$year, periods$year)]
+lsk$reg <- factor(lsk$reg)
+levels(lsk$reg)
+#lsk$reg <- plyr::revalue(lsk$reg, c("Midt-Norge"="C", "Nord-Norge"="N","Norge" ="Norge",
+#                                      "Østlandet"="E", "Sørlandet"="S","Vestlandet"="W"))
+
+### ANO data
+ano <- read.csv(paste0(path, "results.forest_2-sided_Ellenberg.txt_output_boot.csv"), row.names=1)
+ano$period <- 6 # only last period
+ano$year <- 2019 # only last period
+ano$reg <- factor(ano$reg)
+levels(ano$reg) # OK
+```
+## Step 3: Combine datasets
+
+### First step combined data, start with LSK data
+
+```{r}
+allind <- lsk %>% dplyr::select(reg, year, period, ros_scaled, dw10_scaled, dw30_scaled, old_scaled, blb_scaled)
+rm(lsk)
+
+# Check
+#unique(allind$year)
+#unique(allind$period)
+
+#We'll just use period 6
+
+allind <- allind[allind$period==6,] # Exclude period 3 (not enough data coverage)
+
+# Periods to use
+periods_use <- unlist(unique(allind$period))
+
+# Subset additional data
+
+deer <- deer[deer$period%in%periods_use,]
+pred <- pred[pred$period%in%periods_use,]
+inon <- inon[inon$period%in%periods_use,]
+forest <- forest[forest$period%in%periods_use,]
+ndvi_mod <- ndvi_mod[ndvi_mod$period%in%periods_use,] # missing p 2+4
+ano <- ano[ano$period%in%periods_use,] # missing p 2+4+5
+
+```
+
+Adjust NDVI
+```{r}
+# Extract LLV indicator for NDVI
+ndviL <- ndvi_mod %>% 
+  dplyr::select(reg, llv2, llp2, ulp2, period) %>%
+  dplyr::rename(val=llv2)
+
+# Extract ULV indicator for NDVI
+ndviU <- ndvi_mod %>% 
+  dplyr::select(reg, ulv2, llp2, ulp2, period) %>%
+  dplyr::rename(val=ulv2)
+
+# Rename and add weight (w) column (weighting based on number of pixels >/< reference, respectively)
+ndviL$ind <- "ndviL"
+ndviU$ind <- "ndviU"
+ndviL$w <- ndviL$llp2/(ndviL$llp2+ndviL$ulp2)
+ndviU$w <- ndviL$ulp2/(ndviL$llp2+ndviL$ulp2)
+
+# Remove working files
+rm(ndvi_mod)
+```
+
+Adjust ANO
+```{r}
+# Extract separate datasets for ANO indicators
+ano_E1 <-  ano[ano$var_name=="EllN1",] 
+ano_E2 <- ano[ano$var_name=="EllN2",]
+ano_F1 <-  ano[ano$var_name=="EllF1",] 
+ano_F2 <- ano[ano$var_name=="EllF2",]
+ano_alien <-  ano[ano$var_name=="alien",]
+
+# Remove working files
+rm(ano)
+
+```
+
+## Order data
+
+```{r}
+# Given order
+regOrder = c("C","N","W", "S", "E","Norge")
+perOrder = c(6) 
+
+# Order all data
+deer <- deer %>%
+  arrange(match(reg, regOrder), desc(period))
+pred <- pred %>%
+  arrange(match(reg, regOrder), desc(period))
+inon <- inon %>%
+  arrange(match(reg, regOrder), desc(period))
+forest <- forest %>%
+  arrange(match(reg, regOrder), desc(period))
+ndviL <- ndviL %>%
+  arrange(match(reg, regOrder), desc(period))
+ndviU <- ndviU %>%
+  arrange(match(reg, regOrder), desc(period))
+ano_E1 <- ano_E1 %>%
+  arrange(match(reg, regOrder), desc(period))
+ano_E2 <- ano_E2 %>%
+  arrange(match(reg, regOrder), desc(period))
+ano_F1 <- ano_F1 %>%
+  arrange(match(reg, regOrder), desc(period))
+ano_F2 <- ano_F2 %>%
+  arrange(match(reg, regOrder), desc(period))
+ano_alien <- ano_alien %>%
+  arrange(match(reg, regOrder), desc(period))
+allind <- allind %>%
+  arrange(match(reg, regOrder), desc(period))
+
+```
+
+Check ordered data
+```{r}
+temp <- data.frame(cbind(as.character(allind$reg),as.character(deer$reg), as.character(pred$reg), as.character(forest$reg),
+                        as.character(ano_alien$reg), as.character(ano_E1$reg), as.character(ano_E2$reg), 
+                        as.character(ano_F1$reg), as.character(ano_F2$reg),
+                        as.character(inon$reg), as.character(ndviL$reg), as.character(ndviU$reg)))
+
+temp$test <- paste(temp[,1], temp[,2], temp[,3], temp[,4], temp[,5], temp[,6], temp[,7], temp[,8], temp[,9], 
+                   temp[,10], temp[,11], temp[,12])
+
+length(unique(temp$test)) # 6 regions = OK (for 2021)
+
+temp <- data.frame(cbind(as.character(allind$period),as.character(deer$period), as.character(pred$period), as.character(forest$period),
+                         as.character(ano_alien$period), as.character(ano_E1$period), as.character(ano_E2$period),
+                         as.character(ano_F1$period), as.character(ano_F2$period),
+                         as.character(inon$period), as.character(ndviL$period), as.character(ndviU$period)))
+temp$test <- paste(temp[,1], temp[,2], temp[,3], temp[,4], temp[,5], temp[,6], temp[,7], temp[,8], temp[,9], 
+                   temp[,10], temp[,11], temp[,12])
+
+length(unique(temp$test)) # 1 period = OK (for 2021)
+
+```
+
+```{r}
+### Add additional data to allind data
+allind$pred_scaled <- pred$val
+allind$deer_scaled <- deer$val
+allind$inon_scaled <- inon$val
+allind$forest_scaled <- forest$val
+allind$alien_scaled <- ano_alien$val
+allind$ndviL_scaled <- ndviL$val
+allind$ndviU_scaled <- ndviU$val
+allind$EllN1_scaled <- ano_E1$val
+allind$EllN2_scaled <- ano_E2$val
+allind$EllF1_scaled <- ano_F1$val
+allind$EllF2_scaled <- ano_F2$val
+
+# Rename columns before sorting + sort columns
+names(allind)[1] <- "a_reg"
+names(allind)[2] <- "a_year"
+names(allind)[3] <- "a_period"
+allind <- allind[ , order(names(allind))]
+
+```
+
+```{r}
+# Save allind file
+write.csv(allind, "../data/englishPlots/allind_temp.csv", row.names = F)
+```
+
+## Weights
+```{r}
+### Create weights matrix
+
+# Columns with unique region and period combinations
+weights <- allind %>% 
+  dplyr::select(a_reg, a_period)
+weights <- weights[!duplicated(weights), ]
+
+# Columns with all region and period rows
+weights2 <- allind %>%
+  dplyr::select(a_reg, a_period)
+
+# Add Ellenberg and NDVI weights from original (sorted) data
+weights2$EllF1_scaled <- ano_F1$plotsF1_tot/(ano_F1$plotsF1_tot+ano_F1$plotsF2_tot)
+weights2$EllF2_scaled <- ano_F2$plotsF2_tot/(ano_F2$plotsF1_tot+ano_F2$plotsF2_tot)
+weights2$EllN1_scaled <- ano_E1$plotsN1_tot/(ano_E1$plotsN1_tot+ano_E1$plotsN2_tot)
+weights2$EllN2_scaled <- ano_E2$plotsN2_tot/(ano_E2$plotsN1_tot+ano_E2$plotsN2_tot)
+weights2$ndviL_scaled <- ndviL$llp2/(ndviL$llp2+ndviL$ulp2) 
+weights2$ndviU_scaled <- ndviU$ulp2/(ndviU$llp2+ndviU$ulp2) 
+
+# Reduce weights2 to unique region and period combinations
+weights2 <- weights2[!duplicated(weights2), ]
+
+# Add weight [1] for all other indicators
+for (i in 4:(ncol(allind))){
+  tempname <- names(allind)[i]
+  weights <- cbind(weights, rep(1, nrow(weights)))
+  names(weights)[(i-1)] <- tempname
+}
+
+# Add Elleberg and NDVI weights to weights table
+weights$EllF1_scaled <- weights2$EllF1_scaled 
+weights$EllF2_scaled <- weights2$EllF2_scaled
+weights$EllN1_scaled <- weights2$EllN1_scaled 
+weights$EllN2_scaled <- weights2$EllN2_scaled
+weights$ndviL_scaled <- weights2$ndviL_scaled
+weights$ndviU_scaled <- weights2$ndviU_scaled
+
+# Write weights file
+write.csv(weights, "../data/englishPlots/weights_temp.csv", row.names = F)
+
+# Remove working file
+rm(weights2)
+```
+
+## Step 4: Fill indicator <-> characteristics matrix ###
+```{r}
+# Create indicator <-> characteristic matrix
+ind_char$IND <- names(allind)[-(1:3)]
+
+# Primary productivity
+ind_char$ppr <- ifelse(ind_char$IND=="ndvi_scaled"|ind_char$IND=="EllN1_scaled"|ind_char$IND=="EllN2_scaled"|
+                         ind_char$IND=="ndviL_scaled"|ind_char$IND=="ndviU_scaled",
+                       1,0)
+# Biomass distribution among trophic levels 
+ind_char$bmb  <- ifelse(ind_char$IND=="deer_scaled"|ind_char$IND=="pred_scaled",
+                        1,0)
+
+# Functional groups within trophic levels
+ind_char$fgw  <- 0
+
+# Structurally mportant species and biophysical structures
+ind_char$isf <- ifelse(ind_char$IND=="dw10_scaled"|ind_char$IND=="dw30_scaled"|ind_char$IND=="ros_scaled"|ind_char$IND=="old_scaled"|ind_char$IND=="blb_scaled"|ind_char$IND=="alien_scaled",
+                       1,0)
+
+# Biodiversity
+ind_char$bio <- ifelse(ind_char$IND=="forest_scaled",
+                       1,0)
+
+# Landscape ecological patterns
+ind_char$lsp  <- ifelse(ind_char$IND=="inon_scaled"|ind_char$IND=="old_scaled",
+                        1,0)
+
+# Abiotic factors
+ind_char$abf <- ifelse(ind_char$IND=="EllN1_scaled"|ind_char$IND=="EllN2_scaled"|ind_char$IND=="EllF1_scaled"|ind_char$IND=="EllF2_scaled",
+                       1,0)
+
+# Write indicator-characteristic matrix
+write.csv(ind_char, "../data/englishPlots/ind_char.csv")
+
+```
+
+## Step 5: Indicator quantiles per region and period
+
+```{r}
+periods <- unlist(unique(allind$a_period))
+regions <- unlist(unique(allind$a_reg))
+all_Q <- data.frame()
+per_reg <- length(periods)*length(regions)
+
+for (i in 4:ncol(allind)) {
+  temp_ind <- allind[,c(1:3,i)]
+  
+  for (j in 1:length(periods)){
+    
+    temp_ind2 <- subset(temp_ind, a_period==periods[j])
+    
+    for (k in 1:length(regions)){
+      
+      # Subset region, and delete reg/per columns
+      temp_ind3 <- subset(temp_ind2, a_reg==regions[k])
+      
+      ind <- names(temp_ind3)[4]
+      reg <- regions[k]
+      per <- periods[j]
+      
+      if(ind=="deer_scaled"){ 
+        
+        (if(mean(temp_ind3[,4])>1){
+          
+          temp_ind3[,4] <- (2-temp_ind3[,4])
+          temp_ind3[,4][temp_ind3[,4]<0] <- 0
+          
+          ind <- "deer_scaled_upper"
+          
+        } else {
+          temp_ind3[,4] <- temp_ind3[,4]
+          ind <- "deer_scaled_lower"
+        })
+      } else {
+        
+        NULL
+        
+      }
+      
+      temp_Q <- tryCatch(quantile(temp_ind3[,4],c(0.025, 0.5, 0.975)), error=function(e){})
+      all_Q <- rbind(all_Q, data.frame(ind, reg, per, 
+                                       ifelse(is.null(temp_Q), NA, temp_Q[1]),
+                                       ifelse(is.null(temp_Q), NA, temp_Q[2]),
+                                       ifelse(is.null(temp_Q), NA, temp_Q[3]))) 
+    }
+  }
+}
+
+names(all_Q) <- c("ind", "reg", "per", "low", "med", "upp")
+```
+## Step 6: Aggregated characteristic calculations ### 
+
+```{r}
+periods <- unlist(unique(allind$a_period))
+regions <- unlist(unique(allind$a_reg))
+agg_ind <- data.frame()
+per_reg <- length(periods)*length(regions)
+
+w_boot <- data.frame()
+
+for (n in 1:length(characteristics)){
+  
+  # Select by ind_char data frame
+  temp_char <- cbind(ind_char$IND, ind_char[names(ind_char)%in%characteristics[n]])
+  temp_char <- temp_char[temp_char[,2]==1,]
+  
+  temp_ind <- cbind(allind[,1:3], allind[names(allind)%in%temp_char$`ind_char$IND`])
+  
+  for (j in 1:length(periods)){
+    
+    # Subset period
+    temp_ind2 <- subset(temp_ind, a_period==periods[j])
+    
+    for (k in 1:length(regions)){
+
+      # Subset region, and delete reg/per columns
+      temp_ind3 <- subset(temp_ind2, a_reg==regions[k])
+      temp_ind3 <- data.frame(temp_ind3[,-(1:3)])
+      names(temp_ind3) <- names(temp_ind2)[-(1:3)]
+      
+      # weights
+      temp_weights <- weights[weights$a_reg==regions[k],]
+      temp_weights <- temp_weights[temp_weights$a_period==periods[j],]
+      temp_weights <- temp_weights[,names(temp_weights)%in%names(temp_ind3)]
+      temp_weights[is.na(temp_weights)] <- 0
+      temp_weights <- decostand(temp_weights, method="total", margin =1)
+      
+      # check?
+      (names(temp_ind3)==names(temp_weights))
+      
+      # Correct deer 
+      
+      if("deer_scaled" %in% names(temp_ind3)){ 
+        
+        (if(mean(temp_ind3$deer_scaled)>1){
+          
+          temp_ind3$deer_scaled <- (2-temp_ind3$deer_scaled)
+          temp_ind3$deer_scaled[temp_ind3$deer_scaled<0] <- 0
+          
+        } else {
+          temp_ind3$deer_scaled <- temp_ind3$deer_scaled
+          
+        })
+      } else {
+        
+        NULL
+        
+      }
+      
+      # Truncate values
+      temp_ind3[temp_ind3>1] <- 1
+      
+      # Empty sample mean vector
+      temp_x_boot <- NULL
+      
+      for (m in 1:nsim){ # make 10 000
+        
+        # Empty sample values vector  
+        temp_x <- NULL
+        
+        for (i in 1:ncol(temp_ind3)) {
+          
+          # Sample from indicator i
+          temp_x[i] <- tryCatch(sample(temp_ind3[,i], 1), error=function(e){})
+        } 
+        
+        # Mean of all indicators for given characteristic
+        x_boot <- tryCatch(weighted.mean(x=na.omit(temp_x), w=temp_weights[temp_weights!=0]), error=function(e){})
+        x_boot <- ifelse(is.null(x_boot), NA, x_boot)
+        temp_x_boot[m] <- x_boot
+        #mean(na.omit(temp_x)) # no weights
+        
+      }
+      
+      
+      # Info data
+      chr <- characteristics[n]
+      reg <- regions[k]
+      per <- periods[j]
+      
+      w_boot <- rbind(w_boot, data.frame(chr, reg, per, temp_x_boot))
+      
+      # Quantiles
+      temp_Q <- tryCatch(quantile(temp_x_boot,c(0.025, 0.5, 0.975)), error=function(e){})
+      
+      # Compile data
+      agg_ind <- rbind(agg_ind, data.frame(chr, reg, per, 
+                                           ifelse(is.null(temp_Q), NA, temp_Q[1]),
+                                           ifelse(is.null(temp_Q), NA, temp_Q[2]),
+                                           ifelse(is.null(temp_Q), NA, temp_Q[3]))) 
+    }
+  }
+}
+
+# Rename columns
+names(agg_ind) <- c("ind", "reg", "per", "low", "med", "upp")
+names(w_boot)[4] <- c("val")
+```
+
+## Step 7: Aggregated total calculations ###
+
+```{r}
+periods <- unlist(unique(allind$a_period))
+regions <- unlist(unique(allind$a_reg))
+char_w <- unlist(unique(w_boot$chr))
+tot_ind <- data.frame()
+tot_ind_w <- data.frame()
+per_reg <- length(periods)*length(regions)
+weights_all <- data.frame()
+
+for (j in 1:length(periods)){
+  
+  # Subset period
+  temp_ind2 <- subset(allind, a_period==periods[j])
+  temp_chr2 <- subset(w_boot, per==periods[j])
+  
+  for (k in 1:length(regions)){
+    
+    # Subset region, and delete reg/per columns
+    temp_ind3 <- subset(temp_ind2, a_reg==regions[k])
+    temp_chr3 <- subset(temp_chr2, reg==regions[k])
+    
+    temp_ind3 <- temp_ind3[,-(1:3)]
+    
+    # weights
+    temp_weights <- weights[weights$a_reg==regions[k],]
+    temp_weights <- temp_weights[temp_weights$a_period==periods[j],]
+    temp_weights <- temp_weights[,names(temp_weights)%in%names(temp_ind3)]
+    temp_weights[is.na(temp_weights)] <- 0
+    temp_weights <- decostand(temp_weights, method="total", margin =1)
+
+    # check?
+    (names(temp_ind3)==names(temp_weights))
+    
+    if(mean(temp_ind3$deer_scaled)>1){
+      
+      temp_ind3$deer_scaled <- (2-temp_ind3$deer_scaled)
+      temp_ind3$deer_scaled[temp_ind3$deer_scaled<0] <- 0
+      
+    } else {
+      temp_ind3$deer_scaled <- temp_ind3$deer_scaled
+      
+    }
+    
+    # Empty sample mean vector
+    temp_x_boot <- NULL
+    temp_chr_boot <- NULL
+    
+    for (m in 1:nsim){ # make 10 000
+      
+      # Empty sample values vector  
+      temp_x <- NULL
+      
+      for (i in 1:ncol(temp_ind3)) {
+        
+        # Sample from indicator i
+        temp_x[i] <- tryCatch(sample(temp_ind3[,i], 1), error=function(e){})
+      } 
+      
+      # Empty sample values vector  
+      temp_chr <- NULL
+      
+      for (n in 1:length(char_w)) {
+        temp_chr4 <- subset(temp_chr3, chr==char_w[n])
+        
+        # Sample from indicator i
+        temp_chr[n] <- tryCatch(sample(temp_chr4$val, 1), error=function(e){})
+      } 
+      
+      
+      # Mean of all indicators (weighted)
+      x_boot <- tryCatch(weighted.mean(x=na.omit(temp_x), w=temp_weights[temp_weights!=0]), error=function(e){})
+      x_boot <- ifelse(is.null(x_boot), NA, x_boot)
+      temp_x_boot[m] <- x_boot
+      
+      # Characteristic mean (unweighted)
+      temp_chr_boot[m] <- mean(na.omit(temp_chr)) 
+    }
+    
+    # Info data
+    tot <- "Total"
+    totw <- "Total_w"
+    reg <- regions[k]
+    per <- periods[j]
+
+    weights_all <- rbind(weights_all, data.frame(reg, per, temp_weights))
+    
+    # Quantiles
+    temp_Q <- tryCatch(quantile(temp_x_boot,c(0.025, 0.5, 0.975)), error=function(e){})
+    temp_Qw <- tryCatch(quantile(temp_chr_boot,c(0.025, 0.5, 0.975)), error=function(e){})
+    
+    # Compile data
+    tot_ind <- rbind(tot_ind, data.frame(tot, reg, per, 
+                                         ifelse(is.null(temp_Q), NA, temp_Q[1]),
+                                         ifelse(is.null(temp_Q), NA, temp_Q[2]),
+                                         ifelse(is.null(temp_Q), NA, temp_Q[3])))
+    
+    tot_ind_w <- rbind(tot_ind_w, data.frame(totw, reg, per, 
+                                             ifelse(is.null(temp_Qw), NA, temp_Qw[1]),
+                                             ifelse(is.null(temp_Qw), NA, temp_Qw[2]),
+                                             ifelse(is.null(temp_Qw), NA, temp_Qw[3]))) 
+  }
+}
+
+# Rename columns
+names(tot_ind) <- c("ind", "reg", "per", "low", "med", "upp")
+names(tot_ind_w) <- c("ind", "reg", "per", "low", "med", "upp")
+
+```
+
+## Step 8: Rename indicator labels key ###
+
+Dette er det eneste steget som er nytt egentlig.
+```{r}
+temp_names <- data.frame(c(names(allind[,-(1:3)]), names(ind_char[,-1]),
+                           "Total", "Total_w",
+                           "deer_scaled_upper", "deer_scaled_lower"))
+names(temp_names) <- "work"
+temp_names$plot <- c("Absence of alien species ", 
+                     "Bilberry cover ", 
+                     "Large cervids", 
+                     "Dead wood total", 
+                     "Coarse woody debris", 
+                     "Ellenberg F (lower lv*)",  # orginalt med to **
+                     "Ellenberg F (upper lv*)",  # orginalt med to **
+                     "Ellenberg N (lower lv*)",  # orginalt med to **
+                     "Ellenberg N (upper lv*)",  # orginalt med to **
+                     "Nature Index for forests", 
+                     "Area without technical infrastructure", 
+                     "NDVI (lower lv*)",  # orginalt med to **
+                     "NDVI (upper lv*)",  # orginalt med to **
+                     "Biologically old forest", 
+                     "Large carnivores", 
+                     "Rowan-aspen-goat willow", 
+                     "Primary production",
+                     "Functionally important species and structures", 
+                     "Biomass composition within trophic levels",
+                     "Functional composition within trophic levels", 
+                     "Biological diversity",
+                     "Landscape ecological patterns", 
+                     "Abiotic conditions",
+                     "Overall Ecological Condition", 
+                     "Overall Ecological Condition (weighted)",
+                     "Large cervids (upper lv*)", 
+                     "Large cervids (lower lv*)")
+
+### SAVING 
+
+# Extra column for name, matched from temp_names
+all_Q$names_plot <- temp_names$plot[match(all_Q$ind, temp_names$work)]
+```
+
+```{r, eval=F, warning=F}
+setwd("../data/englishPlots")
+write.csv(all_Q, "all_Q.csv")
+write.csv(tot_ind, "tot_ind.csv")
+write.csv(tot_ind_w, "tot_ind_w.csv")
+write.csv(agg_ind, "agg_ind.csv")
+write.csv(weights_all, "weights_all.csv")
+```
+
+```{r, warning=F}
+setwd("../data/englishPlots")
+allind <- read.csv("allind_temp.csv")
+all_Q <- read.csv("all_Q.csv")
+tot_ind <- read.csv("tot_ind.csv")
+tot_ind_w <- read.csv("tot_ind_w.csv")
+agg_ind <- read.csv("agg_ind.csv")
+weights_all <- read.csv("weights_all.csv")
+
+```
+
+```{r}
+# Omit the extra name column (only for better understanding of backup csv file)
+all_Q <- dplyr::select(all_Q, 
+                       -names_plot)
+
+```
+
+## Step 9: Plotting ###
+
+Define plotting order
+```{r}
+unique(temp_names$plot)
+myOrder <- c(
+  "NDVI (upper lv*)"                            ,
+  "NDVI (lower lv*)"                            ,
+ "Ellenberg N (upper lv*)"                     ,
+ "Ellenberg N (lower lv*)"                     ,
+  "Ellenberg F (upper lv*)"                     ,
+ "Ellenberg F (lower lv*)"                     ,
+ "Large cervids (upper lv*)"                   ,
+
+ "Large carnivores"                            ,
+ "Absence of alien species "                   ,
+ "Bilberry cover "                             ,
+ "Rowan-aspen-goat willow"                     ,
+ "Dead wood total"                             ,
+ "Coarse woody debris"                         ,
+ "Biologically old forest"                     ,
+"Area without technical infrastructure"       ,
+ "Nature Index for forests"                    ,
+ 
+ "Overall Ecological Condition"                ,
+ "Overall Ecological Condition (weighted)"     ,
+
+ "Primary production" ,
+ "Biomass composition between trophic levels" ,
+ "Functional composition within trophic levels",
+ "Functionally important species and structures",
+  "Landscape ecological patterns"               ,
+ "Biological diversity"                        ,
+ "Abiotic conditions"                          ,
+
+
+  "Large cervids"                               ,
+ "Large cervids (lower lv*)"
+)
+```
+
+```{r}
+periods <- unlist(unique(allind$a_period))
+regions <- unlist(unique(allind$a_reg))
+
+for (i in 1:length(periods)){
+  for (j in 1:length(regions)){
+
+    TEMP_Q <- rbind(all_Q[all_Q$reg==regions[j]&all_Q$per==periods[i],], 
+                    tot_ind[tot_ind$reg==regions[j]&tot_ind$per==periods[i],],
+                    tot_ind_w[tot_ind_w$reg==regions[j]&tot_ind_w$per==periods[i],],
+                    agg_ind[agg_ind$reg==regions[j]&agg_ind$per==periods[i],])
+   
+    temp_per <- if(periods[i]==2){
+      1998
+    } else if(periods[i]==4) {
+      2008
+    } else if(periods[i]==5) {
+      2013
+    } else if(periods[i]==6) {
+      2018
+    } else {
+      NA
+    }
+    
+    TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
+    TEMP_Q <- TEMP_Q[order(match(TEMP_Q$ind, myOrder)),]
+    TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+
+    # Change to 300 or 600 res
+    #setwd("../output/aggregated_plots/englishPlots/")
+    png(paste("../output/aggregated_plots/englishPlots/skog/region_", regions[j],"_",temp_per, ".png", sep=""), units="in", width=8, height=14, res=600)
+     
+    par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
+    plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Scaled indicator values", xlab="",
+         type="n", ylim=c(0,1.15), cex.lab=1.2)
+    abline(h=1, col="blue", lwd=2)
+    abline(h=0.6, col="red", lwd=2, lty=2)
+    abline(v=(ncol(allind)-3)+0.5, col="black", lwd=2)
+    abline(v=(ncol(allind)-3)+1.5, col="grey", lwd=1, lty=2)
+    abline(v=(ncol(allind)-3)+2.5, col="black", lwd=2)
+    
+    pex <- 1.8 # median point cex
+    lar <- 0.0 # length of CI arrows
+    war <- 5 # width of CI arrows
+    lcol <- "dark grey"
+    bg1 <- "white" # ind point col
+    bg2 <- "black" # char point col
+    
+    
+    # add values and CI's
+    
+    arrows(TEMP_Q$ind_2[1:(nind)],TEMP_Q$med[1:(nind)],TEMP_Q$ind_2[1:(nind)],
+           TEMP_Q$upp[1:(nind)], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[1:(nind)],TEMP_Q$med[1:(nind)],TEMP_Q$ind_2[1:(nind)],
+           TEMP_Q$low[1:(nind)], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[1:(nind)],TEMP_Q$med[1:(nind)], 
+           pch=21, bg=bg1, cex=pex)
+
+    # unweighted
+    arrows(TEMP_Q$ind_2[nind+1],TEMP_Q$med[nind+1],TEMP_Q$ind_2[nind+1],
+           TEMP_Q$upp[nind+1], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[nind+1],TEMP_Q$med[nind+1],TEMP_Q$ind_2[nind+1],
+           TEMP_Q$low[nind+1], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[nind+1],TEMP_Q$med[nind+1], 
+           pch=23, bg=bg1, cex=pex)
+    
+    # weighted
+    arrows(TEMP_Q$ind_2[nind+2],TEMP_Q$med[nind+2],TEMP_Q$ind_2[nind+2],
+           TEMP_Q$upp[nind+2], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[nind+2],TEMP_Q$med[nind+2],TEMP_Q$ind_2[nind+2],
+           TEMP_Q$low[nind+2], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[nind+2],TEMP_Q$med[nind+2], 
+           pch=23, bg=bg2, cex=pex)
+    
+    arrows(TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],TEMP_Q$med[nind+3:nrow(TEMP_Q)],TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],
+           TEMP_Q$upp[nind+3:nrow(TEMP_Q)], angle=90, length=lar, lwd= war, col=lcol)
+    arrows(TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],TEMP_Q$med[nind+3:nrow(TEMP_Q)],TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],
+           TEMP_Q$low[nind+3:nrow(TEMP_Q)], angle=90, length=lar, lwd= war, col=lcol)
+    points(TEMP_Q$ind_2[nind+3:nrow(TEMP_Q)],TEMP_Q$med[nind+3:nrow(TEMP_Q)], 
+           pch=21, bg=bg2, cex=pex)
+    
+    # Name axes #
+    lablist.x<-as.vector(TEMP_Q$ind)
+    
+    axis(1, at=seq(1,  nrow(TEMP_Q), by=1), labels = FALSE)
+    
+    # Change first command number to align labels
+    text(TEMP_Q$ind_2+0.40, par("usr")[3]-0.02, labels = lablist.x,pos=2,srt = 90,  xpd = TRUE, cex=1.2)
+    
+    dev.off()
+  }
+}
+
+
+
+```
+
+```{r}
+#rm(list=ls())
+# tempdir()
+#dir(tempdir())
+#unlink(paste0(normalizePath(tempdir()), "/", dir(tempdir())), recursive = TRUE)
+#dir(tempdir())
+```
+
+## Pressures
+
+```{r}
+# Short names for ecosystem characteristics
+pressures <- c("are", "kli", "fef", "bes", "fre")
+
+# Empty ind <-> char matrix (values added further down)
+ind_press <- data.frame(matrix(nrow=nind, ncol=6))
+names(ind_press) <- c("IND", pressures)
+
+# Create indicator <-> characteristic matrix
+ind_press$IND <- names(allind)[-(1:3)]
+
+### Fill indicator <-> pressures matrix
+
+ind_press$are <- ifelse(ind_press$IND=="blb_scaled"|ind_press$IND=="old_scaled"|ind_press$IND=="ros_scaled"|
+                          ind_press$IND=="dw10_scaled"|ind_press$IND=="dw30_scaled"|ind_press$IND=="deer_scaled"|
+                          ind_press$IND=="inon_scaled"|ind_press$IND=="forest_scaled"|
+                          ind_press$IND=="ndviL_scaled"|ind_press$IND=="ndviU_scaled"|
+                          ind_press$IND=="EllF1_scaled"|ind_press$IND=="EllF2_scaled",
+                        1,0)
+ind_press$kli  <- ifelse(ind_press$IND=="blb_scaled"|ind_press$IND=="deer_scaled"|ind_press$IND=="alien_scaled"|
+                           ind_press$IND=="EllN1_scaled"|ind_press$IND=="EllN2_scaled"|ind_press$IND=="ndviL_scaled"|
+                           ind_press$IND=="ndviU_scaled"|ind_press$IND=="forest_scaled"|
+                           ind_press$IND=="EllF1_scaled"|ind_press$IND=="EllF2_scaled",
+                        1,0)
+ind_press$fef  <- ifelse(ind_press$IND=="blb_scaled"|ind_press$IND=="EllN1_scaled"|ind_press$IND=="EllN2_scaled"|
+                         ind_press$IND=="ndviL_scaled"|ind_press$IND=="ndviU_scaled",
+                         1,0)
+ind_press$bes <- ifelse(ind_press$IND=="deer_scaled"|ind_press$IND=="pred_scaled",
+                       1,0)
+ind_press$fre <- ifelse(ind_press$IND=="alien_scaled",
+                       1,0)
+```
+
+## Step 2: Aggregated pressure calculations
+
+```{r}
+# Loop factors
+periods <- unlist(unique(allind$a_period))
+regions <- unlist(unique(allind$a_reg))
+
+
+# Check unique combinations
+per_reg <- length(periods)*length(regions)
+
+# Empty aggregation data frame
+agg_ind <- data.frame()
+
+for (n in 1:length(pressures)){
+  
+  # Select by ind_press data frame
+  temp_press <- cbind(ind_press$IND, ind_press[names(ind_press)%in%pressures[n]])
+  temp_press <- temp_press[temp_press[,2]==1,]
+  
+  temp_ind <- cbind(allind[,1:3], allind[names(allind)%in%temp_press$`ind_press$IND`])
+
+  for (j in 1:length(periods)){
+    
+    # Subset period
+    temp_ind2 <- subset(temp_ind, a_period==periods[j])
+    
+    for (k in 1:length(regions)){
+      
+      # Subset region, and delete reg/per columns
+      temp_ind3 <- subset(temp_ind2, a_reg==regions[k])
+      temp_ind3 <- data.frame(temp_ind3[,-(1:3)])
+      names(temp_ind3) <- names(temp_ind2)[-(1:3)]
+      
+      # weights
+      temp_weights <- weights[weights$a_reg==regions[k],]
+      temp_weights <- temp_weights[temp_weights$a_period==periods[j],]
+      temp_weights <- temp_weights[,names(temp_weights)%in%names(temp_ind3)]
+      temp_weights[is.na(temp_weights)] <- 0
+      temp_weights <- decostand(temp_weights, method="total", margin =1)
+      
+      # check?
+      (names(temp_ind3)==names(temp_weights))
+      
+      # Correct deer 
+      
+      if("deer_scaled" %in% names(temp_ind3)){ 
+        
+        (if(mean(temp_ind3$deer_scaled)>1){
+          
+          temp_ind3$deer_scaled <- (2-temp_ind3$deer_scaled)
+          temp_ind3$deer_scaled[temp_ind3$deer_scaled<0] <- 0
+          
+        } else {
+          temp_ind3$deer_scaled <- temp_ind3$deer_scaled
+          
+        })
+      } else {
+        
+        NULL
+        
+      }
+      
+      # Truncate values
+      temp_ind3[temp_ind3>1] <- 1
+      
+      # Empty sample mean vector
+      temp_x_boot <- NULL
+      
+      for (m in 1:nsim){ # make 10 000
+        
+        # Empty sample values vector  
+        temp_x <- NULL
+        
+        for (i in 1:ncol(temp_ind3)) {
+          
+          # Sample from indicator i
+          temp_x[i] <- tryCatch(sample(temp_ind3[,i], 1), error=function(e){})
+        } 
+        
+        # Mean of all indicators for given characteristic
+        x_boot <- tryCatch(weighted.mean(x=na.omit(temp_x), w=temp_weights[temp_weights!=0]), error=function(e){})
+        x_boot <- ifelse(is.null(x_boot), NA, x_boot)
+        temp_x_boot[m] <- x_boot
+        
+      }
+      
+      # Info data
+      pres <- pressures[n]
+      reg <- regions[k]
+      per <- periods[j]
+      
+      # Quantiles
+      temp_Q <- tryCatch(quantile(temp_x_boot,c(0.025, 0.5, 0.975)), error=function(e){})
+      
+      # Compile data
+      agg_ind <- rbind(agg_ind, data.frame(pres, reg, per, 
+                                           ifelse(is.null(temp_Q), NA, temp_Q[1]),
+                                           ifelse(is.null(temp_Q), NA, temp_Q[2]),
+                                           ifelse(is.null(temp_Q), NA, temp_Q[3]))) 
+    }
+  }
+}
+
+# Rename columns
+names(agg_ind) <- c("ind", "reg", "per", "low", "med", "upp")
+
+#write.csv(agg_ind, "../data/englishPlots/agg_ind_press.csv", row.names = F)
+#agg_ind <- read.csv("../data/englishPlots/agg_ind_press.csv")
+```
+
+```{r}
+### Names ###
+#############
+
+temp_names <- data.frame(names(ind_press[,-1]))
+names(temp_names) <- "work"
+temp_names$plot <- c("Land use", 
+                     "Climate change", 
+                     "Pollution",
+                     "Population management", 
+                     "Alien species")
+```
+
+## Step 9: Plotting separate                                                    ###
+```{r}
+periods <- unlist(unique(allind$a_period))
+regions <- unlist(unique(allind$a_reg))
+
+for (i in 1:length(periods)){
+  for (j in 1:length(regions)){
+
+    TEMP_Q <- agg_ind[agg_ind$reg==regions[j]&agg_ind$per==periods[i],]
+    
+    TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+    TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
+    
+    temp_per <- if(periods[i]==2){
+      1998
+    } else if(periods[i]==4) {
+      2008
+    } else if(periods[i]==5) {
+      2013
+    } else if(periods[i]==6) {
+      2018
+    } else {
+      NA
+    }
+    
+    
+    write.csv(TEMP_Q, paste("../data/englishPlots/TEMP_Q_", regions[j], "_", temp_per, ".csv", sep=""))
+    
+    # Change to 300 or 600 res
+    #setwd("/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/FINAL/Pressure_plots/vertical")
+    png(paste("../output/aggregated_plots/englishPlots/skog/pressures_region_", regions[j],"_",temp_per, ".png", sep=""), units="in", width=4, height=11, res=600)
+    
+    par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
+    plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Skalerte indikatorverdier", xlab="",
+         type="n", ylim=c(0,1.1), xlim=c(0.5,5.5), cex.lab=1.2)
+    abline(h=1, col="blue", lwd=2)
+    abline(h=0.6, col="red", lwd=2, lty=2)
+    
+    # add values and CI's
+    
+    arrows(TEMP_Q$ind_2[1:nrow(TEMP_Q)],TEMP_Q$med[1:nrow(TEMP_Q)],TEMP_Q$ind_2[1:nrow(TEMP_Q)],
+           TEMP_Q$upp[1:nrow(TEMP_Q)], angle=90, length=0.05, col="grey")
+    arrows(TEMP_Q$ind_2[1:nrow(TEMP_Q)],TEMP_Q$med[1:nrow(TEMP_Q)],TEMP_Q$ind_2[1:nrow(TEMP_Q)],
+           TEMP_Q$low[1:nrow(TEMP_Q)], angle=90, length=0.05, col="grey")
+    points(TEMP_Q$ind_2[1:nrow(TEMP_Q)],TEMP_Q$med[1:nrow(TEMP_Q)], 
+           pch=21, bg="dark grey", cex=1.5)
+    
+    # Name axes #
+    lablist.x<-as.vector(TEMP_Q$ind)
+    
+    axis(1, at=seq(1,  nrow(TEMP_Q), by=1), labels = FALSE)
+    
+    # Change first command number to align labels
+    text(TEMP_Q$ind_2+0.2, par("usr")[3]-0.02, labels = lablist.x,pos=2,srt = 90,  xpd = TRUE, cex=1.2)
+    
+    dev.off()
+  }
+}
+
+```
+
+```{r}
+## Step 10: Plotting combined                                                   ###
+####################################################################################
+
+periods <- unlist(unique(allind$a_period))
+
+regions <- data.frame(ord = c(5,6,4,3,2,1))
+regions$navn <- unlist(unique(allind$a_reg))
+regions <- regions[order(regions$ord),]
+regions$colours <- c("dark grey", "#FFB25B", "#2DCCD3","#004F71", "#7A9A01", "#93328E")
+
+move <- 4
+div <- 8
+
+for (i in 1:length(periods)){
+  
+  TEMP_Q <- agg_ind[agg_ind$reg==regions$navn[2]&agg_ind$per==periods[i],]
+  
+  TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+  TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
+  
+  temp_per <- if(periods[i]==2){
+    1998
+  } else if(periods[i]==4) {
+    2008
+  } else if(periods[i]==5) {
+    2013
+  } else if(periods[i]==6) {
+    2018
+  } else {
+    NA
+  }
+  
+  
+  write.csv(TEMP_Q, paste("../data/englishPlots/TEMP_Q_comb_", regions$navn[2], "_", temp_per, ".csv", sep=""))
+  
+  # Change to 300 or 600 res
+
+  png(paste("../output/aggregated_plots/englishPlots/skog/comb_", temp_per, ".png", sep=""), units="in", width=6, height=11, res=600)
+  
+  par(xaxt="n", mfrow=c(1,1), par(mar=c(25,5,1,1)))
+  plot(TEMP_Q$med~TEMP_Q$ind_2, ylab="Skalerte indikatorverdier", xlab="",
+       type="n", ylim=c(0,1.1), xlim=c(0.5,5.5), cex.lab=1.2)
+  abline(h=1, col="blue", lwd=2)
+  abline(h=0.6, col="red", lwd=2, lty=2)
+  
+  # add values and CI's
+  
+  arrows(TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(2-move)/div,TEMP_Q$med[1:nrow(TEMP_Q)],TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(2-move)/div,
+         TEMP_Q$upp[1:nrow(TEMP_Q)], angle=90, length=0.05, col=regions$colours[2])
+  
+  arrows(TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(2-move)/div,TEMP_Q$med[1:nrow(TEMP_Q)],TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(2-move)/div,
+         TEMP_Q$low[1:nrow(TEMP_Q)], angle=90, length=0.05, col=regions$colours[2])
+  
+  points(TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(2-move)/div,TEMP_Q$med[1:nrow(TEMP_Q)], 
+         pch=21, bg=regions$colours[2], cex=1.5)
+  
+  # Name axes #
+  lablist.x<-as.vector(TEMP_Q$ind)
+  
+  axis(1, at=seq(1,  nrow(TEMP_Q), by=1), labels = FALSE)
+  
+  # Change first command number to align labels
+  text(TEMP_Q$ind_2+0.2, par("usr")[3]-0.02, labels = lablist.x,pos=2,srt = 90,  xpd = TRUE, cex=1.2)
+  
+  
+  for (j in 3:length(regions$navn)){
+    
+    TEMP_Q <- agg_ind[agg_ind$reg==regions$navn[j]&agg_ind$per==periods[i],]
+    
+    TEMP_Q$ind_2 <- c(1:nrow(TEMP_Q))
+    TEMP_Q$ind <- factor(temp_names$plot[match(TEMP_Q$ind, temp_names$work)])
+    
+    temp_per <- if(periods[i]==2){
+      1998
+    } else if(periods[i]==4) {
+      2008
+    } else if(periods[i]==5) {
+      2013
+    } else if(periods[i]==6) {
+      2018
+    } else {
+      NA
+    }
+    
+    
+    write.csv(TEMP_Q, paste("../data/englishPlots/TEMP_Q_comb_", regions$navn[j], "_", temp_per, ".csv", sep=""))
+    
+    
+    # add values and CI's
+    
+    arrows(TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(j-move)/div,TEMP_Q$med[1:nrow(TEMP_Q)],TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(j-move)/div,
+           TEMP_Q$upp[1:nrow(TEMP_Q)], angle=90, length=0.05, col=regions$colours[j])
+    
+    arrows(TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(j-move)/div,TEMP_Q$med[1:nrow(TEMP_Q)],TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(j-move)/div,
+           TEMP_Q$low[1:nrow(TEMP_Q)], angle=90, length=0.05, col=regions$colours[j])
+    
+    points(TEMP_Q$ind_2[1:nrow(TEMP_Q)]+(j-move)/div,TEMP_Q$med[1:nrow(TEMP_Q)], 
+           pch=21, bg=regions$colours[j], cex=1.5)
+    
+  }    
+  
+  dev.off()
+
+}
+
+```
+
