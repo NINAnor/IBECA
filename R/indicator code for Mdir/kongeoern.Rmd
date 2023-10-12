@@ -1,0 +1,616 @@
+---
+title: "Kongeørn"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    
+knit: (function(input_file, encoding) {
+  out_dir <- '../docs';
+  rmarkdown::render(input_file,
+ encoding=encoding,
+ output_file=file.path(dirname(input_file), out_dir, 'kongeoern.html'))})
+---
+
+```{r setup, include=FALSE, message=FALSE}
+library(knitr)
+library(sf)
+library(raster) # burde kanskje byttes ut med stars
+library(sp)  # usikker på om jeg trenger denne
+library(rgdal)
+library(tmap)
+library(NIcalc)
+library(readxl)
+library(ggplot2)
+#library(mapview)
+library(stars)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Analyser av kongeørnterritorier
+Datasettet ligger på P:// som er en server på NINA.
+
+
+```{r import}
+
+#dat <- sf::st_read('P:/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+
+# lokalt:
+dat <- sf::st_read('C:/Users/anders.kolstad/Documents/Github/IBECA_NINA/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+
+# Denne funker for rstudio server. Den over funker på lokal maskin.
+#dat <- sf::st_read('/data/P-Prosjekter/41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly/fjell2021/data/utbredelseKongeoern/Buff_10_All_terr_kongeørn.shp')
+
+
+head(dat)
+```
+
+Datasettet inneholder alle kjente kongeørnterritorier i Norge (vi bryr oss ikke om streiffugler). 
+
+Laster inn en outline for Norge.
+
+```{r crs}
+crs(dat)
+```
+
+
+## Outline of Norway
+```{r outline, eval=FALSE}
+nor <- raster::getData('GADM', country='NOR', level=0)%>%
+  sp::spTransform("+proj=utm +zone=33")
+saveRDS(nor, '../data/norway_outline.RDS')
+```
+
+```{r, echo=FALSE}
+nor <- readRDS('../data/norway_outline.RDS')
+```
+
+Henter shp med regionene
+
+```{r import regions}
+reg <- st_read("../data/regioner_2010/regNorway_wgs84 - MERGED.shp")%>%
+  st_transform(crs = crs(dat))
+```
+
+Fikser øæå
+```{r}
+reg$region[reg$region=="Ã\u0098stlandet"] <- "Østlandet"
+reg$region[reg$region=="SÃ¸rlandet"] <- "Sørlandet"
+
+```
+
+
+Klipper regionene etter norgeskartet
+```{r, message=FALSE}
+reg_clipped <- st_intersection(reg, st_as_sf(nor))
+```
+
+
+```{r plotting territories}
+tmap_mode("view")
+tm_shape(dat) + 
+    tm_polygons(border.col = "grey", 
+                col = 'Visited_20',
+                title = "Overvåket i 2015-2019?",
+                style = "cat",
+                drop.levels = T)+
+  tm_shape(nor)+
+    tm_polygons(alpha = 0,
+                border.col = "black")+
+  tm_shape(reg_clipped)+
+    tm_polygons(alpha = 0,
+                border.col = "black")+
+  tm_text("region", size=1.5)+
+  tm_layout(title = "Alle kjente norske\nkongeørnterritorier")
+  
+
+```
+
+
+
+```{r}
+length(unique(dat$Terr_total))
+```
+Det er 1371 kjente territorier i Norge i dag.
+
+Er det noen duplikater?
+```{r}
+nrow(dat)
+```
+Nei, det er det ikke.
+
+
+Ikke alle territorier er okkupert til en hver tid. Det er to kolonner (`Visit_2021` og `Visit_20`) som indikarer hvorvidt territoriene har blitt overvåket i hhv 2010-2014 og/eller 2015-2019. I tillegg er det noen territorier som er lagt inn i rovbase før dette og som vi ikke vet om er okkupert eller ikke i nyere tid. 
+
+
+Hvor mange territorier ble overvåket i siste periode?
+```{r}
+table(dat$Visited_20)
+```
+Det er 533 territorier som ble overvåket i siste periode (egen farge i kartet over). Av disse var det kun 398 som var okkupert (pers. com. Jenny Mattison). 
+
+```{r}
+table(dat$Visit_2010, dat$Visited_20, deparse.level = 2)
+```
+
+
+Tabellen over sier oss at 635 territorier ikke har vært overvåket i noen av periodene (dvs de er registrer før 2010 og det er uvist om det er fugler der nå), og at 335 har vært overvåket i begge periodene.
+
+Dette datasettet med 'teoretiske' territorier er nyttig for å visualisere på fordelingen av territorier i og innad i regioner og å regne på fordelingen mellom fjell og ikke-fjell. Det er ikke dette datasettet vi bruker for å si hvor mange territorier det er i dag. 
+Modelleringer tilseier at det skal være rundt 1027 okkuperte territorier i Norge under siste perioden (2015-2019) (pers. com. Jenny Mattison). Disse dataene finnes på fylkesnivå og er hva vi må basere oss på som indikatormål. 
+
+
+
+```{r tbl, echo=F}
+tbl <- read_excel("../data/kongeornterritorier_modellerte_perFylke.xlsx", 
+     sheet = "tbl")
+knitr::kable(tbl,
+             align='l',
+             caption = 
+               "Tabell 1. Fylkesvis oversikt over antall estimerte okkuperte kongeørnterritorier (ekstensiv) samt okkupert intensivterritorier, og det totale antallet okkuperte territorier med øvre og nedre 95 % kredibilitetsintervaller. Data fra perioden 2010–2014 er hentet fra Dahl mfl. (2015). <br> <br> Tabellen er hentet fra Mattisson, J., Nilsen, E.B. & Brøseth, H. 2020. Estimering av antall hekkende par kongeørn basert på kjent forekomst i Norge for perioden 2015-2019. NINA Rapport 1858. Norsk Institutt for Naturforskning.")
+```
+
+## Referansetilstand
+Vi trenger referansetilstander. Fra NI-databasen ser jeg at referansetilstanden kun er to-delt, dvs det er en referansetilstand for Nord-Norge og en for Sør-Norge. Begge er definert/satt til 100% etter at årene 2010-2019 er satt til 90%. Arealene øst for Oslo er ikke med i deknignskartet for denne indikatoren i NI, slik at vi trenger ikke bekymre oss med å kutte vekk Vestfold, Oslo, Østfold og Akershus. I disse fylkene er det ingen kjente territorier (trolig mye underrapportering) som betyr at indikatoren ikke har gyldighet der. Det er også lite fjell i disse fylkene.
+
+Her er to screenshot fra Naturindeksdatabasen:
+
+![Kongeørn](../figures/kongeorn-sor.png){width=20cm}
+<br>
+![Kongeørn](../figures/kongeorn-nord.png){width=20cm}
+
+
+I naturindeks er det ikke registrert antall territorier, men bare % av opprinnelig bestand (kun basert på ekspertvurderinger). Referansetilstanden er som sagt satt til 100%. Jeg foreslår at vi fortsetter å bruke 100% som en referanseverdi og setter dagens bestandsstørrelse til 90% av referansetilstandedn. I motsettning til NI kan vi bruke usikkerhetene fra modelleringen av antall territorier. I tabellen over manger det separate estimater for Nord-Norge og Sør-Norge. Jeg spurte Jenny om dette og hun kjørte modellen bak tabell 1 på nytt og fikk:
+
+Nord Norge: 375 (329-423)
+
+Sør Norge: 652 (586-721)
+
+Referansetilstanden blir da
+```{r}
+(375/90)*100
+```
+for N-Norge, og 
+```{r}
+(652/90)*100
+```
+for S-Norge.
+
+```{r}
+scaled <- data.frame(
+  Region = c("Sør-Norge", "Nord-Norge"),
+  Indikatorverdi = c(652, 375),
+  Low_2.5 = c(586, 329),
+  High_97.5 = c(721,423),
+  referansetilstand = c(724.444, 416.667))
+scaled$scaledMean <- scaled$Indikatorverdi/scaled$referansetilstand
+scaled$scaledLow <- scaled$Low_2.5/scaled$referansetilstand
+scaled$scaledHigh <- scaled$High_97.5/scaled$referansetilstand
+scaled
+
+```
+
+```{r, eval=FALSE}
+saveRDS(scaled, "../output/kongeorn_scaledOutput.Rda")
+```
+
+# Eksporterer bootstrapped datasett
+```{r}
+scaled$scaledLow-scaled$scaledMean
+```
+
+```{r}
+scaled$scaledMean-scaled$scaledHigh
+```
+Dette viser oss at usikkerheten ikke er summetrisk rundt estimatet. 
+Jeg må jeg gjøre en forrenkling og si at den er det allikevel.
+
+```{r}
+sdsør <- (scaled$scaledHigh[1]-scaled$scaledMean[1])/2
+
+test <- rnorm(100, 
+      mean = scaled$scaledMean[1], 
+      sd=sdsør)
+quantile(test, c(0.025, 0.5, 0.975))
+```
+Disse tallene ligner veldig på de usikkerheten som Jenny leverte. 
+```{r}
+sdnord <- (scaled$scaledHigh[2]-scaled$scaledMean[2])/2
+print(c(sdnord, sdsør))
+```
+
+
+```{r}
+
+expdat <- data.frame(
+  reg = rep(c("N", "C", "E", "W", "S"), each=10000),
+  year = 2019,
+  val = NA
+  )
+expdat$val[expdat$reg == "N" | expdat$reg == "C"] <-
+  rnorm(20000, 
+      mean = scaled$scaledMean[scaled$Region=="Nord-Norge"], 
+      sd=sdnord)
+expdat$val[expdat$reg == "E" | 
+             expdat$reg == "W" |
+             expdat$reg == "S"] <-
+  rnorm(30000, 
+      mean = scaled$scaledMean[scaled$Region=="Sør-Norge"], 
+      sd=sdsør)
+expdat$val[expdat$val>1] <- 1
+summary(expdat$val)
+```
+# Arealvekting
+```{r}
+wgt <- readRDS("../data/fjellareal.rds")
+wgt$Fjellareal2 <- wgt$Fjellareal/max(wgt$Fjellareal)
+wgt$reg <- c("N", "C", "E", "W", "S")
+```
+
+```{r}
+norge <- data.frame(
+  reg = rep("Norge", 10000),
+  year = 2019,
+  val = NA
+)
+
+temp <- expdat
+    
+temp2 <- c(
+      sample(temp$val[temp$reg == "N"], wgt$Fjellareal2[wgt$reg == "N"]*10000, replace =T),
+      sample(temp$val[temp$reg == "E"], wgt$Fjellareal2[wgt$reg == "E"]*10000, replace =T),
+      sample(temp$val[temp$reg == "W"], wgt$Fjellareal2[wgt$reg == "W"]*10000, replace =T),
+      sample(temp$val[temp$reg == "S"], wgt$Fjellareal2[wgt$reg == "S"]*10000, replace =T),
+      sample(temp$val[temp$reg == "C"], wgt$Fjellareal2[wgt$reg == "C"]*10000, replace =T)
+    )
+
+temp3 <- sample(temp2, 10000, replace = F)
+norge$val <- temp3
+expdat <- rbind(expdat, norge)
+```
+
+```{r, eval=F}
+write.csv(expdat, "../output/indicator_values/kongeorn.csv")
+```
+
+
+## Spørring mot NI-databasen
+Denne opperasjonen er litt overflødig nå, men her gjør jeg en spørring mot NIdatabasen for å se mer nøyaktig hva som ligger der.
+
+Fyll inn ditt eget passord og brukernavn
+```{r, eval=F}
+myUser <- "anders.kolstad@nina.no"
+myPwd  <- "" # hemmelig passord
+```
+
+Importerer data fra NI-databasen og lagrer datasettet på server
+```{r NIimport, eval=F}
+
+golden <- NIcalc::importDatasetApi(
+  username = myUser,
+  password = myPwd,
+  indic = "Kongeørn",
+  year="2019")
+
+saveRDS(golden, "../data/kongeorn_NIdatabasen.rds")
+rm(golden)
+rm(myPwd)
+
+```
+
+
+
+
+```{r}
+golden          <- readRDS("../data/kongeorn_NIdatabasen.rds")
+goldenAssemble  <- NIcalc::assembleNiObject(inputData = golden)
+goldenIndex     <- NIcalc::calculateIndex(x = goldenAssemble, 
+                                          nsim = 1000,
+                                          awBSunit = "Fjell"
+                                          )
+summary(goldenIndex$wholeArea)
+
+```
+```{r}
+plot(goldenIndex$wholeArea)
+
+```
+
+
+
+Tabellen sier at tilstanden er 0.9 for 2019. Jeg har ikke fått ut usikkerheten separat for nord og sør her. Det er sikkert mulig, men ikke nødvendig.
+
+
+## Tilhørigheten til fjell
+
+Etter diskusjon med Jenny er det klart at det ikke finnes godt nok grunnlag for å spesifisere egne referansetilstander for fjell og ikke-fjell (egentlig skog). Derfor er det ikke heller nødvendig å regne ut nøyaktig antall territorier, eller andel av territorieareal, som overlapper med fjell, men vi gjør det her for å gi oss en oversikt.
+
+Ett territorie er en sirkel med radius 10 km plassert rundt sentrumspunktet for de reirene som er inkludert i det samme territoriet (det kan være flere, men bare ett er okkupert til en hvert tid). 
+
+
+
+
+
+Det er ingenting på Østlandet (se kartet over), men ellers så er landet godt dekt. På Østlandet er det trolig stor underrapportering, siden vi vet det finnes mange territorier rett over grensa til Sverige, og habitatet er helt likt. 
+
+Her er et lite utsnatt fra Trøndelag som viser fordlingen og grad av overlapp mellom territorier.
+```{r}
+myExt <- raster::extent(100000, 300000, 6900000, 7100000)
+```
+
+```{r}
+datc <- sf::st_crop(dat, myExt)
+plot(datc[,c('Terr_total', 'geometry')])
+
+```
+
+Det er som vi ser veldig mye overlapp mellom de teoretiske territoriene. Husk at ikke alle er okkuperte, men vi vet ikke nøyaktig hvem av de som er okkuperte til en hver tid.
+
+
+### Fjellmasken
+La oss først ta inn fjellmasken. Deretter kan vi bruke den til å gi oss litt statistikk. Til dette trenger vi ikke den høyeste oppløsningen.
+
+```{r}
+fjell_low <- raster("../output/fjell_1km.tif")
+fjell_low_star <- st_as_stars(fjell_low)
+fjell_low_star[fjell_low_star[]==0] <- NA # for plotting
+```
+
+```{r}
+tmap_mode("view")
+tm_shape(dat) + 
+  tm_polygons(border.col = "black", 
+                col = 'Visited_20',
+                title = "Overvåket i 2015-2019?",
+                style = "cat",
+                drop.levels = T,
+                alpha=0)+
+tm_shape(nor)+
+  tm_polygons(alpha = 0,
+                border.col = "black")+
+tm_shape(reg_clipped)+
+  tm_polygons(alpha = 0,
+                border.col = "black")+
+tm_layout(title = "Alle kjente norske\nkongeørnterritorier")+
+tm_shape(fjell_low_star)+
+  tm_raster(title = "Andel fjellareal")
+  
+```
+
+Så tar vi gjennomsnitt fjellareal per polygon. Det er ganske rett fra siden fjell = 1 og ikke-fjell =0. Opperasjonen tar litt tid, ca 7 min.
+
+```{r, eval=FALSE}
+dat$andelFjell <- raster::extract(fjell_low, dat, fun = mean) 
+saveRDS(dat, "../data/kongeorn-helperfile.Rda")
+```
+
+```{r}
+terr_fjell <- readRDS("../data/kongeorn-helperfile.Rda")
+hist(terr_fjell$andelFjell)
+```
+
+Gjennomsnittlig for hele Norge er andelen av territoriene som overlapper med fjell lik
+
+```{r}
+mean(terr_fjell$andelFjell)
+```
+Det er sikkert litt variasjon mellom regionene. 
+
+```{r, message=FALSE}
+nord <- st_intersection(terr_fjell, reg[1,])
+midt <- st_intersection(terr_fjell, reg[2,])
+ost <-  st_intersection(terr_fjell, reg[3,])
+vest <- st_intersection(terr_fjell, reg[4,])
+sor <-  st_intersection(terr_fjell, reg[5,])
+
+par(mfrow=c(2,3))
+plot(nord$geometry, main="Nord-")
+plot(midt$geometry, main="Midt-")
+plot(ost$geometry, main ="Øst-")
+plot(vest$geometry, main="vest-")
+plot(sor$geometry, main="Sør-")
+plot(dat$geometry, main="Norge")
+
+```
+
+Funskjon for standard error:
+```{r}
+se <- function(x) sd(x, na.rm=T)/sqrt(length(x))
+```
+
+Regner ut gjennomsnitt for hver region
+```{r}
+comb                <- rbind(nord, ost, sor, vest, midt)
+gjOverlappMedFjell  <- tapply(comb$andelFjell,comb$region, FUN=mean)
+SDOverlappMedFjell  <- tapply(comb$andelFjell,comb$region, FUN=se)
+fracFjell           <- as.data.frame(gjOverlappMedFjell)
+fracFjell$se        <- SDOverlappMedFjell
+fracFjell$region    <- row.names(fracFjell)
+fracFjell
+
+```
+
+```{r}
+ggplot(fracFjell)+
+  geom_bar(aes(y=gjOverlappMedFjell, x=region), stat="identity", fill="skyblue")+
+  geom_errorbar(aes(x=region, ymin=gjOverlappMedFjell-se,
+                    ymax=gjOverlappMedFjell+se),
+                width=0.4, colour="orange", alpha=0.9, size=1.3)+
+  xlab("")+
+  ylab("Andel av kongeørnterritoriene som overlapper med fjell")
+
+```
+
+
+
+
+
+### Centroider
+Her er barer en skisse på hvordan man kan definere territorier til fjell eller ikke-fjell basert på centroiden. Dette krever fjellmaske med høyere oppløsning.
+
+```{r import fjell}
+fjell <- raster::raster("../data/fjellmasken.tif")
+
+class(fjell)
+```
+Fila er ganske stor.
+
+
+```{r}
+dim(fjell)
+```
+32k * 32k gir litt over en milliard verdier (piksler)
+
+```{r}
+summary(fjell)
+```
+
+Denne masken ser ut til å være piksler med verdi 202 fra dette kartlaget:
+P:\41201042_okologisk_tilstand_fastlandsnorge_2020_dataanaly\FINAL\Raw_data\Ecosystems\ecoMap_50m.tif
+
+Fila er ganske tung å jobbe med så vi må prøve å redusere størrelsen
+
+
+Alle 0'er kan bli NA
+
+```{r}
+# fjellc <-  raster::mask(fjell, fjell[fjell==0],maskvalue = 0, updatevalue = NA)
+```
+Opperasjonen over tar for lang tid (ikke ferdig på 2 timer)
+
+Finner centroiden til territoriene for å defeinere de til skog eller fjell
+```{r}
+dat$centroid <- st_centroid(dat$geometry)
+```
+
+```{r plotting centroids}
+# crop again
+datc <- sf::st_crop(dat, myExt)
+datc$centroid <- st_centroid(datc$geometry)
+
+nor_sf <- st_as_sf(nor)
+norc <- sf::st_crop(nor_sf, myExt)
+
+fjellc <- raster::crop(fjell, myExt)
+
+fjellc[fjellc[]==0] <- NA
+fjellc[fjellc[]>0] <- 1
+
+
+par(mfrow=c(1,1))
+plot(norc$geometry, axes=T)
+plot(fjellc, add=T)
+plot(datc$geometry, add=T)
+plot(datc$centroid, add=T)
+```
+
+Om vi skal bruke centroidene til å kategoriese territoriene som skog- eller fjellterritorier så må nok fjellmasken være på den oppløsningen den er. 
+
+```{r}
+datc2 <- as(datc$centroid, 'Spatial') # extract-funksjonen krever spatial points dataframe
+datc2$class <- raster::extract(fjellc, datc2, fun=sum, df=F)
+
+plot(norc$geometry, axes=T)
+  plot(fjellc, add=T)
+  plot(datc2[!is.na(datc2$class),], add=T, pch=21)
+  plot(datc2[is.na(datc2$class),], add=T)
+
+
+```
+
+Her vises centroidene som ligger i fjell som fylte sirkler, og de som ligger utenfor som plusstegn. De fleste ligger utenfor. Dette er bare et lite utsnitt av Norge, Men det kan være representatbelt da kongeørn ofte vil ha trær for å bygge reir, men de kan fortsatt jakte på fjellet. 
+
+
+## Gammele analyser (ikke i bruk)
+
+
+Jeg prøver jeg en annen måte for å regne ut andel fjellareal per territorie. Først reduserer jeg oppløsningen på fjellmasken fra 50x50m til 1000x1000 (factor = 20).
+
+```{r}
+fjellc10 <- raster::aggregate(fjellc, fact = 20)
+par(mfrow=c(1,2))
+plot(fjellc); plot(fjellc10)
+```
+
+Noen av øyene ser ut til å ha blitt litt større. Kanskje vi kunne brukt fact = 10. La oss zoom inn litt til for å se.
+
+```{r}
+myExt2 <- raster::extent(200000, 300000, 6900000, 7000000)
+fjellcc <- crop(fjellc, myExt2)
+fjellc10c <- crop(fjellc10, myExt2)
+par(mfrow=c(1,2))
+plot(fjellcc); plot(fjellc10c)
+
+```
+Dette kan være en konsekvens av at jeg satta 0-verdier til NA, slik at alle aggregerte celler blir 1 gitt at det er >=1 fjellcelle der.
+
+```{r}
+fjellc[is.na(fjellc[])] <- 0
+fjellc10v2 <- raster::aggregate(fjellc, fact = 20) # 5 sec. processing time
+fjellccv2 <- crop(fjellc, myExt2)
+fjellc10cv2 <- crop(fjellc10v2, myExt2)
+
+# definerer nye fjellceller som de med fjellareal over 50%
+fjellc10cv3 <- fjellc10cv2
+fjellc10cv3[fjellc10cv3[]<0.5] <- 0
+fjellc10cv3[fjellc10cv3[]>=0.5] <- 1
+
+par(mfrow=c(2,2))
+plot(fjellccv2, main="Original"); 
+plot(fjellc10c, main = "With NA's instead of zeros"); 
+plot(fjellc10cv2, main = "Aggregation with mean values"); 
+plot(fjellc10cv3, main = "Aggregation with threshold")
+```
+Den siste ser grei ut. Plotter territoriene over masken for å sammenligne oppløsningen.
+
+```{r}
+datcc <- st_crop(datc, myExt2)
+```
+```{r}
+plot(fjellc10cv3, main = "Aggregation with threshold")
+  plot(datcc$geometry, add=T)
+
+```
+
+
+
+Ekstraktherer fraksjon fjellareal per polygon.
+```{r}
+datcc$andelFjell <- raster::extract(fjellc10cv3, datcc, fun = mean) # 9 sec processing time
+```
+
+```{r}
+hist(datcc$andelFjell)
+```
+Territoriene har god spredning når det gjelder andel fjellareal
+
+```{r}
+myCols <- sf.colors(5, alpha = 0.5)
+datcc$colour <- myCols[1]
+datcc$colour[datcc$andelFjell >=0.2 & datcc$andelFjell < 0.4] <- myCols[2]
+datcc$colour[datcc$andelFjell >=0.4 & datcc$andelFjell < 0.6] <- myCols[3]
+datcc$colour[datcc$andelFjell >=0.6 & datcc$andelFjell < 0.8] <- myCols[4]
+datcc$colour[datcc$andelFjell >=0.8]                          <- myCols[5]
+
+plot(fjellc10cv3, main = "Aggregation with threshold", legend=F)
+  plot(datcc$geometry, add=T, col = datcc$colour)
+  legend("bottomright",   
+      legend = c("<.2", ".2-.4", ".4-.6", ".6-.8", ">.8"), 
+      fill = myCols)
+  
+```
+
+Dette differensierer territoriene etter hvor mye fjell de innehar. Gjennomsnittet i dette utsnittet er `r mean(datcc$andelFjell)`.
+
+
+
+
+
+## Sjekkliste
+Sjekklisten er ikke utfylt enda.
+
+![Sjekkliste](../output/test/abc.pdf){width=100%}
+
+ Se endring
