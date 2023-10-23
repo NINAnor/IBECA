@@ -16,7 +16,13 @@ write(myfile, "C:/Users/joachim.topper/OneDrive - NINA/work/myJSON.json")
 
 
 
+toJSON(list(
+  output_rapporter_egenskapvurderinger,
+  output_rapporter_egenskapvurderinger)
+)
 
+
+xxx <- read.csv("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/output/for Mdirs infrastruktur/input_code.csv", encoding =  "Latin-1")
 
 
 
