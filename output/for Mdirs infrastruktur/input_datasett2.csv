@@ -1,0 +1,20 @@
+navn;link;kilde;periodestart;periodeslutt;type
+mediansnowCover;mediansnowCover.xlsx;met.no;1960;2020;Modellerte klimadata
+ANO data;https://kartkatalog.miljodirektoratet.no/Dataset/Details/2054;ANO, Miljoedirektoratet;2019;2021;Raadata
+Ellenberg indicator values for British plants;https://nora.nerc.ac.uk/id/eprint/6411/;Hill et al. 1999;;;Ekspertgenererte data
+Generaliserte artslistedata NiN;;NiN 2.0;;;Ekspertgenererte data
+winterRain_med;winterRain_med.xlsx;met.no;1960;2020;Modellerte klimadata
+Swedish Plant indicator data;https://www.sciencedirect.com/science/article/pii/S1470160X20308621?via%3Dihub;Tyler et al. 2021;;;Ekspertgenererte data
+Breatlas 2018/2019;https://www.nve.no/vann-og-vassdrag/vannets-kretsloep/bre/publikasjoner-publications/breatlas-glacier-inventories/;NVE, Sentinel-2;2018;2019;Fjernmaalte data
+snowDepth_med;snowDepth_med.xls;met.no;1960;2020;Modellerte klimadata
+NDVI;https://lpdaac.usgs.gov/products/mod13q1v006/;MODIS, Google Earth Engine;2000;2019;Fjernmaalte data
+fjellrype;miljodirektoratet.no;TOV-E;2010;2020;Raadata
+smaagnagere;https://www.naturindeks.no/;Naturindeks, TOV;1990;2019;Raadata
+lirype;https://honsefugl.nina.no/Innsyn/nb;Hoensefuglportalen;2010;2020;Raadata
+fjellrev;https://www.rovbase.no/;Overvaakingsprogram for fjellrev;1950;2019;Raadata
+kongeoern;https://rovdata.no/;Rovdata;2015;2019;Raadata
+jerv;https://rovdata.no/;Rovdata;1990;2019;Raadata
+Naturindeks for fjell;https://www.naturindeks.no/;Naturindeks;1988;2019;Prosesserte data
+rein;https://www.reinbase.no/;Reinbase, Kjoerstad et al. (2017);2015;2020;Raadata
+N50 kartdata;https://kartkatalog.geonorge.no/metadata/ea192681-d039-42ec-b1bc-f3ce04c189ac;Kartverket;;;Kartdata
+Inngrepsfri natur;https://kartkatalog.geonorge.no/metadata/inngrepsfri-natur-i-norge/277bda73-b924-4a0e-b299-ea5441de2d3b;Miljoedirektoratet;1988;2018;Kartdata

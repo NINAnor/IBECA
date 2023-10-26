@@ -17,8 +17,12 @@ write(myfile, "C:/Users/joachim.topper/OneDrive - NINA/work/myJSON.json")
 
 
 toJSON(list(
-  output_rapporter_egenskapvurderinger,
-  output_rapporter_egenskapvurderinger)
+  input_code2,
+  input_datasett2,
+  output_indikatorvurderinger2,
+  output_rapporter_totalvurdering2,
+  output_rapporter_egenskapvurderinger
+  )
 )
 
 
