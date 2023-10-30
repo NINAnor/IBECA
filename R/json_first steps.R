@@ -1,4 +1,5 @@
 library(rjson)
+library(jsonlite)
 
 list_1 = vector(mode="list", length = 2)
 
@@ -16,14 +17,30 @@ write(myfile, "C:/Users/joachim.topper/OneDrive - NINA/work/myJSON.json")
 
 
 
-toJSON(list(
+json1 <- toJSON(list(
   input_code2,
   input_datasett2,
   output_indikatorvurderinger2,
   output_rapporter_totalvurdering2,
   output_rapporter_egenskapvurderinger
   )
+,indent=1)
+
+
+json2 <- toJSON(list(
+  list(input_code2),
+  list(input_datasett2),
+  list(output_indikatorvurderinger2),
+  list(output_rapporter_totalvurdering2),
+  list(output_rapporter_egenskapvurderinger)
 )
+)
+
+
+
+
+
+
 
 
 xxx <- read.csv("C:/Users/joachim.topper/OneDrive - NINA/work/R projects/github/IBECA/output/for Mdirs infrastruktur/input_code.csv", encoding =  "Latin-1")
@@ -320,3 +337,23 @@ json.list <- list(
     )
   )
   )
+
+
+
+
+
+
+#### continue here ####
+
+jsonlite::toJSON(list(
+  input=list(kode=input_code2, 
+             datasett=input_datasett2),
+  output=list(indikatorvurderinger=output_indikatorvurderinger2,
+              rapporter=c(output_rapporter_totalvurdering2,
+                          egenskapsvurderinger)
+  )
+)
+,pretty=TRUE)
+
+
+jsonlite::toJSON(output_rapporter_egenskapvurderinger, pretty=TRUE)
